@@ -1,12 +1,12 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { DM_Sans } from 'next/font/google'
 import "./globals.css"
 import { Toaster } from "sonner"
 import Navbar from "@/components/navbar"
 import { auth } from "@/auth"
 
-const inter = Inter({ subsets: ["latin"] })
+const dmSans = DM_Sans({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "Mi Aplicación",
@@ -22,7 +22,7 @@ export default async function RootLayout({
 
   return (
     <html lang="es">
-      <body className={inter.className}>
+      <body className={dmSans.className}>
         <Toaster position="top-center" richColors />
         <Navbar user={session?.user} />
         <main className="min-h-screen ">{children}</main>

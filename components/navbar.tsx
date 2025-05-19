@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Menu, X, User, LogOut, Settings } from "lucide-react"
+import { Menu, X, User, Settings, LogOut } from "lucide-react"
 import { toast } from "sonner"
 
 interface NavbarProps {
@@ -29,11 +29,12 @@ export default function Navbar({ user }: NavbarProps) {
 
   const handleSignOut = async () => {
     try {
-      await signOut({ redirect: false })
       toast.success("Sesión cerrada", {
         description: "Has cerrado sesión correctamente",
       })
-      // No es necesario redirigir aquí, ya que el middleware se encargará de eso
+      await signOut({
+        callbackUrl: "/login",
+      })
     } catch (error) {
       toast.error("Error al cerrar sesión", {
         description: "Ha ocurrido un error al cerrar la sesión",
