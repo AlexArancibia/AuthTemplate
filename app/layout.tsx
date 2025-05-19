@@ -1,12 +1,15 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { DM_Sans } from 'next/font/google'
+import { DM_Sans, Poppins } from 'next/font/google'
 import "./globals.css"
 import { Toaster } from "sonner"
 import Navbar from "@/components/navbar"
 import { auth } from "@/auth"
 
-const dmSans = DM_Sans({ subsets: ["latin"] })
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["400","500","600", "700","800"],
+});
 
 export const metadata: Metadata = {
   title: "Mi Aplicación",
@@ -22,7 +25,7 @@ export default async function RootLayout({
 
   return (
     <html lang="es">
-      <body className={dmSans.className}>
+      <body className={poppins.className}>
         <Toaster position="top-center" richColors />
         <Navbar user={session?.user} />
         <main className="min-h-screen ">{children}</main>
