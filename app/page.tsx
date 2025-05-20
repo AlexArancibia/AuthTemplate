@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { useMainStore } from "@/stores/mainStore"
 import { HeroSection } from "@/components/HeroSection"
+import { ProductCarousel } from "@/components/ProductCarousel"
 
 export default function HomePage() {
  
@@ -14,6 +15,7 @@ export default function HomePage() {
     <>
     
     <HeroSection />
+    <ProductCarousel />
     </>
   )
 }

@@ -47,7 +47,17 @@ const navItems = [
 
 export default function Navbar({ user }: NavbarProps) {
   const pathname = usePathname()
-  const { fetchShopSettings, shopSettings, loading, error } = useMainStore()
+  const {
+    fetchShopSettings,
+    fetchProducts,
+    fetchShippingMethods,
+    fetchCategories,
+    fetchCollections,
+    fetchPaymentProviders,
+    shopSettings,
+    loading,
+    error,
+  } = useMainStore()
   const { items, removeItem, getTotal, getItemsCount } = useCartStore()
   const [mounted, setMounted] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
@@ -63,38 +73,48 @@ export default function Navbar({ user }: NavbarProps) {
 
   // Fetch shop settings on mount
   useEffect(() => {
-    console.log("[NAVBAR] useEffect for fetching shop settings triggered")
+    console.log("[NAVBAR] useEffect for fetching data triggered")
 
-    const loadShopSettings = async () => {
+    const loadData = async () => {
       // Skip if already fetched or already loading
       if (hasFetched.current || loading) {
-        console.log("[NAVBAR] Shop settings already fetched or loading, skipping")
+        console.log("[NAVBAR] Data already fetched or loading, skipping")
         return
       }
 
-      // Skip if we already have data
-      if (shopSettings && shopSettings.length > 0) {
-        console.log("[NAVBAR] Shop settings already in store, skipping fetch")
-        hasFetched.current = true
-        return
-      }
-
-      console.log("[NAVBAR] Fetching shop settings from Navbar")
+      console.log("[NAVBAR] Fetching all required data")
+      hasFetched.current = true
 
       try {
-        await fetchShopSettings()
-        console.log("[NAVBAR] Shop settings loaded successfully")
-        hasFetched.current = true
+        // Realizar todos los fetch en paralelo
+        await Promise.all([
+          fetchShopSettings(),
+          fetchProducts(),
+          fetchShippingMethods(),
+          fetchCategories(),
+          fetchCollections(),
+          fetchPaymentProviders(),
+        ])
+
+        console.log("[NAVBAR] All data loaded successfully")
       } catch (err) {
-        console.error("[NAVBAR] Error fetching shop settings:", err)
+        console.error("[NAVBAR] Error fetching data:", err)
         toast.error("Error de conexión", {
-          description: "No se pudo cargar la configuración de la tienda",
+          description: "No se pudieron cargar los datos de la tienda",
         })
       }
     }
 
-    loadShopSettings()
-  }, [fetchShopSettings, loading, shopSettings])
+    loadData()
+  }, [
+    fetchShopSettings,
+    fetchProducts,
+    fetchShippingMethods,
+    fetchCategories,
+    fetchCollections,
+    fetchPaymentProviders,
+    loading,
+  ])
 
   const handleSignOut = async () => {
     try {
@@ -180,14 +200,14 @@ export default function Navbar({ user }: NavbarProps) {
   return (
     <nav className="bg-background/95 backdrop-blur-md border-b sticky top-0 z-[180]">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-14">
           {/* Logo */}
           <div className="w-1/4 lg:w-1/4">
             <Link href="/" aria-label="Ir a la página de inicio" className="flex items-center">
               {loading ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : shopLogo ? (
-                <img src={shopLogo || "/placeholder.svg"} alt={shopName} className="h-10 w-auto mr-2" />
+                <img src={shopLogo || "/placeholder.svg"} alt={shopName} className="h-6 w-auto mr-2" />
               ) : (
                 <Store className="h-5 w-5 mr-2" />
               )}

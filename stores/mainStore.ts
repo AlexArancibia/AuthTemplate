@@ -5,7 +5,7 @@ import type { Product } from "@/types/product"
 import type { Category } from "@/types/category"
 import type { Collection } from "@/types/collection"
 import type { Order } from "@/types/order"
-import type { Customer } from "@/types/customer"
+ 
 import type { Coupon } from "@/types/coupon"
 import type { ShippingMethod } from "@/types/shippingMethod"
 import type { ShopSettings } from "@/types/store"
@@ -41,7 +41,7 @@ interface MainStore {
   productVariants: ProductVariant[]
   collections: Collection[]
   orders: Order[]
-  customers: Customer[]
+ 
   coupons: Coupon[]
   shippingMethods: ShippingMethod[]
   paymentProviders: PaymentProvider[]
@@ -90,7 +90,7 @@ interface MainStore {
   fetchTeamSections: () => Promise<TeamSection[]>
   fetchTeamMembers: (teamSectionId: string) => Promise<TeamMember[]>
   fetchOrders: () => Promise<Order[]>
-  fetchCustomers: () => Promise<Customer[]>
+ 
   fetchCoupons: () => Promise<Coupon[]>
   fetchShippingMethods: () => Promise<ShippingMethod[]>
   fetchPaymentProviders: () => Promise<PaymentProvider[]>
@@ -107,12 +107,16 @@ interface MainStore {
   updateOrder: (id: string, data: any) => Promise<Order>
   createRefund: (data: any) => Promise<void>
 
+
+  submitFormEmail: (formData: any) => Promise<void>
+  sendEmail: (to: string, subject: string, html: string) => Promise<void>
+  initializeStore: () => Promise<void>;
+
   refreshData: () => Promise<void>
   getCategoryById: (id: string) => Category | undefined
   getProductById: (id: string) => Product | undefined
   getCollectionById: (id: string) => Collection | undefined
   getOrderById: (id: string) => Order | undefined
-  getCustomerById: (id: string) => Customer | undefined
   getCouponById: (id: string) => Coupon | undefined
   getCurrencyById: (id: string) => Currency | undefined
   getExchangeRateById: (id: string) => ExchangeRate | undefined
@@ -187,7 +191,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<Category[]>(`/categories/store/${STORE_ID}`)
+      const response = await apiClient.get<Category[]>(`/categories?storeId=${STORE_ID}`)
       set({
         categories: response.data,
         loading: false,
@@ -274,7 +278,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<Collection[]>(`/collections/store/${STORE_ID}`)
+      const response = await apiClient.get<Collection[]>(`/categories?storeId=${STORE_ID}`)
       set({
         collections: response.data,
         loading: false,
@@ -440,34 +444,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
   },
 
   // Método fetchCustomers mejorado con caché
-  fetchCustomers: async () => {
-    const { customers, lastFetch } = get()
-    const now = Date.now()
-
-    if (!STORE_ID) {
-      throw new Error("No store ID provided in environment variables")
-    }
-
-    // Verificar si hay clientes en caché y si el caché aún es válido
-    if (customers.length > 0 && lastFetch.customers && now - lastFetch.customers < CACHE_DURATION) {
-      return customers
-    }
-
-    set({ loading: true, error: null })
-    try {
-      const response = await apiClient.get<Customer[]>(`/customers/store/${STORE_ID}`)
-      set({
-        customers: response.data,
-        loading: false,
-        lastFetch: { ...get().lastFetch, customers: now },
-      })
-      return response.data
-    } catch (error) {
-      set({ error: "Failed to fetch customers", loading: false })
-      throw error
-    }
-  },
-
+ 
   // Método fetchCoupons mejorado con caché
   fetchCoupons: async () => {
     const { coupons, lastFetch } = get()
@@ -872,6 +849,30 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
+  sendEmail: async (to, subject, html) => {
+    try {
+      const response = await apiClient.post("/email/send", {
+        to,
+        subject,
+        html,
+      })
+      return response.data
+    } catch (error) {
+      console.error("Error sending email:", error)
+      throw error
+    }
+  },
+  submitFormEmail: async (formData) => {
+    try {
+      const response = await apiClient.post("/email/submit-form", formData)
+      return response.data
+    } catch (error) {
+      console.error("Error submitting form email:", error)
+      throw error
+    }
+  },
+
+
   // Utility functions
   refreshData: async () => {
     set({ loading: true, error: null })
@@ -930,7 +931,6 @@ export const useMainStore = create<MainStore>((set, get) => ({
         cardSections: cardSectionsResponse.data,
         teamSections: teamSectionsResponse.data,
         orders: ordersResponse.data,
-        customers: customersResponse.data,
         coupons: couponsResponse.data,
         shippingMethods: shippingMethodsResponse.data,
         paymentProviders: paymentProvidersResponse.data,
@@ -1009,9 +1009,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
     return get().orders.find((order) => order.id === id)
   },
 
-  getCustomerById: (id) => {
-    return get().customers.find((customer) => customer.id === id)
-  },
+
 
   getCouponById: (id) => {
     return get().coupons.find((coupon) => coupon.id === id)
@@ -1027,5 +1025,17 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
   getFrequentlyBoughtTogetherById: (id) => {
     return get().frequentlyBoughtTogether.find((fbt) => fbt.id === id)
+  },
+
+
+  initializeStore: async () => {
+    // if (get().products.length > 0 && get().shopSettings.length > 0) return;
+
+    set({ loading: true });
+    try {
+      await Promise.all([get().fetchProducts(), get().fetchShopSettings(), get().fetchShippingMethods(), get().fetchCategories(),  get().fetchCollections() ,get().fetchPaymentProviders()]);
+    } finally {
+      set({ loading: false });
+    }
   },
 }))

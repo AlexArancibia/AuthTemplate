@@ -4,7 +4,8 @@ import authConfig from "./auth.config";
 
 const { auth } = NextAuth(authConfig);
 
-const publicRoutes = ["/", "/nosotros","/cart"];
+const publicRoutes = ["/", "/nosotros","/cart","/productos","/checkout"];
+const publicPrefixes = ["/productos/"];
 const authRoutes = ["/login", "/register"];
 const apiAuthPrefix = "/api/auth";
 
@@ -18,6 +19,13 @@ export default auth((req) => {
   if (nextUrl.pathname.startsWith(apiAuthPrefix)) {
     return NextResponse.next();
   }
+
+  if (
+  publicRoutes.includes(nextUrl.pathname) ||
+  publicPrefixes.some((prefix) => nextUrl.pathname.startsWith(prefix))
+) {
+  return NextResponse.next();
+}
 
   // Permitir acceso a rutas públicas sin importar el estado de autenticación
   if (publicRoutes.includes(nextUrl.pathname)) {
