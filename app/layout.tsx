@@ -28,7 +28,7 @@ export default async function RootLayout({
       <body className={poppins.className}>
         <Toaster position="top-center" richColors />
         <Navbar user={session?.user} />
-        <main className="min-h-screen ">{children}</main>
+        <main className="  ">{children}</main>
       </body>
     </html>
   )

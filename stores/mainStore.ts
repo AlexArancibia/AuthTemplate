@@ -303,7 +303,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<HeroSection[]>(`/hero-sections/store/${STORE_ID}`)
+      const response = await apiClient.get<HeroSection[]>(`/hero-sections?storeId=${STORE_ID}`)
       set({
         heroSections: response.data,
         loading: false,
