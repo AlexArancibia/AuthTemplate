@@ -9,6 +9,7 @@ import { HeroSection } from "@/components/HeroSection"
 import { ProductCarousel } from "@/components/ProductCarousel"
 import { Suspense } from "react"
 import CardSectionsContainer from "@/components/card-sections-container"
+import { BlogSection } from "@/components/BlogSection"
 
 export default function HomePage() {
  
@@ -21,6 +22,7 @@ export default function HomePage() {
     <Suspense fallback={<div className="h-96 bg-muted animate-pulse" />}>
         <CardSectionsContainer id="cs_5c596d6f-a27c" />
       </Suspense>
+       <BlogSection />
     </>
   )
 }

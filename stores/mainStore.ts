@@ -585,7 +585,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<Content[]>(`/contents/store/${STORE_ID}`)
+      const response = await apiClient.get<Content[]>(`/contents?store=${STORE_ID}`)
       set({
         contents: response.data,
         loading: false,
