@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 import { MapPin, Phone, Mail, Clock } from "lucide-react"
@@ -22,6 +23,9 @@ const formSchema = z.object({
   company: z.string().optional(),
   subject: z.string().min(1, "Por favor seleccione un asunto"),
   message: z.string().min(10, "El mensaje debe tener al menos 10 caracteres"),
+  acceptTerms: z.boolean().refine((val) => val === true, {
+    message: "Debes aceptar los términos y condiciones",
+  }),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -61,18 +65,24 @@ export function ContactForm() {
     formState: { errors },
     reset,
     setValue,
+    watch,
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       subject: "",
+      acceptTerms: false,
     },
   })
+
+  const acceptTerms = watch("acceptTerms")
 
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true)
 
     try {
-      await sendContactForm(data)
+      // Excluir acceptTerms del envío ya que es solo para validación
+      const { acceptTerms, ...formData } = data
+      await sendContactForm(formData)
       toast.success("Formulario enviado", {
         description: "Gracias por contactarnos. Te responderemos pronto.",
       })
@@ -89,6 +99,10 @@ export function ContactForm() {
 
   const handleSubjectChange = (value: string) => {
     setValue("subject", value, { shouldValidate: true })
+  }
+
+  const handleTermsChange = (checked: boolean) => {
+    setValue("acceptTerms", checked, { shouldValidate: true })
   }
 
   // Construir dirección desde shopSettings
@@ -284,11 +298,47 @@ export function ContactForm() {
                     {errors.message && <p className="text-sm text-red-500 mt-1">{errors.message.message}</p>}
                   </motion.div>
 
+                  {/* Checkbox de términos y condiciones */}
+                  <motion.div variants={itemVariants} className="flex items-start space-x-3 py-2">
+                    <Checkbox
+                      id="acceptTerms"
+                      checked={acceptTerms}
+                      onCheckedChange={handleTermsChange}
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <Label htmlFor="acceptTerms" className="text-sm leading-relaxed cursor-pointer">
+                        Acepto los{" "}
+                        <a
+                          href="/terminos-y-condiciones"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline font-medium"
+                          style={{ color: shopInfo?.primaryColor || undefined }}
+                        >
+                          términos y condiciones
+                        </a>{" "}
+                        y la{" "}
+                        <a
+                          href="/politica-de-privacidad"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline font-medium"
+                          style={{ color: shopInfo?.primaryColor || undefined }}
+                        >
+                          política de privacidad
+                        </a>
+                        .
+                      </Label>
+                      {errors.acceptTerms && <p className="text-sm text-red-500 mt-1">{errors.acceptTerms.message}</p>}
+                    </div>
+                  </motion.div>
+
                   <motion.div variants={itemVariants} transition={{ delay: 0.1 }}>
                     <Button
                       type="submit"
                       className="w-full"
-                      disabled={isSubmitting}
+                      disabled={isSubmitting || !acceptTerms}
                       style={{
                         backgroundColor: shopInfo?.primaryColor || undefined,
                       }}

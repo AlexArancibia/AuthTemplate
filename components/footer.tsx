@@ -1,0 +1,323 @@
+"use client"
+
+import type React from "react"
+
+import { motion } from "framer-motion"
+import Link from "next/link"
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Separator } from "@/components/ui/separator"
+import { toast } from "sonner"
+import {
+  Facebook,
+  Instagram,
+  Twitter,
+  Youtube,
+  Mail,
+  Phone,
+  MapPin,
+  Clock,
+  Send,
+  Heart,
+  Shield,
+  FileText,
+  BookOpen,
+} from "lucide-react"
+import { useMainStore } from "@/stores/mainStore"
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      delayChildren: 0.1,
+      staggerChildren: 0.1,
+    },
+  },
+}
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: {
+      duration: 0.5,
+    },
+  },
+}
+
+export function Footer() {
+  const [email, setEmail] = useState("")
+  const [isSubscribing, setIsSubscribing] = useState(false)
+  const { shopSettings } = useMainStore()
+
+  const shopInfo = shopSettings?.[0]
+
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!email) return
+
+    setIsSubscribing(true)
+    try {
+      // Simular suscripción al newsletter
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      toast.success("¡Suscripción exitosa!", {
+        description: "Te has suscrito correctamente a nuestro newsletter.",
+      })
+      setEmail("")
+    } catch (error) {
+      toast.error("Error al suscribirse", {
+        description: "Por favor, inténtalo de nuevo más tarde.",
+      })
+    } finally {
+      setIsSubscribing(false)
+    }
+  }
+
+  const navigationLinks = [
+    { name: "Inicio", href: "/" },
+    { name: "Nosotros", href: "/nosotros" },
+    { name: "Productos", href: "/productos" },
+    { name: "Promociones", href: "/promociones" },
+    { name: "Catálogo", href: "/catalogo" },
+    { name: "Blog", href: "/blog" },
+    { name: "Contáctenos", href: "/contactenos" },
+  ]
+
+  const helpLinks = [
+    { name: "Centro de Ayuda", href: "/ayuda" },
+    { name: "Preguntas Frecuentes", href: "/faq" },
+    { name: "Envíos y Devoluciones", href: "/envios" },
+    { name: "Métodos de Pago", href: "/pagos" },
+    { name: "Soporte Técnico", href: "/soporte" },
+  ]
+
+  const legalLinks = [
+    { name: "Términos y Condiciones", href: "/terminos-y-condiciones", icon: FileText },
+    { name: "Política de Privacidad", href: "/politica-de-privacidad", icon: Shield },
+    { name: "Libro de Reclamaciones", href: "/libro-de-reclamaciones", icon: BookOpen },
+  ]
+
+  const socialLinks = [
+    { name: "Facebook", icon: Facebook, href: shopInfo?.facebookUrl || "#" },
+    { name: "Instagram", icon: Instagram, href: shopInfo?.instagramUrl || "#" },
+    { name: "Twitter", icon: Twitter, href: shopInfo?.twitterUrl || "#" },
+    { name: "YouTube", icon: Youtube, href: shopInfo?.youtubeUrl || "#" },
+  ]
+
+  // Construir dirección desde shopSettings
+  const getAddress = () => {
+    if (!shopInfo) return "Dirección no disponible"
+
+    const addressParts = [
+      shopInfo.address1,
+      shopInfo.address2,
+      shopInfo.city,
+      shopInfo.province,
+      shopInfo.zip,
+      shopInfo.country,
+    ].filter(Boolean)
+
+    return addressParts.length > 0 ? addressParts.join(", ") : "Dirección no disponible"
+  }
+
+  return (
+    <footer className="bg-gray-900 text-white">
+      <div className="container mx-auto px-4 py-12">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
+        >
+          {/* Información de la empresa */}
+          <motion.div variants={itemVariants} className="space-y-4">
+            <div>
+              <h3 className="text-xl font-bold mb-4">{shopInfo?.name || "Nuestra Empresa"}</h3>
+              <p className="text-gray-300 text-sm leading-relaxed">
+                {shopInfo?.description ||
+                  "Comprometidos con la excelencia y la satisfacción de nuestros clientes. Ofrecemos productos y servicios de la más alta calidad."}
+              </p>
+            </div>
+
+            {/* Newsletter */}
+            <div className="pt-4">
+              <h4 className="font-semibold mb-3">Newsletter</h4>
+              <p className="text-gray-300 text-sm mb-3">Suscríbete para recibir ofertas especiales</p>
+              <form onSubmit={handleNewsletterSubmit} className="flex gap-2">
+                <Input
+                  type="email"
+                  placeholder="Tu email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="bg-gray-800 border-gray-700 text-white placeholder-gray-400"
+                  required
+                />
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={isSubscribing}
+                  className="bg-primary hover:bg-primary/90"
+                  style={{
+                    backgroundColor: shopInfo?.primaryColor || undefined,
+                  }}
+                >
+                  {isSubscribing ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              </form>
+            </div>
+          </motion.div>
+
+          {/* Enlaces de navegación */}
+          <motion.div variants={itemVariants}>
+            <h3 className="text-lg font-semibold mb-4">Navegación</h3>
+            <ul className="space-y-2">
+              {navigationLinks.map((link) => (
+                <li key={link.name}>
+                  <Link href={link.href} className="text-gray-300 hover:text-white transition-colors text-sm">
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+
+          {/* Ayuda y soporte */}
+          <motion.div variants={itemVariants}>
+            <h3 className="text-lg font-semibold mb-4">Ayuda y Soporte</h3>
+            <ul className="space-y-2">
+              {helpLinks.map((link) => (
+                <li key={link.name}>
+                  <Link href={link.href} className="text-gray-300 hover:text-white transition-colors text-sm">
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+
+          {/* Información de contacto */}
+          <motion.div variants={itemVariants}>
+            <h3 className="text-lg font-semibold mb-4">Contacto</h3>
+            <div className="space-y-3">
+              {(shopInfo?.address1 || shopInfo?.city) && (
+                <div className="flex items-start space-x-3">
+                  <MapPin className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-gray-300 text-sm">{getAddress()}</p>
+                </div>
+              )}
+
+              {(shopInfo?.phone || shopInfo?.supportPhone) && (
+                <div className="flex items-center space-x-3">
+                  <Phone className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-gray-300 text-sm">{shopInfo?.phone || shopInfo?.supportPhone}</p>
+                    {shopInfo?.supportPhone && shopInfo.supportPhone !== shopInfo.phone && (
+                      <p className="text-gray-300 text-sm">{shopInfo.supportPhone}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {(shopInfo?.email || shopInfo?.supportEmail) && (
+                <div className="flex items-center space-x-3">
+                  <Mail className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-gray-300 text-sm">{shopInfo?.email || shopInfo?.supportEmail}</p>
+                    {shopInfo?.supportEmail && shopInfo.supportEmail !== shopInfo.email && (
+                      <p className="text-gray-300 text-sm">{shopInfo.supportEmail}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center space-x-3">
+                <Clock className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                <p className="text-gray-300 text-sm">Lun - Vie: 9:00 AM - 6:00 PM</p>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+
+        <Separator className="my-8 bg-gray-700" />
+
+        {/* Sección inferior */}
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          className="flex flex-col lg:flex-row justify-between items-center space-y-4 lg:space-y-0"
+        >
+          {/* Enlaces legales */}
+          <motion.div variants={itemVariants} className="flex flex-wrap justify-center lg:justify-start gap-6">
+            {legalLinks.map((link) => {
+              const IconComponent = link.icon
+              return (
+                <Link
+                  key={link.name}
+                  href={link.href}
+                  className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors text-sm group"
+                >
+                  <IconComponent className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  <span>{link.name}</span>
+                </Link>
+              )
+            })}
+          </motion.div>
+
+          {/* Redes sociales */}
+          <motion.div variants={itemVariants} className="flex space-x-4">
+            {socialLinks.map((social) => {
+              const IconComponent = social.icon
+              return (
+                <Link
+                  key={social.name}
+                  href={social.href}
+                  className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-gray-800 rounded-full"
+                  aria-label={social.name}
+                >
+                  <IconComponent className="w-5 h-5" />
+                </Link>
+              )
+            })}
+          </motion.div>
+        </motion.div>
+
+        <Separator className="my-6 bg-gray-700" />
+
+        {/* Copyright */}
+        <motion.div
+          variants={itemVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          className="text-center"
+        >
+          <p className="text-gray-400 text-sm flex items-center justify-center space-x-1">
+            <span>© {new Date().getFullYear()}</span>
+            <span>{shopInfo?.name || "Nuestra Empresa"}.</span>
+            <span>Todos los derechos reservados.</span>
+            <span>Hecho con</span>
+            <Heart className="w-4 h-4 text-red-500 fill-current" />
+            <span>en Perú</span>
+          </p>
+          {shopInfo?.domain && (
+            <p className="text-gray-500 text-xs mt-2">
+              <Link href={shopInfo.domain} className="hover:text-gray-300 transition-colors">
+                {shopInfo.domain}
+              </Link>
+            </p>
+          )}
+        </motion.div>
+      </div>
+    </footer>
+  )
+}

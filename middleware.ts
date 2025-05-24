@@ -4,7 +4,7 @@ import authConfig from "./auth.config";
 
 const { auth } = NextAuth(authConfig);
 
-const publicRoutes = ["/", "/nosotros","/cart","/productos","/checkout"];
+const publicRoutes = ["/", "/nosotros","/cart","/productos","/checkout","/api/email/send-verification"];
 const publicPrefixes = ["/productos/"];
 const authRoutes = ["/login", "/register"];
 const apiAuthPrefix = "/api/auth";

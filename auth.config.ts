@@ -4,10 +4,9 @@ import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import type { NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { sendEmailVerification } from "./lib/mail";
 
-import GitHub from "next-auth/providers/github";
-import Google from "next-auth/providers/google";
+import GitHub from "next-auth/providers/github"
+import Google from "next-auth/providers/google"
 
 // Notice this is only an object, not a full Auth.js instance
 export default {
@@ -16,10 +15,10 @@ export default {
     GitHub,
     Credentials({
       authorize: async (credentials) => {
-        const { data, success } = loginSchema.safeParse(credentials);
+        const { data, success } = loginSchema.safeParse(credentials)
 
         if (!success) {
-          throw new Error("Invalid credentials");
+          throw new Error("Invalid credentials")
         }
 
         // verificar si existe el usuario en la base de datos
@@ -27,17 +26,17 @@ export default {
           where: {
             email: data.email,
           },
-        });
+        })
 
         if (!user || !user.password) {
-          throw new Error("No user found");
+          throw new Error("No user found")
         }
 
         // verificar si la contraseña es correcta
-        const isValid = await bcrypt.compare(data.password, user.password);
+        const isValid = await bcrypt.compare(data.password, user.password)
 
         if (!isValid) {
-          throw new Error("Incorrect password");
+          throw new Error("Incorrect password")
         }
 
         // verificación de email
@@ -46,7 +45,7 @@ export default {
             where: {
               identifier: user.email,
             },
-          });
+          })
 
           // si existe un token, lo eliminamos
           if (verifyTokenExits?.identifier) {
@@ -54,10 +53,10 @@ export default {
               where: {
                 identifier: user.email,
               },
-            });
+            })
           }
 
-          const token = nanoid();
+          const token = nanoid()
 
           await db.verificationToken.create({
             data: {
@@ -65,16 +64,40 @@ export default {
               token,
               expires: new Date(Date.now() + 1000 * 60 * 60 * 24),
             },
-          });
+          })
 
-          // enviar email de verificación
-          await sendEmailVerification(user.email, token);
+          // enviar email de verificación usando el API endpoint
+          try {
+            const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/email/send-verification`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                email: user.email,
+                verificationToken: token,
+                verificationUrl: process.env.NEXTAUTH_URL || 'http://localhost:3000'
+              })
+            })
 
-          throw new Error("Please check Email send verification");
+            const result = await response.json()
+
+            if (!response.ok || !result.success) {
+              throw new Error(result.error || "Error enviando email de verificación")
+            }
+
+            console.log("Email de verificación enviado:", result.messageId)
+          } catch (error) {
+            // Log del error pero no fallar el proceso
+            console.error("Error enviando email de verificación:", error)
+            throw new Error("Por favor verifica tu email para continuar")
+          }
+
+          throw new Error("Por favor verifica tu email para continuar")
         }
 
-        return user;
+        return user
       },
     }),
   ],
-} satisfies NextAuthConfig;
+} satisfies NextAuthConfig

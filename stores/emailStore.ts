@@ -21,7 +21,7 @@ interface EmailResponse {
 
 interface EmailHistoryItem {
   id: string
-  type: "client_order" | "admin_order" | "contact_form"
+  type: "client_order" | "admin_order" | "contact_form" | "email_verification"
   to?: string
   subject: string
   sentAt: Date
@@ -36,12 +36,14 @@ interface EmailState {
   sendingToClient: boolean
   sendingToAdmin: boolean
   sendingContactForm: boolean
+  sendingVerification: boolean
 
   // Estados de error
   error: string | null
   clientEmailError: string | null
   adminEmailError: string | null
   contactFormError: string | null
+  verificationEmailError: string | null
 
   // Historial de emails enviados (opcional)
   emailHistory: EmailHistoryItem[]
@@ -58,6 +60,7 @@ interface EmailActions {
   sendOrderConfirmationToClient: (order: Order, shopSettings?: ShopSettings) => Promise<EmailResponse>
   sendOrderNotificationToAdmin: (order: Order, shopSettings?: ShopSettings) => Promise<EmailResponse>
   sendContactForm: (formData: ContactFormData, shopSettings?: ShopSettings) => Promise<EmailResponse>
+  sendEmailVerification: (email: string, token: string, shopSettings?: ShopSettings) => Promise<EmailResponse>
 
   // Acciones de utilidad
   verifyEmailConfiguration: () => Promise<boolean>
@@ -83,11 +86,13 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
   sendingToClient: false,
   sendingToAdmin: false,
   sendingContactForm: false,
+  sendingVerification: false,
 
   error: null,
   clientEmailError: null,
   adminEmailError: null,
   contactFormError: null,
+  verificationEmailError: null,
 
   emailHistory: [],
 
@@ -260,6 +265,57 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
     }
   },
 
+  // Enviar email de verificación (CLIENT-SIDE ONLY)
+  sendEmailVerification: async (email: string, token: string, shopSettings?: ShopSettings) => {
+    set({ sendingVerification: true, verificationEmailError: null })
+
+    try {
+      const response = await fetch("/api/email/send-verification", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, token, shopSettings }),
+      })
+
+      const result: EmailResponse = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.message || "Error enviando email de verificación")
+      }
+
+      // Agregar al historial
+      get().addToHistory({
+        type: "email_verification",
+        to: email,
+        subject: "Verificación de Email",
+        messageId: result.messageId,
+        success: true,
+      })
+
+      set({ sendingVerification: false })
+      return result
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Error desconocido"
+
+      // Agregar al historial como error
+      get().addToHistory({
+        type: "email_verification",
+        to: email,
+        subject: "Verificación de Email",
+        success: false,
+        error: errorMessage,
+      })
+
+      set({
+        sendingVerification: false,
+        verificationEmailError: errorMessage,
+      })
+
+      throw error
+    }
+  },
+
   // Verificar configuración de email
   verifyEmailConfiguration: async () => {
     set({ loading: true, error: null })
@@ -337,6 +393,7 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
       clientEmailError: null,
       adminEmailError: null,
       contactFormError: null,
+      verificationEmailError: null,
     })
   },
 
@@ -349,18 +406,30 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
 // Hook personalizado para obtener el estado de carga general
 export const useEmailLoading = () => {
   return useEmailStore(
-    (state) => state.loading || state.sendingToClient || state.sendingToAdmin || state.sendingContactForm,
+    (state) =>
+      state.loading ||
+      state.sendingToClient ||
+      state.sendingToAdmin ||
+      state.sendingContactForm ||
+      state.sendingVerification,
   )
 }
 
 // Hook personalizado para obtener errores
 export const useEmailErrors = () => {
   return useEmailStore((state) => ({
-    hasErrors: !!(state.error || state.clientEmailError || state.adminEmailError || state.contactFormError),
+    hasErrors: !!(
+      state.error ||
+      state.clientEmailError ||
+      state.adminEmailError ||
+      state.contactFormError ||
+      state.verificationEmailError
+    ),
     generalError: state.error,
     clientError: state.clientEmailError,
     adminError: state.adminEmailError,
     contactFormError: state.contactFormError,
+    verificationError: state.verificationEmailError,
   }))
 }
 
@@ -377,6 +446,7 @@ export const useEmailStats = () => {
       clientOrders: history.filter((item) => item.type === "client_order").length,
       adminOrders: history.filter((item) => item.type === "admin_order").length,
       contactForms: history.filter((item) => item.type === "contact_form").length,
+      emailVerifications: history.filter((item) => item.type === "email_verification").length,
     }
 
     return {
@@ -390,4 +460,4 @@ export const useEmailStats = () => {
 }
 
 // Exportar tipos para uso en componentes
-export type { ContactFormData, EmailResponse, EmailHistoryItem }
+export type { ContactFormData, EmailResponse, EmailHistoryItem, ShopSettings }
