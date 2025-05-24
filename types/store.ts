@@ -50,19 +50,19 @@ export interface ShopSettings {
   store?: Store
   name: string
   domain: string
-  email?: string | null
-  shopOwner?: string | null
-  logo?: string | null
-  description?: string | null
-  address1?: string | null
-  address2?: string | null
-  city?: string | null
-  province?: string | null
-  provinceCode?: string | null
-  country?: string | null
-  countryCode?: string | null
-  zip?: string | null
-  phone?: string | null
+  email?: string 
+  shopOwner?: string 
+  logo?: string 
+  description?: string 
+  address1?: string 
+  address2?: string 
+  city?: string 
+  province?: string 
+  provinceCode?: string 
+  country?: string 
+  countryCode?: string 
+  zip?: string 
+  phone?: string 
 
   // Currency Settings
   defaultCurrency: Currency
@@ -71,48 +71,48 @@ export interface ShopSettings {
   multiCurrencyEnabled: boolean
 
   // Shipping Settings
-  shippingZones?: string | null
-  defaultShippingRate?: number | null
-  freeShippingThreshold?: number | null
+  shippingZones?: string 
+  defaultShippingRate?: number 
+  freeShippingThreshold?: number 
 
   // Tax Settings
   taxesIncluded: boolean
-  taxValue?: number | null
+  taxValue?: number 
 
   // Timezone & Measurement
-  timezone?: string | null
-  weightUnit?: string | null
+  timezone?: string 
+  weightUnit?: string 
 
   // Branding & Theme
-  primaryColor?: string | null
-  secondaryColor?: string | null
-  theme?: string | null
+  primaryColor?: string 
+  secondaryColor?: string 
+  theme?: string 
 
   // Social Media
-  facebookUrl?: string | null
-  instagramUrl?: string | null
-  twitterUrl?: string | null
-  tiktokUrl?: string | null
-  youtubeUrl?: string | null
+  facebookUrl?: string 
+  instagramUrl?: string 
+  twitterUrl?: string 
+  tiktokUrl?: string 
+  youtubeUrl?: string 
 
   // Analytics
-  googleAnalyticsId?: string | null
-  facebookPixelId?: string | null
+  googleAnalyticsId?: string 
+  facebookPixelId?: string 
 
   // Support
-  supportEmail?: string | null
-  supportPhone?: string | null
+  supportEmail?: string 
+  supportPhone?: string 
   liveChatEnabled: boolean
 
   // Status & Settings
   status: string
   maintenanceMode: boolean
   multiLanguageEnabled: boolean
-  cookieConsentEnabled?: boolean | null
-  gdprCompliant?: boolean | null
-  ccpaCompliant?: boolean | null
-  enableWishlist?: boolean | null
-  webhooks?: any | null // Json type
+  cookieConsentEnabled?: boolean 
+  gdprCompliant?: boolean 
+  ccpaCompliant?: boolean 
+  enableWishlist?: boolean 
+  webhooks?: any  // Json type
 
   createdAt: Date
   updatedAt: Date

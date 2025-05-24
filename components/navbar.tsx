@@ -54,6 +54,7 @@ export default function Navbar({ user }: NavbarProps) {
     fetchCategories,
     fetchCollections,
     fetchPaymentProviders,
+    fetchCardSections,
     shopSettings,
     loading,
     error,
@@ -93,6 +94,7 @@ export default function Navbar({ user }: NavbarProps) {
           fetchShippingMethods(),
           fetchCategories(),
           fetchCollections(),
+          fetchCardSections(),
           fetchPaymentProviders(),
         ])
 
@@ -112,6 +114,7 @@ export default function Navbar({ user }: NavbarProps) {
     fetchShippingMethods,
     fetchCategories,
     fetchCollections,
+    fetchCardSections,
     fetchPaymentProviders,
     loading,
   ])

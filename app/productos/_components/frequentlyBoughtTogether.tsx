@@ -1,162 +1,379 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { Checkbox } from "@/components/ui/checkbox"
+import type { FrequentlyBoughtTogether } from "@/types/fbt"
+import type { Product } from "@/types/product"
+import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { toast } from "sonner"
 import { useCartStore } from "@/stores/cartStore"
 import { useMainStore } from "@/stores/mainStore"
-import { Plus } from "lucide-react"
-import type { Product } from "@/types/product"
-import { toast } from "sonner"
-import type { ProductVariant } from "@/types/productVariant"
 
 interface FrequentlyBoughtTogetherProps {
-  mainProduct: Product
-  mainVariant: ProductVariant
-  fbt: Record<string, string[]>
+  product: Product
 }
 
-export function FrequentlyBoughtTogether({ mainProduct, mainVariant, fbt }: FrequentlyBoughtTogetherProps) {
-  const { products, shopSettings } = useMainStore()
+// Función para formatear moneda
+const formatCurrency = (amount: number, currency = "USD"): string => {
+  return new Intl.NumberFormat("es-PE", {
+    style: "currency",
+    currency: currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount)
+}
+
+export default function FrequentlyBoughtTogetherComponent({ product }: FrequentlyBoughtTogetherProps) {
+  const [loading, setLoading] = useState(true)
+  const [selectedGroup, setSelectedGroup] = useState<FrequentlyBoughtTogether | null>(null)
+  const [selectedProducts, setSelectedProducts] = useState<Record<string, boolean>>({})
+  const [selectedVariantIds, setSelectedVariantIds] = useState<Record<string, string>>({})
+
+  const { fetchFrequentlyBoughtTogether, frequentlyBoughtTogether, products } = useMainStore()
   const { addItem } = useCartStore()
-  const [fbtProducts, setFbtProducts] = useState<{ product: Product; variant: ProductVariant; selected: boolean }[]>([])
 
-  const defaultCurrency = shopSettings[0]?.defaultCurrency
+  // Estado para almacenar los productos completos obtenidos
+  const [fbtProducts, setFbtProducts] = useState<Product[]>([])
 
+  // Buscar grupos FBT relevantes y obtener productos completos
   useEffect(() => {
-    const fbtItems = Object.entries(fbt)
-      .map(([productId, variantIds]) => {
-        const product = products.find((p) => p.id === productId)
-        if (!product) return null
+    const loadFBTData = async () => {
+      setLoading(true)
 
-        const variant = product.variants.find((v) => variantIds.includes(v.id))
-        if (!variant) return null
+      try {
+        // Asegurarse de que tenemos los datos de FBT
+        if (frequentlyBoughtTogether.length === 0) {
+          await fetchFrequentlyBoughtTogether()
+        }
 
-        return { product, variant, selected: true }
-      })
-      .filter((item): item is NonNullable<typeof item> => item !== null)
+        // Obtener IDs de variantes del producto actual
+        const productVariantIds = product.variants?.map((v) => v.id) || []
 
-    setFbtProducts(fbtItems)
-  }, [fbt, products])
+        // Buscar grupos FBT que contengan alguna variante del producto actual
+        const relevantGroups = frequentlyBoughtTogether.filter((group) => {
+          return group.variants?.some((variant) => productVariantIds.includes(variant.id)) || false
+        })
 
-  const handleCheckboxChange = (index: number) => {
-    setFbtProducts((prev) => prev.map((item, i) => (i === index ? { ...item, selected: !item.selected } : item)))
-  }
+        if (relevantGroups.length > 0) {
+          const selectedFBTGroup = relevantGroups[0]
+          setSelectedGroup(selectedFBTGroup)
 
-  const handleAddToCart = () => {
-    addItem(mainProduct, mainVariant, 1)
-    fbtProducts.forEach((item) => {
-      if (item.selected) {
-        addItem(item.product, item.variant, 1)
+          // Obtener IDs únicos de variantes del grupo FBT
+          const variantIds = selectedFBTGroup.variants?.map((v) => v.id) || []
+
+          // Encontrar productos que contienen estas variantes usando la variable products del store
+          const relatedProducts = products.filter((prod) =>
+            prod.variants?.some((variant) => variantIds.includes(variant.id)),
+          )
+
+          setFbtProducts(relatedProducts)
+
+          // Inicializar selecciones basadas en los productos obtenidos
+          const initialSelected: Record<string, boolean> = {}
+          const initialVariantIds: Record<string, string> = {}
+
+          // Para cada producto, encontrar la variante correspondiente del grupo FBT
+          relatedProducts.forEach((prod) => {
+            initialSelected[prod.id] = true
+
+            // Encontrar la variante de este producto que está en el grupo FBT
+            const fbtVariant = selectedFBTGroup.variants?.find((v) => prod.variants?.some((pv) => pv.id === v.id))
+
+            if (fbtVariant) {
+              initialVariantIds[prod.id] = fbtVariant.id
+            } else if (prod.variants && prod.variants.length > 0) {
+              // Fallback a la primera variante si no se encuentra
+              initialVariantIds[prod.id] = prod.variants[0].id
+            }
+          })
+
+          setSelectedProducts(initialSelected)
+          setSelectedVariantIds(initialVariantIds)
+        }
+      } catch (error) {
+        console.error("Error loading FBT data:", error)
+      }
+
+      setLoading(false)
+    }
+
+    if (product && products.length > 0) {
+      loadFBTData()
+    }
+  }, [product, fetchFrequentlyBoughtTogether, frequentlyBoughtTogether, products])
+
+  // Actualizar la función calculateTotalPrice para usar fbtProducts
+  const calculateTotalPrice = () => {
+    if (!selectedGroup || fbtProducts.length === 0) return 0
+
+    let totalPrice = 0
+
+    fbtProducts.forEach((prod) => {
+      if (selectedProducts[prod.id]) {
+        const selectedVariantId = selectedVariantIds[prod.id]
+        const variant = prod.variants?.find((v) => v.id === selectedVariantId)
+
+        if (variant && variant.prices && variant.prices.length > 0) {
+          totalPrice += Number(variant.prices[0]?.price || 0)
+        }
       }
     })
+
+    return totalPrice
+  }
+
+  const totalPrice = calculateTotalPrice()
+  const currency = selectedGroup?.variants?.[0]?.prices?.[0]?.currency?.code || "PEN"
+
+  // Actualizar la función getProductInfo para usar fbtProducts
+  const getProductInfo = (productId: string) => {
+    const product = fbtProducts.find((p) => p.id === productId)
+    if (!product) return null
+
+    const selectedVariantId = selectedVariantIds[productId]
+    const currentVariant = product.variants?.find((v) => v.id === selectedVariantId) || product.variants?.[0]
+
+    if (!currentVariant) return null
+
+    const price =
+      currentVariant.prices && currentVariant.prices.length > 0 ? Number(currentVariant.prices[0]?.price || 0) : 0
+
+    let variantDescription = ""
+    if (currentVariant.title && currentVariant.title !== product.title) {
+      variantDescription = currentVariant.title
+    } else if (currentVariant.attributes && Object.keys(currentVariant.attributes).length > 0) {
+      variantDescription = Object.entries(currentVariant.attributes)
+        .filter(([_, value]) => value)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join(", ")
+    }
+
+    const imageUrl = currentVariant.imageUrl || product.imageUrls?.[0] || "/placeholder.svg"
+
+    return {
+      product,
+      variant: currentVariant,
+      price,
+      variantDescription,
+      imageUrl,
+      hasMultipleVariants: (product.variants?.length || 0) > 1,
+    }
+  }
+
+  // Actualizar handleAddAllToCart para usar fbtProducts
+  const handleAddAllToCart = () => {
+    if (!selectedGroup || fbtProducts.length === 0) return
+
+    let addedCount = 0
+
+    fbtProducts.forEach((prod) => {
+      if (selectedProducts[prod.id]) {
+        const selectedVariantId = selectedVariantIds[prod.id]
+        const variantToAdd = prod.variants?.find((v) => v.id === selectedVariantId) || prod.variants?.[0]
+
+        if (variantToAdd) {
+          addItem(prod, variantToAdd, 1)
+          addedCount++
+        }
+      }
+    })
+
     toast.success("Combo añadido al carrito", {
-      description: "Los productos seleccionados han sido añadidos a tu carrito.",
+      description: `Se agregaron ${addedCount} productos al carrito`,
     })
   }
 
-  const getPrice = (variant: ProductVariant): number => {
-    const price = variant.prices.find((p) => p.currencyId === defaultCurrency?.id)?.price
-    return Number(price || 0)
+  // Actualizar la lista de productos para usar fbtProducts
+  const productList = fbtProducts.map((p) => p.id)
+
+  const handleProductSelection = (productId: string) => {
+    setSelectedProducts((prev) => ({
+      ...prev,
+      [productId]: !prev[productId],
+    }))
   }
 
-  const mainProductPrice = getPrice(mainVariant)
+  const handleVariantChange = (productId: string, variantId: string) => {
+    setSelectedVariantIds((prev) => ({
+      ...prev,
+      [productId]: variantId,
+    }))
+  }
 
-  const selectedTotal = fbtProducts.reduce((sum, item) => {
-    if (!item.selected) return sum
-    const itemPrice = getPrice(item.variant)
-    return sum + itemPrice
-  }, mainProductPrice)
+  if (loading) {
+    return (
+      <div className="py-8 text-center">
+        <div className="animate-pulse text-muted-foreground">Cargando productos recomendados...</div>
+      </div>
+    )
+  }
 
-  if (fbtProducts.length === 0) return null
+  if (!selectedGroup) {
+    return null // No hay grupos FBT para este producto
+  }
 
   return (
-    <div className="mt-8 border border-gray-200 rounded-lg p-4 sm:p-6 bg-background">
-      <div className="mb-1">
-        <h2 className="text-xl font-semibold text-foreground">¡Haz tu compra aún mejor!</h2>
+    <div className="w-full py-8 bg-muted/30 rounded-lg px-6">
+      {/* Título */}
+      <div className="mb-6">
+        <h2 className="text-lg font-semibold text-foreground mb-1">¡Haz tu compra aún mejor!</h2>
         <p className="text-sm text-muted-foreground">Nuestros clientes vieron también estos productos</p>
       </div>
 
-      <div className="flex flex-wrap items-center justify-center gap-4 my-6">
-        <div className="relative w-24 h-24 border border-border rounded-md overflow-hidden p-2 flex items-center justify-center">
-          <Image
-            src={mainProduct.imageUrls[0] || "/placeholder.svg"}
-            alt={mainProduct.title}
-            width={80}
-            height={80}
-            className="object-contain"
-          />
+      {/* Productos en línea horizontal */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4 flex-1">
+          {productList.map((productId, index) => {
+            const productInfo = getProductInfo(productId)
+            if (!productInfo) return null
+
+            return (
+              <div key={productId} className="flex items-center">
+                {index > 0 && (
+                  <div className="mx-2 text-muted-foreground">
+                    <Plus className="w-5 h-5" />
+                  </div>
+                )}
+
+                <div className="flex flex-col items-center relative">
+                  <div
+                    className={`w-24 h-24 border-2 rounded-lg p-2 bg-background flex items-center justify-center cursor-pointer transition-all duration-200 shadow-sm ${
+                      selectedProducts[productId]
+                        ? "border-primary ring-2 ring-primary/20"
+                        : "border-border hover:border-primary/50 opacity-50"
+                    }`}
+                    onClick={() => handleProductSelection(productId)}
+                  >
+                    <Image
+                      src={productInfo.imageUrl || "/placeholder.svg"}
+                      alt={productInfo.product.title}
+                      width={80}
+                      height={80}
+                      className="object-contain"
+                    />
+
+                    {/* Indicador de selección */}
+                    {selectedProducts[productId] && (
+                      <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-md">
+                        ✓
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
 
-        {fbtProducts.map((item, index) => (
-          <div key={`product-${item.product.id}`} className="flex items-center">
-            <Plus className="mx-2 text-muted-foreground" />
-            <div
-              className={`relative w-24 h-24 border rounded-md overflow-hidden p-2 flex items-center justify-center cursor-pointer
-                ${item.selected ? "border-2 border-primary" : "border border-border"}`}
-              onClick={() => handleCheckboxChange(index)}
-            >
-              <Image
-                src={item.product.imageUrls[0] || "/placeholder.svg"}
-                alt={item.product.title}
-                width={80}
-                height={80}
-                className="object-contain"
-              />
-            </div>
+        {/* Resumen de precio */}
+        <div className="ml-8 text-right">
+          <div className="mb-3">
+            <p className="text-sm text-muted-foreground">Total:</p>
+            <p className="text-2xl font-bold text-primary">{formatCurrency(totalPrice, currency)}</p>
           </div>
-        ))}
-
-        <div className="flex-1 min-w-[200px] flex flex-col items-end justify-center ml-4">
-          <div className="text-right">
-            <div className="text-sm text-muted-foreground">Total:</div>
-            <div className="text-xl font-bold text-foreground">
-              {defaultCurrency?.symbol}
-              {selectedTotal.toFixed(2)}
-            </div>
-          </div>
-
-          <Button onClick={handleAddToCart} className="mt-2">
+          <Button
+            onClick={handleAddAllToCart}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2 rounded-md font-medium shadow-md"
+          >
             Añadir combo
           </Button>
         </div>
       </div>
 
+      {/* Lista de productos con checkboxes */}
       <div className="space-y-3">
-        <div className="flex items-center text-sm">
-          <div className="w-5 h-5 bg-primary/20 rounded-full mr-2 flex items-center justify-center">
-            <div className="w-3 h-3 bg-primary rounded-full"></div>
-          </div>
-          <span className="font-medium">Este producto: </span>
-          <span className="ml-1">{mainProduct.title}</span>
-        </div>
+        {productList.map((productId) => {
+          const productInfo = getProductInfo(productId)
+          if (!productInfo) return null
 
-        {fbtProducts.map((item, index) => (
-          <div key={`checkbox-${item.product.id}`} className="flex items-center text-sm">
-            <Checkbox
-              checked={item.selected}
-              onCheckedChange={() => handleCheckboxChange(index)}
-              id={`fbt-${item.product.id}`}
-              className="mr-2"
-            />
-            <div className="flex flex-wrap items-center">
-              <span className="font-medium text-muted-foreground mr-1">
-                ({defaultCurrency?.symbol}
-                {getPrice(item.variant).toFixed(2)})
-              </span>
-              <span>
-                {item.product.title} - {item.variant.title}
-              </span>
-              <Link href={`/productos/${item.product.slug}`} className="ml-1 text-primary hover:underline">
-                Ver
-              </Link>
+          return (
+            <div key={`list-${productId}`} className="flex items-center gap-3">
+              <div className="flex items-center justify-center">
+                <Checkbox
+                  checked={selectedProducts[productId] || false}
+                  onCheckedChange={() => handleProductSelection(productId)}
+                  className="w-4 h-4 data-[state=checked]:bg-primary data-[state=checked]:border-primary border-primary/60"
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-foreground">
+                    <span className="font-medium">({formatCurrency(productInfo.price, currency)})</span>{" "}
+                    {productInfo.product.title}
+                    {productInfo.variantDescription && (
+                      <span className="text-muted-foreground">, {productInfo.variantDescription}</span>
+                    )}
+                  </p>
+                  <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                    {productInfo.hasMultipleVariants && (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" className="text-xs px-2 py-1 h-7">
+                            Cambiar variante
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 p-3" align="end">
+                          <div className="space-y-3">
+                            <h4 className="font-medium text-sm text-foreground">Reemplazar variante</h4>
+                            <div className="grid grid-cols-2 gap-2">
+                              {productInfo.product.variants?.map((v) => {
+                                let variantDisplay = v.title || ""
+                                if (!variantDisplay && v.attributes) {
+                                  variantDisplay = Object.values(v.attributes).filter(Boolean).join(", ")
+                                }
+                                if (!variantDisplay) {
+                                  variantDisplay = `Variante ${v.id.substring(0, 4)}`
+                                }
+
+                                const isCurrentlySelected =
+                                  selectedVariantIds[productId] === v.id ||
+                                  (!selectedVariantIds[productId] && v.id === productInfo.variant.id)
+
+                                return (
+                                  <div
+                                    key={v.id}
+                                    onClick={() => handleVariantChange(productId, v.id)}
+                                    className={`p-2 border rounded-lg cursor-pointer transition-all hover:bg-muted ${
+                                      isCurrentlySelected ? "border-primary bg-primary/10" : "border-border"
+                                    }`}
+                                  >
+                                    <div className="relative h-12 mb-1">
+                                      <Image
+                                        src={v.imageUrl || productInfo.product.imageUrls?.[0] || "/placeholder.svg"}
+                                        alt={variantDisplay}
+                                        fill
+                                        className="object-contain"
+                                      />
+                                    </div>
+                                    <p className="text-xs text-center truncate text-foreground">{variantDisplay}</p>
+                                    <p className="text-xs font-medium text-center text-primary mt-0.5">
+                                      {formatCurrency(Number(v.prices?.[0]?.price || 0), currency)}
+                                    </p>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                    <Link
+                      href={`/productos/${productInfo.product.slug || ""}`}
+                      className="text-primary hover:text-primary/80 text-sm font-medium underline whitespace-nowrap"
+                    >
+                      Ver
+                    </Link>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
 }
-

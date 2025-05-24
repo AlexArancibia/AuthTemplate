@@ -16,3 +16,11 @@ export function formatCurrency(amount: number | null | undefined, currencyCode =
     minimumFractionDigits: 2,
   }).format(amount)
 }
+
+export function formatDate(date: Date): string {
+  return new Intl.DateTimeFormat("es-ES", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date)
+}

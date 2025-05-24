@@ -1,42 +1,32 @@
 "use client"
 
-import { Badge } from "@/components/ui/badge"
 import type React from "react"
+
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { useCartStore } from "@/stores/cartStore"
-import { useMainStore } from "@/stores/mainStore"
+import { useEmailStore } from "@/stores/emailStore" // Add email store import
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Textarea } from "@/components/ui/textarea"
-import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
-import {
-  CheckCircle,
-  CreditCard,
-  MapPin,
-  Package,
-  Truck,
-  ArrowLeft,
-  ArrowRight,
-  Plus,
-  Home,
-  Building,
-  Loader2,
-} from "lucide-react"
-import Image from "next/image"
 import Link from "next/link"
 import { toast } from "sonner"
-import { Checkbox } from "@/components/ui/checkbox"
 import { OrderFinancialStatus, OrderFulfillmentStatus, ShippingStatus } from "@/types/common"
-import { Card, CardContent } from "@/components/ui/card"
-import { generateOrderConfirmationEmail } from "@/lib/email-templates"
 import { AddressType } from "@prisma/client"
-import { Address, AddressCreateData, useUserStore } from "@/stores/userStore"
-import { auth } from "@/auth"
+import { type AddressCreateData, useUserStore } from "@/stores/userStore"
+import { formatUserName } from "@/lib/user-utils"
+import type { Order } from "@/types/order"
+
+// Import modular components
+import { CartReviewStep } from "@/components/checkout/cart-review-step"
+import { CustomerInfoStep } from "@/components/checkout/customer-info-step"
+import { ShippingPaymentStep } from "@/components/checkout/shipping-payment-step"
+import { ConfirmationStep } from "@/components/checkout/confirmation-step"
+import { OrderSummary } from "@/components/checkout/order-summary"
+import { CheckoutSteps } from "@/components/checkout/checkout-steps"
+import { CreditCard } from "lucide-react"
+import Image from "next/image"
+import { useMainStore } from "@/stores/mainStore"
 
 // Update the STEPS enum to combine shipping and payment
 const STEPS = {
@@ -49,18 +39,9 @@ const STEPS = {
 export default function CheckoutPage() {
   const router = useRouter()
   const { items, clearCart, getTotal } = useCartStore()
-  const {
-    shopSettings,
-    shippingMethods,
-    paymentProviders,
-    fetchShippingMethods,
-    fetchPaymentProviders,
-    createOrder,
-    sendEmail,
-    submitFormEmail,
-  } = useMainStore()
-
-  const { currentUser, loading: userLoading, error: userError, fetchUserById, createAddress } = useUserStore()
+  const { shopSettings, shippingMethods, paymentProviders, createOrder } = useMainStore()
+  const { currentUser, loading: userLoading, fetchUserByEmail, createAddress } = useUserStore()
+  const { sendOrderEmails } = useEmailStore() // Add email store hook
 
   // State for user session
   const [session, setSession] = useState<any>(null)
@@ -70,10 +51,10 @@ export default function CheckoutPage() {
   const [showNewBillingAddress, setShowNewBillingAddress] = useState(false)
   const [selectedShippingAddressId, setSelectedShippingAddressId] = useState<string | null>(null)
   const [selectedBillingAddressId, setSelectedBillingAddressId] = useState<string | null>(null)
- 
+
   const [currentStep, setCurrentStep] = useState(STEPS.CART_REVIEW)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(false)
   const [pageLoading, setPageLoading] = useState(true)
   const [customerId, setCustomerId] = useState<string | null>(null)
   const [orderId, setOrderId] = useState<string | null>(null)
@@ -121,14 +102,10 @@ export default function CheckoutPage() {
     preferredDeliveryDate: new Date().toISOString(),
   })
 
-  // Function to check authentication
- 
-
   // Initial page loading
   useEffect(() => {
     const loadInitialData = async () => {
       try {
-        setSession(await auth())
         setPageLoading(false)
       } catch (error) {
         console.error("Error loading initial data:", error)
@@ -146,98 +123,217 @@ export default function CheckoutPage() {
     return () => clearTimeout(timeout)
   }, [])
 
+  // Fetch user session and data
+  useEffect(() => {
+    const fetchSessionAndUser = async () => {
+      console.log("🔍 Starting to fetch session and user data...")
+      try {
+        // For client components, we need to use a different approach to get the session
+        // Instead of importing auth directly, we'll make a fetch request to an API endpoint
+        const response = await fetch("/api/auth/session")
+        console.log("📡 Session API response status:", response.status)
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch session: ${response.status}`)
+        }
+
+        const sessionData = await response.json()
+        console.log("🔐 Session data:", sessionData)
+
+        if (sessionData && sessionData.user && sessionData.user.email) {
+          console.log("👤 User is authenticated, email:", sessionData.user.email)
+          setSession(sessionData)
+          setIsAuthenticated(true)
+
+          // Fetch user data by email instead of ID
+          console.log("🔄 Fetching user data for email:", sessionData.user.email)
+          const userData = await fetchUserByEmail(sessionData.user.email)
+          console.log("📋 User data fetched:", userData ? "Success" : "Failed")
+
+          if (userData) {
+            console.log("ℹ️ User info:", {
+              name: userData.firstName + " " + userData.lastName,
+              email: userData.email,
+              hasAddresses: userData.addresses && userData.addresses.length > 0,
+            })
+          }
+        } else {
+          console.log("🔒 No authenticated user session found")
+          setIsAuthenticated(false)
+        }
+      } catch (error) {
+        console.error("❌ Error fetching session or user data:", error)
+      }
+    }
+
+    fetchSessionAndUser()
+  }, [fetchUserByEmail])
+
   // Populate form with user data when currentUser changes
   useEffect(() => {
+    console.log("🔄 currentUser changed, checking for data to populate form...")
+
     if (currentUser) {
-      console.log("User data loaded, populating form fields...")
+      console.log("👤 User data loaded:", {
+        id: currentUser.id,
+        name: `${currentUser.firstName || ""} ${currentUser.lastName || ""}`,
+        email: currentUser.email,
+        addressCount: currentUser.addresses?.length || 0,
+      })
 
       // Populate form with user data
-      setFormData((prev) => ({
-        ...prev,
-        firstName: currentUser.firstName || prev.firstName,
-        lastName: currentUser.lastName || prev.lastName,
-        email: currentUser.email || prev.email,
-        phone: currentUser.phone || prev.phone,
-        company: currentUser.company || prev.company,
-        shippingPhone: currentUser.phone || prev.shippingPhone,
-      }))
+      console.log("📝 Populating form with user data...")
+      setFormData((prev) => {
+        const newFormData = {
+          ...prev,
+          firstName: currentUser.firstName || prev.firstName,
+          lastName: currentUser.lastName || prev.lastName,
+          email: currentUser.email || prev.email,
+          phone: currentUser.phone || prev.phone,
+          company: currentUser.company || prev.company,
+          shippingPhone: currentUser.phone || prev.shippingPhone,
+        }
+        console.log("📋 Form data updated with user info:", {
+          firstName: newFormData.firstName,
+          lastName: newFormData.lastName,
+          email: newFormData.email,
+        })
+        return newFormData
+      })
 
       // Set customer ID
       setCustomerId(currentUser.id)
+      console.log("🆔 Customer ID set:", currentUser.id)
 
       // If user has addresses, select the default one
       if (currentUser.addresses && currentUser.addresses.length > 0) {
+        console.log("🏠 User has addresses:", currentUser.addresses.length)
+        console.log(
+          "🏠 Address details:",
+          currentUser.addresses.map((addr) => ({
+            id: addr.id,
+            type: addr.addressType,
+            isDefault: addr.isDefault,
+            address: addr.address1,
+          })),
+        )
+
         // Find default shipping address
         const defaultShippingAddress = currentUser.addresses.find(
           (addr) =>
             addr.isDefault && (addr.addressType === AddressType.shipping || addr.addressType === AddressType.both),
         )
+        console.log("🚚 Default shipping address:", defaultShippingAddress ? defaultShippingAddress.id : "None")
 
         // Find default billing address
         const defaultBillingAddress = currentUser.addresses.find(
           (addr) =>
             addr.isDefault && (addr.addressType === AddressType.billing || addr.addressType === AddressType.both),
         )
+        console.log("💳 Default billing address:", defaultBillingAddress ? defaultBillingAddress.id : "None")
 
         // If no default addresses, use the first appropriate address
         const firstShippingAddress = currentUser.addresses.find(
           (addr) => addr.addressType === AddressType.shipping || addr.addressType === AddressType.both,
         )
+        console.log("🚚 First shipping address:", firstShippingAddress ? firstShippingAddress.id : "None")
 
         const firstBillingAddress = currentUser.addresses.find(
           (addr) => addr.addressType === AddressType.billing || addr.addressType === AddressType.both,
         )
+        console.log("💳 First billing address:", firstBillingAddress ? firstBillingAddress.id : "None")
 
         // Set shipping address
         const shippingAddressToUse = defaultShippingAddress || firstShippingAddress
         if (shippingAddressToUse) {
+          console.log("🚚 Using shipping address:", shippingAddressToUse.id)
           setSelectedShippingAddressId(shippingAddressToUse.id)
           setShippingAddressId(shippingAddressToUse.id)
+
+          // Also populate shipping form fields with the selected address data
+          console.log("📝 Populating shipping form fields with address data...")
+          setFormData((prev) => {
+            const newFormData = {
+              ...prev,
+              address: shippingAddressToUse.address1,
+              apartment: shippingAddressToUse.address2 || "",
+              city: shippingAddressToUse.city,
+              state: shippingAddressToUse.province || "",
+              zipCode: shippingAddressToUse.zip,
+              shippingPhone: shippingAddressToUse.phone || currentUser.phone || "",
+            }
+            console.log("📋 Shipping form fields updated:", {
+              address: newFormData.address,
+              city: newFormData.city,
+              zipCode: newFormData.zipCode,
+            })
+            return newFormData
+          })
         } else {
+          console.log("🚚 No shipping address found, showing new address form")
           setShowNewShippingAddress(true)
         }
 
         // Set billing address
         const billingAddressToUse = defaultBillingAddress || firstBillingAddress
         if (billingAddressToUse) {
+          console.log("💳 Using billing address:", billingAddressToUse.id)
           setSelectedBillingAddressId(billingAddressToUse.id)
           setBillingAddressId(billingAddressToUse.id)
-          setFormData((prev) => ({
-            ...prev,
-            sameBillingAddress: shippingAddressToUse?.id === billingAddressToUse?.id,
-          }))
+
+          // Determine if shipping and billing are the same
+          const isSameAddress = shippingAddressToUse?.id === billingAddressToUse?.id
+          console.log("🔄 Shipping and billing addresses are the same:", isSameAddress)
+
+          setFormData((prev) => {
+            const newFormData = {
+              ...prev,
+              sameBillingAddress: isSameAddress,
+              // Only populate billing fields if not using same address
+              ...(isSameAddress
+                ? {}
+                : {
+                    billingAddress: billingAddressToUse.address1,
+                    billingApartment: billingAddressToUse.address2 || "",
+                    billingCity: billingAddressToUse.city,
+                    billingState: billingAddressToUse.province || "",
+                    billingZipCode: billingAddressToUse.zip,
+                    billingPhone: billingAddressToUse.phone || currentUser.phone || "",
+                  }),
+            }
+            if (!isSameAddress) {
+              console.log("📋 Billing form fields updated:", {
+                billingAddress: newFormData.billingAddress,
+                billingCity: newFormData.billingCity,
+                billingZipCode: newFormData.billingZipCode,
+              })
+            }
+            return newFormData
+          })
         } else if (shippingAddressToUse) {
           // Use shipping address for billing if no billing address exists
+          console.log("💳 No billing address found, using shipping address")
           setSelectedBillingAddressId(shippingAddressToUse.id)
           setBillingAddressId(shippingAddressToUse.id)
           setFormData((prev) => ({ ...prev, sameBillingAddress: true }))
         } else {
+          console.log("💳 No billing address found, showing new address form")
           setShowNewBillingAddress(true)
         }
       } else {
         // If no addresses, show the new address form
+        console.log("🏠 User has no addresses, showing new address forms")
         setShowNewShippingAddress(true)
       }
+    } else {
+      console.log("👤 No user data available")
     }
   }, [currentUser])
 
-  // Fetch shipping methods and payment providers on component mount
+  // Set loading to false since data is already being fetched elsewhere
   useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true)
-      try {
-        console.log("Fetching shipping methods and payment providers...")
-        await Promise.all([fetchShippingMethods(), fetchPaymentProviders()])
-      } catch (error) {
-        console.error("Error loading checkout data:", error)
-        toast.error("Error loading checkout data. Please try again.")
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    loadData()
-  }, [fetchShippingMethods, fetchPaymentProviders])
+    setIsLoading(false)
+  }, [])
 
   // Set default shipping and payment methods once data is loaded
   useEffect(() => {
@@ -352,7 +448,7 @@ export default function CheckoutPage() {
 
   // Save a new address to the user profile
   const saveNewAddress = async (isBilling: boolean) => {
-    if (!isAuthenticated || !currentUser || !session?.user?.id) {
+    if (!isAuthenticated || !currentUser) {
       return null
     }
 
@@ -384,10 +480,17 @@ export default function CheckoutPage() {
             isDefault: !currentUser.addresses?.length,
           }
 
+      console.log(
+        `Creating new ${isBilling ? "billing" : "shipping"} address for user ID: ${currentUser.id}`,
+        newAddress,
+      )
+
       // Create the new address using the user store
-      const createdAddress = await createAddress(session.user.id, newAddress)
+      const createdAddress = await createAddress(currentUser.id, newAddress)
 
       if (createdAddress) {
+        console.log(`Successfully created address with ID: ${createdAddress.id}`)
+
         // Update the selected address ID
         if (isBilling) {
           setSelectedBillingAddressId(createdAddress.id)
@@ -405,6 +508,9 @@ export default function CheckoutPage() {
 
         toast.success(`Nueva dirección ${isBilling ? "de facturación" : "de envío"} guardada`)
         return createdAddress.id
+      } else {
+        console.error("No address was created - returned null or undefined")
+        return null
       }
     } catch (error) {
       console.error("Error saving new address:", error)
@@ -483,7 +589,7 @@ export default function CheckoutPage() {
       if (taxesIncluded) {
         // Si los precios ya incluyen impuestos, extraer el impuesto del subtotal
         const taxDivisor = 1 + taxRate
-        totalTax = subtotalPrice - subtotal / taxDivisor
+        totalTax = subtotalPrice - subtotalPrice / taxDivisor
         totalPrice = subtotalPrice + Number(getShippingCost())
       } else {
         // Si los precios no incluyen impuestos, agregar el impuesto al subtotal
@@ -504,49 +610,67 @@ export default function CheckoutPage() {
       console.log("Currency symbol:", shopSettings?.[0]?.defaultCurrency?.symbol)
 
       // 5. Prepare order data
+      // Generate a random order number between 1 and 1000
+      const orderNumber = Math.floor(Math.random() * 1000) + 1
+
       const orderData = {
-        customerId: customer.id,
+        storeId: process.env.NEXT_PUBLIC_STORE_ID || "store_default", // Use environment variable with fallback
+        orderNumber: orderNumber, // Add the orderNumber field
         currencyId: currencyId,
         totalPrice,
         subtotalPrice,
         totalTax,
         totalDiscounts: 0,
         lineItems,
-        shippingAddressId: calculatedShippingAddressId,
-        billingAddressId: calculatedBillingAddressId,
-        // For guest users, include the address information directly
-        guestInfo: !isAuthenticated
-          ? {
-              firstName: formData.firstName,
-              lastName: formData.lastName,
-              email: formData.email,
-              phone: formData.phone,
-              company: formData.company,
-              shippingAddress: {
+        // Create customerInfo JSON object with properly formatted name
+        customerInfo: (() => {
+          // Use the formatUserName utility function
+          const { firstName, lastName } = formatUserName({
+            firstName: formData.firstName || currentUser?.firstName || null,
+            lastName: formData.lastName || currentUser?.lastName || null,
+            name: currentUser?.name || null,
+          })
+
+          return {
+            firstName,
+            lastName,
+            email: formData.email || currentUser?.email || "",
+            phone: formData.phone || currentUser?.phone || "",
+            company: formData.company || currentUser?.company || "",
+            isAuthenticated: isAuthenticated,
+            userId: currentUser?.id || null,
+          }
+        })(),
+        // Create shippingAddress JSON object
+        shippingAddress:
+          isAuthenticated && calculatedShippingAddressId
+            ? { id: calculatedShippingAddressId }
+            : {
                 address1: formData.address,
-                address2: formData.apartment,
+                address2: formData.apartment || undefined,
                 city: formData.city,
                 province: formData.state,
                 zip: formData.zipCode,
                 country: "PE",
                 phone: formData.shippingPhone,
               },
-              billingAddress: formData.sameBillingAddress
-                ? null
-                : {
-                    address1: formData.billingAddress,
-                    address2: formData.billingApartment,
-                    city: formData.billingCity,
-                    province: formData.billingState,
-                    zip: formData.billingZipCode,
-                    country: "PE",
-                    phone: formData.billingPhone,
-                  },
-            }
-          : undefined,
-        couponId: "", // No coupon for now
-        paymentProviderId: formData.paymentMethod,
-        shippingMethodId: formData.shippingMethod,
+        // Create billingAddress JSON object
+        billingAddress: formData.sameBillingAddress
+          ? null
+          : isAuthenticated && calculatedBillingAddressId
+            ? { id: calculatedBillingAddressId }
+            : {
+                address1: formData.billingAddress,
+                address2: formData.billingApartment || undefined,
+                city: formData.billingCity,
+                province: formData.billingState,
+                zip: formData.billingZipCode,
+                country: "PE",
+                phone: formData.billingPhone,
+              },
+        couponId: null, // Set to null when no coupon
+        paymentProviderId: formData.paymentMethod || null, // Set to null when no payment method
+        shippingMethodId: formData.shippingMethod || null, // Set to null when no shipping method
         financialStatus: OrderFinancialStatus.PENDING,
         fulfillmentStatus: OrderFulfillmentStatus.UNFULFILLED,
         shippingStatus: ShippingStatus.PENDING,
@@ -556,127 +680,182 @@ export default function CheckoutPage() {
         preferredDeliveryDate: formData.preferredDeliveryDate,
       }
 
+      console.log("========== COMPLETE ORDER PAYLOAD ==========")
+      console.log(JSON.stringify(orderData, null, 2))
+      console.log("===========================================")
+
       console.log("========== DATOS COMPLETOS DE LA ORDEN ==========")
       console.log(JSON.stringify(orderData, null, 2))
       console.log("=================================================")
 
       // 6. Create the order
       console.log("Sending order data to server...")
-      const order = await createOrder(orderData)
-      console.log("Order creation response:", order)
+      let orderCreationSuccess = false
+      let retryCount = 0
+      const maxRetries = 3
 
-      if (!order || !order.id) {
-        console.error("Failed to create order - no order ID returned")
-        throw new Error("Failed to create order")
-      }
-
-      console.log("Order created successfully with ID:", order.id)
-      setOrderId(order.id)
-
-      // Solo enviar correo de confirmación si el cliente está autenticado
-      if (isAuthenticated && currentUser) {
+      while (!orderCreationSuccess && retryCount < maxRetries) {
         try {
-          const emailData = {
-            orderId: order.id,
-            customerName:
-              `${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim() || currentUser.name || "Cliente",
-            customerEmail: currentUser.email,
-            items: lineItems.map((item) => ({
-              title: item.title,
-              quantity: item.quantity,
-              price: item.price,
-            })),
-            subtotal: subtotalPrice,
-            tax: totalTax,
-            shipping: shippingCost,
-            total: totalPrice,
-            taxesIncluded: taxesIncluded,
-            taxRate: taxRate,
-            currency,
-            shippingAddress: {
-              address1: formData.address,
-              address2: formData.apartment || undefined,
-              city: formData.city,
-              province: formData.state,
-              zip: formData.zipCode,
-            },
-            billingAddress: !formData.sameBillingAddress
-              ? {
-                  address1: formData.billingAddress,
-                  address2: formData.billingApartment || undefined,
-                  city: formData.billingCity,
-                  province: formData.billingState,
-                  zip: formData.billingZipCode,
-                }
-              : undefined,
-            paymentMethod: paymentProviders.find((p) => p.id === formData.paymentMethod)?.name,
-            notes: formData.notes || undefined,
+          console.log(`Attempt ${retryCount + 1} to create order with orderNumber: ${orderData.orderNumber}`)
+          const order = await createOrder(orderData)
+          console.log("Order creation response:", order)
+
+          if (!order || !order.id) {
+            console.error("Failed to create order - no order ID returned")
+            throw new Error("Failed to create order")
           }
 
-          const emailHtml = generateOrderConfirmationEmail(emailData)
+          console.log("Order created successfully with ID:", order.id)
+          setOrderId(order.id)
+          orderCreationSuccess = true
 
-          await sendEmail(currentUser.email, `Confirmación de pedido #${order.id} - Clefast`, emailHtml)
-          console.log("Confirmation email sent successfully")
-        } catch (emailError) {
-          console.error("Error sending confirmation email:", emailError)
-          // Don't throw here, we don't want to fail the order if email fails
+          // 7. Send order confirmation emails using emailStore
+          try {
+            console.log("📧 Preparing to send order confirmation emails...")
+
+            // Prepare order data for email templates using the Order schema
+            const emailOrderData: Order = {
+              id: order.id,
+              storeId: order.storeId || process.env.NEXT_PUBLIC_STORE_ID || "store_default",
+              orderNumber: order.orderNumber || orderNumber,
+              currencyId: currencyId,
+              // Use the complete Currency object from shopSettings
+              currency: shopSettings?.[0]?.defaultCurrency || {
+                id: currencyId,
+                code: "PEN",
+                name: "Nuevo Sol Peruano",
+                symbol: "S/",
+                decimalPlaces: 2,
+                symbolPosition: "before",
+                isActive: true,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              },
+              // customerInfo as Record<string, any> to match schema
+              customerInfo: {
+                name:
+                  `${formData.firstName || currentUser?.firstName || ""} ${formData.lastName || currentUser?.lastName || ""}`.trim() ||
+                  "Cliente",
+                email: formData.email || currentUser?.email || "",
+                phone: formData.phone || currentUser?.phone || "",
+                company: formData.company || currentUser?.company || "",
+                userId: currentUser?.id || null,
+                isAuthenticated: isAuthenticated,
+              },
+              // shippingAddress as Record<string, any> to match schema
+              shippingAddress: {
+                name: `${formData.firstName || currentUser?.firstName || ""} ${formData.lastName || currentUser?.lastName || ""}`.trim(),
+                address1: formData.address,
+                address2: formData.apartment || "",
+                city: formData.city,
+                state: formData.state || "",
+                postalCode: formData.zipCode,
+                country: "PE",
+                phone: formData.shippingPhone || formData.phone || currentUser?.phone || "",
+              },
+              // billingAddress as Record<string, any> to match schema
+              billingAddress: formData.sameBillingAddress
+                ? null
+                : {
+                    name: `${formData.firstName || currentUser?.firstName || ""} ${formData.lastName || currentUser?.lastName || ""}`.trim(),
+                    address1: formData.billingAddress,
+                    address2: formData.billingApartment || "",
+                    city: formData.billingCity,
+                    state: formData.billingState || "",
+                    postalCode: formData.billingZipCode,
+                    country: "PE",
+                    phone: formData.billingPhone || formData.phone || currentUser?.phone || "",
+                  },
+              lineItems: lineItems.map((item) => ({
+                id: `item_${Date.now()}_${Math.random()}`,
+                orderId: order.id,
+                variantId: item.variantId,
+                title: item.title,
+                quantity: item.quantity,
+                price: item.price,
+                totalDiscount: item.totalDiscount || 0,
+                refundLineItems: [],
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              })),
+              subtotalPrice: subtotalPrice,
+              totalTax: totalTax,
+              totalDiscounts: 0,
+              totalPrice: totalPrice,
+              financialStatus: OrderFinancialStatus.PENDING,
+              fulfillmentStatus: OrderFulfillmentStatus.UNFULFILLED,
+              shippingStatus: ShippingStatus.PENDING,
+              paymentProvider: paymentProviders.find((p) => p.id === formData.paymentMethod) || null,
+              paymentProviderId: formData.paymentMethod || null,
+              shippingMethod: shippingMethods.find((m) => m.id === formData.shippingMethod) || null,
+              shippingMethodId: formData.shippingMethod || null,
+              customerNotes: formData.notes || "",
+              trackingNumber: null,
+              estimatedDeliveryDate: null,
+              refunds: [],
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              // Optional fields that might be needed
+              couponId: null,
+              paymentStatus: null,
+              paymentDetails: null,
+              trackingUrl: null,
+              shippedAt: null,
+              deliveredAt: null,
+              internalNotes: "",
+              source: "web",
+              preferredDeliveryDate: formData.preferredDeliveryDate ? new Date(formData.preferredDeliveryDate) : null,
+              paymentTransactions: [],
+            }
+
+            console.log("📧 Email order data prepared:", emailOrderData)
+
+            // Send both emails (client confirmation and admin notification) with shopSettings
+            const emailResults = await sendOrderEmails(emailOrderData, shopSettings?.[0])
+
+            if (emailResults.clientResult.success) {
+              console.log("✅ Client confirmation email sent successfully")
+            } else {
+              console.error("❌ Failed to send client confirmation email:", emailResults.clientResult.message)
+            }
+
+            if (emailResults.adminResult.success) {
+              console.log("✅ Admin notification email sent successfully")
+            } else {
+              console.error("❌ Failed to send admin notification email:", emailResults.adminResult.message)
+            }
+
+            // Show success message even if some emails failed
+            if (emailResults.clientResult.success || emailResults.adminResult.success) {
+              console.log("📧 At least one email was sent successfully")
+            } else {
+              console.warn("⚠️ Both emails failed to send, but order was created successfully")
+            }
+          } catch (emailError) {
+            console.error("❌ Error sending order emails:", emailError)
+            // Don't throw here, we don't want to fail the order if email fails
+            // The order was created successfully, email failure is not critical
+          }
+        } catch (error) {
+          console.error(`Order creation attempt ${retryCount + 1} failed:`, error)
+          retryCount++
+          if (retryCount < maxRetries) {
+            // Generate a new orderNumber for the retry
+            orderData.orderNumber = Math.floor(Math.random() * 1000) + 1
+            console.log(`Retrying with new orderNumber: ${orderData.orderNumber}`)
+          } else {
+            console.error("Max retries reached. Order creation failed.")
+            toast.error("Error al procesar el pedido. Por favor, intenta nuevamente.")
+            setIsSubmitting(false)
+            return
+          }
         }
-      } else {
-        console.log("Cliente no registrado, no se envía correo de confirmación")
       }
 
-      // Enviar notificación a la empresa sobre el nuevo pedido
-      try {
-        // Preparar resumen de productos para la notificación
-        const productsResumen = items
-          .map(
-            (item) =>
-              `${item.product.title} - ${Object.entries(item.variant.attributes || {})
-                .map(([key, value]) => `${key}: ${value}`)
-                .join(", ")} (${item.quantity} x ${currency}${Number(item.variant.prices[0].price).toFixed(2)})`,
-          )
-          .join("\n")
-
-        // Formatear dirección completa
-        const shippingAddressFormatted = `${formData.firstName} ${formData.lastName}, ${formData.address}${formData.apartment ? `, ${formData.apartment}` : ""}, ${formData.city}, ${formData.state} ${formData.zipCode}`
-
-        // Formatear dirección de facturación si es diferente
-        const billingAddressFormatted = !formData.sameBillingAddress
-          ? `  ${formData.billingAddress}${formData.billingApartment ? `, ${formData.billingApartment}` : ""}, ${formData.billingCity}, ${formData.billingState} ${formData.billingZipCode}`
-          : "Misma que la dirección de envío"
-
-        // Crear datos para el formulario de notificación
-        const notificationData = {
-          email: formData.email || currentUser?.email || "",
-          nombre:
-            `${formData.firstName || currentUser?.firstName || ""} ${formData.lastName || currentUser?.lastName || ""}`.trim(),
-          telefono: formData.phone || currentUser?.phone || "",
-          order: order.id,
-          subtotal: Number(subtotalPrice).toFixed(2),
-          impuesto: totalTax.toFixed(2),
-          tasaImpuesto: `${(taxRate * 100).toFixed(0)}%`,
-          envio: Number(shippingCost).toFixed(2),
-          total: Number(totalPrice).toFixed(2),
-          impuestosIncluidos: taxesIncluded ? "Sí" : "No",
-          productos: productsResumen,
-          direccionEnvio: shippingAddressFormatted,
-          direccionFacturacion: billingAddressFormatted,
-          notas: formData.notes || "Sin notas adicionales",
-          esRegistrado: isAuthenticated ? "Sí" : "No",
-          metodoPago: paymentProviders.find((p) => p.id === formData.paymentMethod)?.name || "No especificado",
-        }
-
-        await submitFormEmail(notificationData)
-        console.log("Notificación de pedido enviada a la empresa")
-      } catch (notificationError) {
-        console.error("Error enviando notificación a la empresa:", notificationError)
-        // No lanzar error, no queremos que falle el pedido si la notificación falla
-      }
-
-      // 7. Success
+      // 8. Success
       console.log("Order process completed successfully")
       toast.success("¡Pedido realizado con éxito!", {
-        description: `Pedido #${order.id} creado. Recibirás un correo con los detalles de tu compra.`,
+        description: `Pedido #${orderId} creado. Recibirás un correo con los detalles de tu compra.`,
       })
 
       clearCart()
@@ -736,7 +915,7 @@ export default function CheckoutPage() {
     return selectedMethod?.prices[0]?.price || 0
   }
 
-  // Calculate totals with the real shipping cost
+  // Calculate totals
   const subtotal = Number(getTotal())
   const shipping = Number(getShippingCost())
   const taxesIncluded = shopSettings?.[0]?.taxesIncluded || false
@@ -870,870 +1049,114 @@ export default function CheckoutPage() {
     )
   }
 
-  // Render an address card
-  const renderAddressCard = (address: Address, isSelected: boolean, onSelect: () => void, isShipping: boolean) => (
-    <Card
-      key={address.id}
-      className={`mb-3 cursor-pointer transition-all ${isSelected ? "ring-2 ring-primary" : "hover:border-primary/50"}`}
-      onClick={onSelect}
-    >
-      <CardContent className="p-4">
-        <div className="flex justify-between items-start">
-          <div className="flex items-start gap-3">
-            <div className={`mt-1 p-1 rounded-full ${isSelected ? "bg-primary text-white" : "bg-muted"}`}>
-              {address.address1.toLowerCase().includes("oficina") || address.company ? (
-                <Building className="h-4 w-4" />
-              ) : (
-                <Home className="h-4 w-4" />
-              )}
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">{address.address1}</p>
-              {address.address2 && <p className="text-sm text-muted-foreground">{address.address2}</p>}
-              <p className="text-sm text-muted-foreground">
-                {address.city}, {address.province} {address.zip}
-              </p>
-              {address.phone && <p className="text-sm text-muted-foreground">{address.phone}</p>}
-              {address.isDefault && <Badge className="mt-1 bg-primary/10 text-primary">Predeterminada</Badge>}
-            </div>
-          </div>
-          <RadioGroupItem
-            value={address.id}
-            id={`${isShipping ? "shipping" : "billing"}-${address.id}`}
-            className="mt-1"
-            checked={isSelected}
-          />
-        </div>
-      </CardContent>
-    </Card>
-  )
+  // Define steps for the checkout process
+  const checkoutSteps = [
+    { step: STEPS.CART_REVIEW, label: "Carrito" },
+    { step: STEPS.CUSTOMER_INFO, label: "Información" },
+    { step: STEPS.SHIPPING_PAYMENT, label: "Envío y Pago" },
+    { step: STEPS.CONFIRMATION, label: "Confirmación" },
+  ]
 
   return (
-    <div className="bg-gray-50 min-h-screen py-10">
-      <div className="container mx-auto px-4">
+    <div className="bg-gradient-to-b from-slate-50 to-white min-h-screen py-12">
+      <div className="container max-w-6xl mx-auto px-4 sm:px-6">
         {/* Checkout Header */}
-        <div className="max-w-4xl mx-auto mb-8">
-          <h1 className="text-3xl font-bold text-center mb-6">Checkout</h1>
+        <div className="max-w-4xl mx-auto mb-12">
+          <h1 className="text-3xl md:text-4xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700">
+            Checkout
+          </h1>
 
           {/* Progress Steps */}
-          <div className="hidden md:flex justify-between items-center max-w-2xl mx-auto mb-8">
-            {[
-              { step: STEPS.CART_REVIEW, label: "Carrito" },
-              { step: STEPS.CUSTOMER_INFO, label: "Información" },
-              { step: STEPS.SHIPPING_PAYMENT, label: "Envío y Pago" },
-              { step: STEPS.CONFIRMATION, label: "Confirmación" },
-            ].map((item, index) => (
-              <div key={index} className="flex flex-col items-center">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 ${
-                    currentStep >= item.step ? "bg-primary text-white" : "bg-gray-200 text-gray-500"
-                  }`}
-                >
-                  {currentStep > item.step ? <CheckCircle className="w-5 h-5" /> : <span>{index + 1}</span>}
-                </div>
-                <span className={`text-sm ${currentStep >= item.step ? "text-primary font-medium" : "text-gray-500"}`}>
-                  {item.label}
-                </span>
-              </div>
-            ))}
-          </div>
+          <CheckoutSteps steps={checkoutSteps} currentStep={currentStep} />
         </div>
 
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Content */}
             <div className={currentStep === STEPS.CONFIRMATION ? "lg:col-span-3" : "lg:col-span-2"}>
-              <div className="bg-white rounded-lg shadow-sm p-6">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className="bg-white rounded-xl shadow-md border border-slate-100 p-6 sm:p-8"
+              >
                 {/* Step 1: Cart Review */}
                 {currentStep === STEPS.CART_REVIEW && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="space-y-6"
-                  >
-                    <h2 className="text-xl font-semibold mb-4">Revisa tu carrito</h2>
-
-                    {items.map((item) => (
-                      <div key={item.variant.id} className="flex items-center gap-4 py-4 border-b">
-                        <div className="relative w-20 h-20 bg-gray-100 rounded-md overflow-hidden">
-                          <Image
-                            src={item.product.imageUrls[0] || "/placeholder.svg"}
-                            alt={item.product.title}
-                            fill
-                            className="object-contain p-2"
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-medium">{item.product.title}</h3>
-                          {item.variant.attributes && Object.entries(item.variant.attributes).length > 1 && (
-                            <p className="text-sm text-gray-500">
-                              {Object.entries(item.variant.attributes || {})
-                                .map(([key, value]) => `${key}: ${value}`)
-                                .join(", ")}
-                            </p>
-                          )}
-
-                          <p className="text-sm text-gray-500">Cantidad: {item.quantity}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">
-                            {currency}
-                            {Number(item.variant.prices[0].price * item.quantity).toFixed(2)}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-
-                    <div className="flex justify-between pt-4">
-                      <Button variant="outline" asChild>
-                        <Link href="/cart">
-                          <ArrowLeft className="mr-2 h-4 w-4" />
-                          Volver al carrito
-                        </Link>
-                      </Button>
-                      <Button onClick={nextStep}>
-                        Continuar
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </div>
-                  </motion.div>
+                  <CartReviewStep items={items} currency={currency} nextStep={nextStep} />
                 )}
 
                 {/* Step 2: Customer Information */}
                 {currentStep === STEPS.CUSTOMER_INFO && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="space-y-6"
-                  >
-                    {!isAuthenticated && (
-                      <div className="bg-blue-50 p-4 rounded-lg mb-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h3 className="font-medium text-blue-800">¿Ya tienes una cuenta?</h3>
-                            <p className="text-sm text-blue-700">Inicia sesión para agilizar el proceso de compra</p>
-                          </div>
-                          <Button variant="outline" className="bg-white" onClick={() => router.push("/login")}>
-                            Iniciar sesión
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    <h2 className="text-xl font-semibold mb-4">Información de contacto</h2>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="firstName">Nombre</Label>
-                        <Input
-                          id="firstName"
-                          name="firstName"
-                          value={formData.firstName}
-                          onChange={handleInputChange}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="lastName">Apellido</Label>
-                        <Input
-                          id="lastName"
-                          name="lastName"
-                          value={formData.lastName}
-                          onChange={handleInputChange}
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="email">Correo electrónico</Label>
-                        <Input
-                          id="email"
-                          name="email"
-                          type="email"
-                          value={formData.email || currentUser?.email || ""}
-                          onChange={handleInputChange}
-                          required
-                          disabled={!!currentUser?.email}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="phone">Teléfono de contacto</Label>
-                        <Input id="phone" name="phone" value={formData.phone} onChange={handleInputChange} required />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="company">Empresa (opcional)</Label>
-                      <Input id="company" name="company" value={formData.company} onChange={handleInputChange} />
-                    </div>
-
-                    <Separator className="my-6" />
-
-                    <h2 className="text-xl font-semibold mb-4">Dirección de envío</h2>
-
-                    {/* Display existing addresses for authenticated users */}
-                    {isAuthenticated && currentUser && currentUser.addresses && currentUser.addresses.length > 0 && (
-                      <div className="mb-6">
-                        <RadioGroup
-                          value={selectedShippingAddressId || ""}
-                          onValueChange={(value) => handleSelectShippingAddress(value)}
-                          className="space-y-2"
-                        >
-                          {currentUser.addresses
-                            .filter(
-                              (addr) =>
-                                addr.addressType === AddressType.shipping || addr.addressType === AddressType.both,
-                            )
-                            .map((address) =>
-                              renderAddressCard(
-                                address,
-                                selectedShippingAddressId === address.id,
-                                () => handleSelectShippingAddress(address.id),
-                                true,
-                              ),
-                            )}
-                        </RadioGroup>
-
-                        <Button
-                          variant="outline"
-                          className="mt-3 flex items-center gap-2"
-                          onClick={() => setShowNewShippingAddress(true)}
-                        >
-                          <Plus className="h-4 w-4" />
-                          Agregar nueva dirección
-                        </Button>
-                      </div>
-                    )}
-
-                    {/* New shipping address form */}
-                    {(showNewShippingAddress || !isAuthenticated || !currentUser?.addresses?.length) && (
-                      <>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="address">Dirección</Label>
-                            <Input
-                              id="address"
-                              name="address"
-                              value={formData.address}
-                              onChange={handleInputChange}
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="shippingPhone">Teléfono</Label>
-                            <Input
-                              id="shippingPhone"
-                              name="shippingPhone"
-                              value={formData.shippingPhone}
-                              onChange={handleInputChange}
-                              required
-                            />
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="apartment">Apartamento, suite, etc. (opcional)</Label>
-                            <Input
-                              id="apartment"
-                              name="apartment"
-                              value={formData.apartment}
-                              onChange={handleInputChange}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="city">Ciudad</Label>
-                            <Input id="city" name="city" value={formData.city} onChange={handleInputChange} required />
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="state">Departamento/Provincia</Label>
-                            <Input
-                              id="state"
-                              name="state"
-                              value={formData.state}
-                              onChange={handleInputChange}
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="zipCode">Código postal</Label>
-                            <Input
-                              id="zipCode"
-                              name="zipCode"
-                              value={formData.zipCode}
-                              onChange={handleInputChange}
-                              required
-                            />
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    <Separator className="my-6" />
-
-                    <div className="flex items-center space-x-2 mb-4">
-                      <Checkbox
-                        id="sameBillingAddress"
-                        checked={formData.sameBillingAddress}
-                        onCheckedChange={handleBillingAddressToggle}
-                      />
-                      <Label htmlFor="sameBillingAddress" className="cursor-pointer">
-                        La dirección de facturación es la misma que la dirección de envío
-                      </Label>
-                    </div>
-
-                    {!formData.sameBillingAddress && (
-                      <div className="space-y-6 border-l-2 border-primary/20 pl-4">
-                        <div className="flex justify-between items-center">
-                          <h2 className="text-xl font-semibold">Dirección de facturación</h2>
-                          {showNewBillingAddress && (
-                            <Button type="button" variant="outline" size="sm" onClick={copyShippingToBilling}>
-                              Copiar dirección de envío
-                            </Button>
-                          )}
-                        </div>
-
-                        {/* Display existing addresses for billing */}
-                        {isAuthenticated &&
-                          currentUser &&
-                          currentUser.addresses &&
-                          currentUser.addresses.length > 0 && (
-                            <div className="mb-6">
-                              <RadioGroup
-                                value={selectedBillingAddressId || ""}
-                                onValueChange={(value) => handleSelectBillingAddress(value)}
-                                className="space-y-2"
-                              >
-                                {currentUser.addresses
-                                  .filter(
-                                    (addr) =>
-                                      addr.addressType === AddressType.billing || addr.addressType === AddressType.both,
-                                  )
-                                  .map((address) =>
-                                    renderAddressCard(
-                                      address,
-                                      selectedBillingAddressId === address.id,
-                                      () => handleSelectBillingAddress(address.id),
-                                      false,
-                                    ),
-                                  )}
-                              </RadioGroup>
-
-                              <Button
-                                variant="outline"
-                                className="mt-3 flex items-center gap-2"
-                                onClick={() => setShowNewBillingAddress(true)}
-                              >
-                                <Plus className="h-4 w-4" />
-                                Agregar nueva dirección de facturación
-                              </Button>
-                            </div>
-                          )}
-
-                        {/* New billing address form */}
-                        {(showNewBillingAddress || !isAuthenticated || !currentUser?.addresses?.length) && (
-                          <>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="billingAddress">Dirección</Label>
-                                <Input
-                                  id="billingAddress"
-                                  name="billingAddress"
-                                  value={formData.billingAddress}
-                                  onChange={handleInputChange}
-                                  required={!formData.sameBillingAddress}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="billingPhone">Teléfono</Label>
-                                <Input
-                                  id="billingPhone"
-                                  name="billingPhone"
-                                  value={formData.billingPhone}
-                                  onChange={handleInputChange}
-                                  required={!formData.sameBillingAddress}
-                                />
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="billingApartment">Apartamento, suite, etc. (opcional)</Label>
-                                <Input
-                                  id="billingApartment"
-                                  name="billingApartment"
-                                  value={formData.billingApartment}
-                                  onChange={handleInputChange}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="billingCity">Ciudad</Label>
-                                <Input
-                                  id="billingCity"
-                                  name="billingCity"
-                                  value={formData.billingCity}
-                                  onChange={handleInputChange}
-                                  required={!formData.sameBillingAddress}
-                                />
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="billingState">Departamento/Provincia</Label>
-                                <Input
-                                  id="billingState"
-                                  name="billingState"
-                                  value={formData.billingState}
-                                  onChange={handleInputChange}
-                                  required={!formData.sameBillingAddress}
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="billingZipCode">Código postal</Label>
-                                <Input
-                                  id="billingZipCode"
-                                  name="billingZipCode"
-                                  value={formData.billingZipCode}
-                                  onChange={handleInputChange}
-                                  required={!formData.sameBillingAddress}
-                                />
-                              </div>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="flex justify-between pt-4">
-                      <Button variant="outline" onClick={prevStep}>
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Atrás
-                      </Button>
-                      <Button onClick={nextStep}>
-                        Continuar
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </div>
-                  </motion.div>
+                  <CustomerInfoStep
+                    formData={formData}
+                    handleInputChange={handleInputChange}
+                    nextStep={nextStep}
+                    prevStep={prevStep}
+                    isAuthenticated={isAuthenticated}
+                    currentUser={currentUser}
+                    showNewShippingAddress={showNewShippingAddress}
+                    setShowNewShippingAddress={setShowNewShippingAddress}
+                    showNewBillingAddress={showNewBillingAddress}
+                    setShowNewBillingAddress={setShowNewBillingAddress}
+                    selectedShippingAddressId={selectedShippingAddressId}
+                    selectedBillingAddressId={selectedBillingAddressId}
+                    handleSelectShippingAddress={handleSelectShippingAddress}
+                    handleSelectBillingAddress={handleSelectBillingAddress}
+                    handleBillingAddressToggle={handleBillingAddressToggle}
+                    copyShippingToBilling={copyShippingToBilling}
+                  />
                 )}
 
                 {/* Step 3: Combined Shipping and Payment Methods */}
                 {currentStep === STEPS.SHIPPING_PAYMENT && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="space-y-8"
-                  >
-                    {/* Shipping Method Section */}
-                    <div className="space-y-6">
-                      <h2 className="text-xl font-semibold mb-4">Método de envío</h2>
-
-                      {isLoading ? (
-                        <div className="py-8 flex justify-center">
-                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        </div>
-                      ) : (
-                        <RadioGroup
-                          value={formData.shippingMethod}
-                          onValueChange={(value) => handleSelectChange("shippingMethod", value)}
-                          className="space-y-4"
-                        >
-                          {shippingMethods.map((method) => (
-                            <div
-                              key={method.id}
-                              className="flex items-center space-x-2 border rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
-                            >
-                              <RadioGroupItem value={method.id} id={method.id} />
-                              <Label htmlFor={method.id} className="flex-1 cursor-pointer">
-                                <div className="flex items-center">
-                                  {method.name.toLowerCase().includes("express") ? (
-                                    <Package className="mr-3 h-5 w-5 text-primary" />
-                                  ) : (
-                                    <Truck className="mr-3 h-5 w-5 text-primary" />
-                                  )}
-                                  <div>
-                                    <p className="font-medium">{method.name}</p>
-                                    <p className="text-sm text-gray-500">
-                                      {method.description || method.estimatedDeliveryTime}
-                                    </p>
-                                  </div>
-                                </div>
-                              </Label>
-                              <span className="font-medium">
-                                {currency}
-                                {Number(method.prices[0]?.price).toFixed(2) || "0.00"}
-                              </span>
-                            </div>
-                          ))}
-                        </RadioGroup>
-                      )}
-                    </div>
-
-                    <Separator />
-
-                    {/* Payment Method Section */}
-                    <div className="space-y-6">
-                      <h2 className="text-xl font-semibold mb-4">Método de pago</h2>
-
-                      {isLoading ? (
-                        <div className="py-8 flex justify-center">
-                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        </div>
-                      ) : (
-                        <RadioGroup
-                          value={formData.paymentMethod}
-                          onValueChange={(value) => handleSelectChange("paymentMethod", value)}
-                          className="space-y-4"
-                        >
-                          {paymentProviders.map((provider) => (
-                            <div
-                              key={provider.id}
-                              className="flex items-center space-x-2 border rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
-                            >
-                              <RadioGroupItem value={provider.id} id={provider.id} />
-                              <Label htmlFor={provider.id} className="flex-1 cursor-pointer">
-                                <div className="flex items-center">
-                                  {getPaymentIcon(provider.name)}
-                                  <div>
-                                    <p className="font-medium">{provider.name}</p>
-                                    <p className="text-sm text-gray-500">{provider.description}</p>
-                                  </div>
-                                </div>
-                              </Label>
-                            </div>
-                          ))}
-                        </RadioGroup>
-                      )}
-
-                      {formData.paymentMethod &&
-                        paymentProviders
-                          .find((p) => p.id === formData.paymentMethod)
-                          ?.name.toLowerCase()
-                          .includes("tarjeta") && (
-                          <div className="space-y-4 pt-4 border-t">
-                            <div className="space-y-2">
-                              <Label htmlFor="cardNumber">Número de tarjeta</Label>
-                              <Input
-                                id="cardNumber"
-                                name="cardNumber"
-                                value={formData.cardNumber}
-                                onChange={handleInputChange}
-                                placeholder="1234 5678 9012 3456"
-                                required
-                              />
-                            </div>
-
-                            <div className="space-y-2">
-                              <Label htmlFor="cardName">Nombre en la tarjeta</Label>
-                              <Input
-                                id="cardName"
-                                name="cardName"
-                                value={formData.cardName}
-                                onChange={handleInputChange}
-                                placeholder="John Doe"
-                                required
-                              />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="expiryDate">Fecha de expiración</Label>
-                                <Input
-                                  id="expiryDate"
-                                  name="expiryDate"
-                                  value={formData.expiryDate}
-                                  onChange={handleInputChange}
-                                  placeholder="MM/AA"
-                                  required
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="cvv">CVV</Label>
-                                <Input
-                                  id="cvv"
-                                  name="cvv"
-                                  value={formData.cvv}
-                                  onChange={handleInputChange}
-                                  placeholder="123"
-                                  required
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                    </div>
-
-                    {/* Additional Notes */}
-                    <div className="space-y-2 pt-4">
-                      <Label htmlFor="notes">Notas adicionales (opcional)</Label>
-                      <Textarea
-                        id="notes"
-                        name="notes"
-                        value={formData.notes}
-                        onChange={handleInputChange}
-                        placeholder="Instrucciones especiales para la entrega"
-                        className="min-h-[100px]"
-                      />
-                    </div>
-
-                    <div className="flex justify-between pt-4">
-                      <Button variant="outline" onClick={prevStep}>
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Atrás
-                      </Button>
-                      <Button onClick={submitOrder} disabled={isSubmitting}>
-                        {isSubmitting ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Procesando...
-                          </>
-                        ) : (
-                          <>Finalizar compra</>
-                        )}
-                      </Button>
-                    </div>
-                  </motion.div>
+                  <ShippingPaymentStep
+                    formData={formData}
+                    handleInputChange={handleInputChange}
+                    handleSelectChange={handleSelectChange}
+                    prevStep={prevStep}
+                    submitOrder={submitOrder}
+                    isSubmitting={isSubmitting}
+                    isLoading={isLoading}
+                    shippingMethods={shippingMethods}
+                    paymentProviders={paymentProviders}
+                    getPaymentIcon={getPaymentIcon}
+                  />
                 )}
 
                 {/* Step 4: Confirmation */}
                 {currentStep === STEPS.CONFIRMATION && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="flex flex-col items-center justify-center py-12 px-4 text-center"
-                  >
-                    <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
-                      <CheckCircle className="w-10 h-10 text-green-600" />
-                    </div>
-
-                    <h2 className="text-3xl font-bold mb-4">¡Gracias por tu compra!</h2>
-
-                    <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                      Tu pedido ha sido recibido y está siendo procesado.
-                      {isAuthenticated && currentUser
-                        ? " Hemos enviado un correo electrónico con los detalles de tu compra."
-                        : ""}
-                    </p>
-
-                    <div className="bg-gray-50 p-4 rounded-lg mb-8 w-full max-w-md">
-                      <p className="text-gray-800 font-medium mb-2">
-                        Número de pedido:{" "}
-                        <span className="font-bold">{orderId || `CL-${Math.floor(Math.random() * 10000)}`}</span>
-                      </p>
-                      <p className="text-gray-600 text-sm">Guarda este número para futuras referencias.</p>
-                    </div>
-
-                    <div className="w-full max-w-md mb-8">
-                      <a
-                        href={`https://wa.me/${shopSettings?.[0]?.phone?.replace(/\s+/g, "") || ""}?text=${encodeURIComponent(
-                          `Hola, acabo de realizar el pedido #${orderId || `CL-${Math.floor(Math.random() * 10000)}`} y quisiera coordinar el pago.
-
-*Detalles del pedido:*
-${items
-  .map(
-    (item) =>
-      `- ${item.product.title} - ${Object.entries(item.variant.attributes || {})
-        .map(([key, value]) => `${key}: ${value}`)
-        .join(", ")} (${item.quantity} x ${currency}${Number(item.variant.prices[0].price).toFixed(2)})`,
-  )
-  .join("\n")}
-
-*Subtotal:* ${currency}${Number(subtotal).toFixed(2)}
-*IGV (18%):* ${currency}${Number(tax).toFixed(2)}
-*Envío:* ${currency}${Number(shipping).toFixed(2)}
-*Total:* ${currency}${Number(total).toFixed(2)}
-
-*Dirección de envío:*
-${formData.firstName} ${formData.lastName}
-${formData.address}${formData.apartment ? `, ${formData.apartment}` : ""}
-${formData.city}, ${formData.state} ${formData.zipCode}
-
-${
-  !formData.sameBillingAddress
-    ? `*Dirección de facturación:*
-  ${formData.billingAddress}${formData.billingApartment ? `, ${formData.billingApartment}` : ""}
-${formData.billingCity}, ${formData.billingState} ${formData.billingZipCode}`
-    : "*Dirección de facturación:* Misma que la dirección de envío"
-}
-
-Gracias.`,
-                        )}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-3 bg-green-500 hover:bg-green-600 text-white font-medium py-4 px-6 rounded-lg w-full transition-colors"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          fill="white"
-                          stroke="currentColor"
-                          strokeWidth="0"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                        </svg>
-                        Contactar por WhatsApp para gestionar el pago
-                      </a>
-                      <p className="text-sm text-gray-500 mt-2 text-center">
-                        Nuestro equipo te ayudará a completar el proceso de pago y responderá todas tus dudas.
-                      </p>
-                    </div>
-
-                    <div className="flex gap-4">
-                      <Button variant="outline" asChild>
-                        <Link href="/productos">Seguir comprando</Link>
-                      </Button>
-                      <Button asChild>
-                        <Link href="/">Volver al inicio</Link>
-                      </Button>
-                    </div>
-                  </motion.div>
+                  <ConfirmationStep
+                    orderId={orderId}
+                    isAuthenticated={isAuthenticated}
+                    currentUser={currentUser}
+                    formData={formData}
+                    items={items}
+                    subtotal={subtotal}
+                    tax={tax}
+                    shipping={shipping}
+                    total={total}
+                    currency={currency}
+                    shopSettings={shopSettings}
+                  />
                 )}
-              </div>
+              </motion.div>
             </div>
 
             {/* Order Summary */}
             {currentStep !== STEPS.CONFIRMATION && (
               <div className="lg:col-span-1">
-                <div className="bg-white rounded-lg shadow-sm p-6 sticky top-24">
-                  <h2 className="text-xl font-semibold mb-4">Resumen del pedido</h2>
-
-                  <div className="space-y-4 mb-6">
-                    {items.map((item) => (
-                      <div key={item.variant.id} className="flex justify-between text-sm">
-                        <span>
-                          {item.product.title} ({item.quantity})
-                        </span>
-                        <span className="font-medium">
-                          {currency}
-                          {Number(item.variant.prices[0].price * item.quantity).toFixed(2)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <Separator className="my-4" />
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span>Subtotal</span>
-                      <span>
-                        {currency}
-                        {Number(subtotal).toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>IGV (18%){taxesIncluded ? " (incluido)" : ""}</span>
-                      <span>
-                        {currency}
-                        {Number(tax).toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Envío</span>
-                      <span>
-                        {currency}
-                        {Number(shipping).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-
-                  <Separator className="my-4" />
-
-                  <div className="flex justify-between font-bold text-lg">
-                    <span>Total</span>
-                    <span>
-                      {currency}
-                      {Number(total).toFixed(2)}
-                    </span>
-                  </div>
-
-                  {/* Shipping Address Summary (only show in payment step) */}
-                  {currentStep === STEPS.SHIPPING_PAYMENT && (
-                    <div className="mt-6 pt-6 border-t">
-                      <div className="flex items-start mb-4">
-                        <MapPin className="w-5 h-5 text-gray-500 mr-2 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <h3 className="font-medium">Dirección de envío</h3>
-                          {isAuthenticated && currentUser && selectedShippingAddressId ? (
-                            // Display selected address from user's saved addresses
-                            (() => {
-                              const address = currentUser.addresses?.find((a) => a.id === selectedShippingAddressId)
-                              return address ? (
-                                <>
-                                  <p className="text-sm text-gray-600">
-                                    {address.address1}, {address.address2 && `${address.address2}, `}
-                                    {address.city}, {address.province} {address.zip}
-                                  </p>
-                                  {address.phone && <p className="text-sm text-gray-600">Tel: {address.phone}</p>}
-                                </>
-                              ) : null
-                            })()
-                          ) : (
-                            // Display address from form data
-                            <>
-                              <p className="text-sm text-gray-600">
-                                {formData.address}, {formData.apartment && `${formData.apartment}, `}
-                                {formData.city}, {formData.state} {formData.zipCode}
-                              </p>
-                              <p className="text-sm text-gray-600">Tel: {formData.shippingPhone}</p>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Billing Address */}
-                      <div className="flex items-start">
-                        <CreditCard className="w-5 h-5 text-gray-500 mr-2 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <h3 className="font-medium">Dirección de facturación</h3>
-                          {formData.sameBillingAddress ? (
-                            <p className="text-sm text-gray-600 italic">Misma que la dirección de envío</p>
-                          ) : isAuthenticated && currentUser && selectedBillingAddressId ? (
-                            // Display selected address from user's saved addresses
-                            (() => {
-                              const address = currentUser.addresses?.find((a) => a.id === selectedBillingAddressId)
-                              return address ? (
-                                <>
-                                  <p className="text-sm text-gray-600">
-                                    {address.address1}, {address.address2 && `${address.address2}, `}
-                                    {address.city}, {address.province} {address.zip}
-                                  </p>
-                                  {address.phone && <p className="text-sm text-gray-600">Tel: {address.phone}</p>}
-                                </>
-                              ) : null
-                            })()
-                          ) : !formData.sameBillingAddress ? (
-                            // Display address from form data
-                            <>
-                              <p className="text-sm text-gray-600">
-                                {formData.billingAddress},{" "}
-                                {formData.billingApartment && `${formData.billingApartment}, `}
-                                {formData.billingCity}, {formData.billingState} {formData.billingZipCode}
-                              </p>
-                              {formData.billingPhone && (
-                                <p className="text-sm text-gray-600">Tel: {formData.billingPhone}</p>
-                              )}
-                            </>
-                          ) : null}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <OrderSummary
+                  items={items}
+                  subtotal={subtotal}
+                  tax={tax}
+                  shipping={shipping}
+                  total={total}
+                  currency={currency}
+                  currentStep={currentStep}
+                  formData={formData}
+                  shippingMethods={shippingMethods}
+                  paymentProviders={paymentProviders}
+                />
               </div>
             )}
           </div>

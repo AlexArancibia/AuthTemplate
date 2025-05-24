@@ -5,7 +5,6 @@ import type { Product } from "@/types/product"
 import type { Category } from "@/types/category"
 import type { Collection } from "@/types/collection"
 import type { Order } from "@/types/order"
- 
 import type { Coupon } from "@/types/coupon"
 import type { ShippingMethod } from "@/types/shippingMethod"
 import type { ShopSettings } from "@/types/store"
@@ -18,7 +17,7 @@ import type { PaymentProvider, PaymentTransaction } from "@/types/payments"
 import type { HeroSection } from "@/types/heroSection"
 import type { CardSection } from "@/types/card"
 import type { TeamMember, TeamSection } from "@/types/team"
-import { FrequentlyBoughtTogether } from "@/types/fbt"
+import type { FrequentlyBoughtTogether } from "@/types/fbt"
 
 // Definir duración del caché (5 minutos)
 const CACHE_DURATION = 5 * 60 * 1000
@@ -41,7 +40,6 @@ interface MainStore {
   productVariants: ProductVariant[]
   collections: Collection[]
   orders: Order[]
- 
   coupons: Coupon[]
   shippingMethods: ShippingMethod[]
   paymentProviders: PaymentProvider[]
@@ -90,7 +88,6 @@ interface MainStore {
   fetchTeamSections: () => Promise<TeamSection[]>
   fetchTeamMembers: (teamSectionId: string) => Promise<TeamMember[]>
   fetchOrders: () => Promise<Order[]>
- 
   fetchCoupons: () => Promise<Coupon[]>
   fetchShippingMethods: () => Promise<ShippingMethod[]>
   fetchPaymentProviders: () => Promise<PaymentProvider[]>
@@ -102,15 +99,20 @@ interface MainStore {
   fetchExchangeRates: () => Promise<ExchangeRate[]>
   fetchFrequentlyBoughtTogether: () => Promise<FrequentlyBoughtTogether[]>
 
+  // Métodos adicionales para FBT
+  fetchFrequentlyBoughtTogetherById: (id: string) => Promise<FrequentlyBoughtTogether>
+  createFrequentlyBoughtTogether: (data: any) => Promise<FrequentlyBoughtTogether>
+  updateFrequentlyBoughtTogether: (id: string, data: any) => Promise<FrequentlyBoughtTogether>
+  deleteFrequentlyBoughtTogether: (id: string) => Promise<void>
+
   // Mantener solo los métodos de creación y actualización para orders y refunds
   createOrder: (data: any) => Promise<Order>
   updateOrder: (id: string, data: any) => Promise<Order>
   createRefund: (data: any) => Promise<void>
 
-
   submitFormEmail: (formData: any) => Promise<void>
   sendEmail: (to: string, subject: string, html: string) => Promise<void>
-  initializeStore: () => Promise<void>;
+  initializeStore: () => Promise<void>
 
   refreshData: () => Promise<void>
   getCategoryById: (id: string) => Category | undefined
@@ -443,8 +445,6 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchCustomers mejorado con caché
- 
   // Método fetchCoupons mejorado con caché
   fetchCoupons: async () => {
     const { coupons, lastFetch } = get()
@@ -764,7 +764,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Nuevo método para FrequentlyBoughtTogether
+  // Método fetchFrequentlyBoughtTogether implementado correctamente para incluir el filtro por tienda
   fetchFrequentlyBoughtTogether: async () => {
     const { frequentlyBoughtTogether, lastFetch } = get()
     const now = Date.now()
@@ -793,6 +793,78 @@ export const useMainStore = create<MainStore>((set, get) => ({
       return response.data
     } catch (error) {
       set({ error: "Failed to fetch frequently bought together items", loading: false })
+      throw error
+    }
+  },
+
+  // Método para obtener un FBT específico por ID
+  fetchFrequentlyBoughtTogetherById: async (id: string) => {
+    set({ loading: true, error: null })
+    try {
+      const response = await apiClient.get<FrequentlyBoughtTogether>(`/frequently-bought-together/${id}`)
+      set({ loading: false })
+      return response.data
+    } catch (error) {
+      set({ error: "Failed to fetch frequently bought together item", loading: false })
+      throw error
+    }
+  },
+
+  // Método para crear un nuevo FBT
+  createFrequentlyBoughtTogether: async (data: any) => {
+    set({ loading: true, error: null })
+    try {
+      if (!STORE_ID) {
+        throw new Error("No store ID provided in environment variables")
+      }
+
+      // Asegurarse de que el storeId esté incluido en los datos
+      const fbtData = {
+        ...data,
+        storeId: data.storeId || STORE_ID,
+      }
+
+      const response = await apiClient.post<FrequentlyBoughtTogether>("/frequently-bought-together", fbtData)
+      set((state) => ({
+        frequentlyBoughtTogether: [...state.frequentlyBoughtTogether, response.data],
+        loading: false,
+      }))
+      return response.data
+    } catch (error) {
+      set({ error: "Failed to create frequently bought together item", loading: false })
+      throw error
+    }
+  },
+
+  // Método para actualizar un FBT existente
+  updateFrequentlyBoughtTogether: async (id: string, data: any) => {
+    set({ loading: true, error: null })
+    try {
+      const response = await apiClient.patch<FrequentlyBoughtTogether>(`/frequently-bought-together/${id}`, data)
+      set((state) => ({
+        frequentlyBoughtTogether: state.frequentlyBoughtTogether.map((item) =>
+          item.id === id ? { ...item, ...response.data } : item,
+        ),
+        loading: false,
+      }))
+      return response.data
+    } catch (error) {
+      set({ error: "Failed to update frequently bought together item", loading: false })
+      throw error
+    }
+  },
+
+  // Método para eliminar un FBT
+  deleteFrequentlyBoughtTogether: async (id: string) => {
+    set({ loading: true, error: null })
+    try {
+      await apiClient.delete(`/frequently-bought-together/${id}`)
+      set((state) => ({
+        frequentlyBoughtTogether: state.frequentlyBoughtTogether.filter((item) => item.id !== id),
+        loading: false,
+      }))
+    } catch (error) {
+      set({ error: "Failed to delete frequently bought together item", loading: false })
       throw error
     }
   },
@@ -871,7 +943,6 @@ export const useMainStore = create<MainStore>((set, get) => ({
       throw error
     }
   },
-
 
   // Utility functions
   refreshData: async () => {
@@ -1009,8 +1080,6 @@ export const useMainStore = create<MainStore>((set, get) => ({
     return get().orders.find((order) => order.id === id)
   },
 
-
-
   getCouponById: (id) => {
     return get().coupons.find((coupon) => coupon.id === id)
   },
@@ -1027,15 +1096,22 @@ export const useMainStore = create<MainStore>((set, get) => ({
     return get().frequentlyBoughtTogether.find((fbt) => fbt.id === id)
   },
 
-
   initializeStore: async () => {
     // if (get().products.length > 0 && get().shopSettings.length > 0) return;
 
-    set({ loading: true });
+    set({ loading: true })
     try {
-      await Promise.all([get().fetchProducts(), get().fetchShopSettings(), get().fetchShippingMethods(), get().fetchCategories(),  get().fetchCollections() ,get().fetchPaymentProviders()]);
+      await Promise.all([
+        get().fetchProducts(),
+        get().fetchShopSettings(),
+        get().fetchShippingMethods(),
+        get().fetchCategories(),
+        get().fetchCollections(),
+        get().fetchPaymentProviders(),
+        get().fetchFrequentlyBoughtTogether(), // Añadido para cargar FBT al inicializar
+      ])
     } finally {
-      set({ loading: false });
+      set({ loading: false })
     }
   },
 }))

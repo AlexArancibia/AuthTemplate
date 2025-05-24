@@ -15,11 +15,13 @@ import type { ProductVariant } from "@/types/productVariant"
 import { ProductSidebar } from "./ProductSidebar"
 import { motion, AnimatePresence } from "framer-motion"
 import useEmblaCarousel from "embla-carousel-react"
-import { FrequentlyBoughtTogether } from "./frequentlyBoughtTogether"
+ 
 import { ProductCard } from "@/components/ProductCard"
 import { toast } from "sonner"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { auth } from "@/auth"
+import FrequentlyBoughtTogetherComponent from "./frequentlyBoughtTogether"
 
 interface ProductDetailsProps {
   slug: string
@@ -35,7 +37,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
   const [isZoomed, setIsZoomed] = useState(false)
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
   const [isLoading, setIsLoading] = useState(true)
-
+  
   // Carrusel para productos relacionados
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: "start",
@@ -411,16 +413,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                 )}
 
                 {/* Display new product fields */}
-                {product.restockThreshold && (
-                  <p className="text-sm text-muted-foreground">
-                    Umbral de reabastecimiento: {product.restockThreshold} unidades
-                  </p>
-                )}
-                {product.restockNotify && (
-                  <p className="text-sm text-green-600">
-                    Notificación de reabastecimiento activada
-                  </p>
-                )}
+ 
                 {product.viewCount && product.viewCount > 0 && (
                   <p className="text-sm text-muted-foreground">
                     {product.viewCount} personas han visto este producto
@@ -443,6 +436,14 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                 fbt={product.fbt || []} 
               />
             </motion.div> */}
+
+             <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.6, duration: 0.5 }}
+            >
+              <FrequentlyBoughtTogetherComponent product={product} />
+            </motion.div>
 
             {/* Product Description Tabs - New Section */}
             <motion.div
