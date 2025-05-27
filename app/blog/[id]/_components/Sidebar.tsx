@@ -59,7 +59,7 @@ export function Sidebar() {
                     {post.type}
                   </Badge>
                   <h4 className="font-medium text-base leading-snug group-hover:text-primary transition-colors">{post.title}</h4>
-                  <p className="text-xs text-muted-foreground line-clamp-2">{getExcerpt(post.body)}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-2">{getExcerpt(post.body || undefined)}</p>
                 </div>
               </article>
             </Link>
