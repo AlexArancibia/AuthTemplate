@@ -3,7 +3,7 @@ import { db } from "@/lib/db"
 import { auth } from "@/auth"
 
 // POST: Establecer una dirección como predeterminada
-export async function POST(request: Request, { params }: { params: { addressId: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ addressId: string }> }) {
   try {
     // Verificación de autenticación usando auth() en lugar de getServerSession
     const session = await auth()
@@ -11,7 +11,7 @@ export async function POST(request: Request, { params }: { params: { addressId: 
       return NextResponse.json({ message: "No autorizado" }, { status: 401 })
     }
 
-    const addressId = params.addressId
+    const { addressId } = await params
 
     // Obtener la dirección para verificar el usuario y tipo
     const address = await db.address.findUnique({
