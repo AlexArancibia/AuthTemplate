@@ -3,7 +3,7 @@ import { db } from "@/lib/db"
 import { auth } from "@/auth"
 
 // PATCH: Actualizar una dirección existente
-export async function PATCH(request: Request, { params }: { params: { addressId: string } }) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ addressId: string }> }) {
   try {
     // Verificación de autenticación usando auth() en lugar de getServerSession
     const session = await auth()
@@ -11,7 +11,7 @@ export async function PATCH(request: Request, { params }: { params: { addressId:
       return NextResponse.json({ message: "No autorizado" }, { status: 401 })
     }
 
-    const addressId = params.addressId
+    const { addressId } = await params
 
     // Obtener la dirección actual para verificar el usuario
     const currentAddress = await db.address.findUnique({
@@ -61,7 +61,7 @@ export async function PATCH(request: Request, { params }: { params: { addressId:
 }
 
 // DELETE: Eliminar una dirección
-export async function DELETE(request: Request, { params }: { params: { addressId: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ addressId: string }> }) {
   try {
     // Verificación de autenticación usando auth() en lugar de getServerSession
     const session = await auth()
@@ -69,7 +69,7 @@ export async function DELETE(request: Request, { params }: { params: { addressId
       return NextResponse.json({ message: "No autorizado" }, { status: 401 })
     }
 
-    const addressId = params.addressId
+    const { addressId } = await params
 
     // Obtener la dirección para verificar el usuario
     const address = await db.address.findUnique({
