@@ -3,11 +3,8 @@ import { db } from "@/lib/db"
 import { auth } from "@/auth"
 
 // GET: Obtener usuario por email
-export async function GET(request: Request, { params }: { params: Promise<{ email: string }>  }) {
-   const { email: encodedEmail } = await params
-    const email = decodeURIComponent(encodedEmail)
+export async function GET(request: Request, { params }: { params: Promise<{ email: string }> }) {
   try {
-    
     // Verificación de autenticación usando auth() en lugar de getServerSession
     const session = await auth()
     if (!session || !session.user) {
@@ -15,7 +12,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ emai
     }
 
     // Descodificar el email (viene codificado en la URL)
-  
+    const { email: encodedEmail } = await params
+    const email = decodeURIComponent(encodedEmail)
 
     // Verificar que el usuario actual está solicitando sus propios datos
     if (email !== session.user.email) {
@@ -52,7 +50,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ emai
 }
 
 // PATCH: Actualizar usuario por email
-export async function PATCH(request: Request, { params }: { params: { email: string } }) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ email: string }> }) {
   try {
     // Verificación de autenticación usando auth() en lugar de getServerSession
     const session = await auth()
@@ -61,7 +59,8 @@ export async function PATCH(request: Request, { params }: { params: { email: str
     }
 
     // Descodificar el email (viene codificado en la URL)
-    const email = decodeURIComponent(params.email)
+    const { email: encodedEmail } = await params
+    const email = decodeURIComponent(encodedEmail)
 
     // Verificar que el usuario actual está actualizando sus propios datos
     if (email !== session.user.email) {
