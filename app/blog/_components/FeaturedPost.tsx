@@ -101,7 +101,7 @@ export function FeaturedContent({ content }: FeaturedContentProps) {
             </div>
 
             <p className="text-gray-600 leading-relaxed">
-              {content.metadata?.excerpt || getExcerpt(content.body)}
+              {content.metadata?.excerpt || getExcerpt(content.body || undefined)}
             </p>
 
             {content.type === ContentType.NEWS && content.metadata?.source && (
