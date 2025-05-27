@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
 import { toast } from "sonner"
 import { OrderFinancialStatus, OrderFulfillmentStatus, ShippingStatus } from "@/types/common"
-import { AddressType } from "@prisma/client"
+ 
 import { type AddressCreateData, useUserStore } from "@/stores/userStore"
 import { formatUserName } from "@/lib/user-utils"
 import type { Order } from "@/types/order"
@@ -27,7 +27,8 @@ import { CheckoutSteps } from "@/components/checkout/checkout-steps"
 import { CreditCard } from "lucide-react"
 import Image from "next/image"
 import { useMainStore } from "@/stores/mainStore"
-
+import { AddressType } from "@/types/auth"
+ 
 // Update the STEPS enum to combine shipping and payment
 const STEPS = {
   CART_REVIEW: 0,
@@ -221,25 +222,25 @@ export default function CheckoutPage() {
         // Find default shipping address
         const defaultShippingAddress = currentUser.addresses.find(
           (addr) =>
-            addr.isDefault && (addr.addressType === AddressType.shipping || addr.addressType === AddressType.both),
+            addr.isDefault && (addr.addressType === AddressType.SHIPPING || addr.addressType === AddressType.BOTH),
         )
         console.log("🚚 Default shipping address:", defaultShippingAddress ? defaultShippingAddress.id : "None")
 
         // Find default billing address
         const defaultBillingAddress = currentUser.addresses.find(
           (addr) =>
-            addr.isDefault && (addr.addressType === AddressType.billing || addr.addressType === AddressType.both),
+            addr.isDefault && (addr.addressType === AddressType.BILLING || addr.addressType === AddressType.BOTH),
         )
         console.log("💳 Default billing address:", defaultBillingAddress ? defaultBillingAddress.id : "None")
 
         // If no default addresses, use the first appropriate address
         const firstShippingAddress = currentUser.addresses.find(
-          (addr) => addr.addressType === AddressType.shipping || addr.addressType === AddressType.both,
+          (addr) => addr.addressType === AddressType.SHIPPING || addr.addressType === AddressType.BOTH,
         )
         console.log("🚚 First shipping address:", firstShippingAddress ? firstShippingAddress.id : "None")
 
         const firstBillingAddress = currentUser.addresses.find(
-          (addr) => addr.addressType === AddressType.billing || addr.addressType === AddressType.both,
+          (addr) => addr.addressType === AddressType.BILLING || addr.addressType === AddressType.BOTH,
         )
         console.log("💳 First billing address:", firstBillingAddress ? firstBillingAddress.id : "None")
 
@@ -456,7 +457,7 @@ export default function CheckoutPage() {
       // Prepare the new address data
       const newAddress: AddressCreateData = isBilling
         ? {
-            addressType: AddressType.billing,
+            addressType: AddressType.BILLING,
             address1: formData.billingAddress,
             address2: formData.billingApartment || undefined,
             city: formData.billingCity,
@@ -468,7 +469,7 @@ export default function CheckoutPage() {
             isDefault: false,
           }
         : {
-            addressType: AddressType.shipping,
+            addressType: AddressType.SHIPPING,
             address1: formData.address,
             address2: formData.apartment || undefined,
             city: formData.city,
