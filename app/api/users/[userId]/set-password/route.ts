@@ -3,7 +3,7 @@ import { db } from "@/lib/db"
 import { auth } from "@/auth"
 import bcrypt from "bcryptjs"
 
-export async function POST(request: Request, { params }: { params: { userId: string } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ userId: string }> }) {
   try {
     // Verificación de autenticación usando auth() en lugar de getServerSession
     const session = await auth()
@@ -11,7 +11,7 @@ export async function POST(request: Request, { params }: { params: { userId: str
       return NextResponse.json({ message: "No autorizado" }, { status: 401 })
     }
 
-    const userId = params.userId
+    const { userId } = await params
 
     // Verificar que el usuario existe
     const user = await db.user.findUnique({

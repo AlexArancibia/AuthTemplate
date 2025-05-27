@@ -3,8 +3,11 @@ import { db } from "@/lib/db"
 import { auth } from "@/auth"
 
 // GET: Obtener usuario por email
-export async function GET(request: Request, { params }: { params: { email: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ email: string }>  }) {
+   const { email: encodedEmail } = await params
+    const email = decodeURIComponent(encodedEmail)
   try {
+    
     // Verificación de autenticación usando auth() en lugar de getServerSession
     const session = await auth()
     if (!session || !session.user) {
@@ -12,7 +15,7 @@ export async function GET(request: Request, { params }: { params: { email: strin
     }
 
     // Descodificar el email (viene codificado en la URL)
-    const email = decodeURIComponent(params.email)
+  
 
     // Verificar que el usuario actual está solicitando sus propios datos
     if (email !== session.user.email) {
