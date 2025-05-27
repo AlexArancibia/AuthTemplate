@@ -12,8 +12,9 @@ import { Separator } from "@/components/ui/separator"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { AddressType } from "@prisma/client"
+ 
 import type { Address } from "@/stores/userStore"
+import { AddressType } from "@/types/auth"
 
 interface CustomerInfoStepProps {
   formData: any
@@ -158,7 +159,7 @@ export function CustomerInfoStep({
             className="space-y-2"
           >
             {currentUser.addresses
-              .filter((addr: { addressType: string }) => addr.addressType === AddressType.shipping || addr.addressType === AddressType.both)
+              .filter((addr: { addressType: string }) => addr.addressType === AddressType.SHIPPING || addr.addressType === AddressType.BOTH)
               .map((address: Address) =>
                 renderAddressCard(
                   address,
@@ -257,7 +258,7 @@ export function CustomerInfoStep({
                 className="space-y-2"
               >
                 {currentUser.addresses
-                  .filter((addr: { addressType: string }) => addr.addressType === AddressType.billing || addr.addressType === AddressType.both)
+                  .filter((addr: { addressType: string }) => addr.addressType === AddressType.BILLING || addr.addressType === AddressType.BOTH)
                   .map((address: Address) =>
                     renderAddressCard(
                       address,

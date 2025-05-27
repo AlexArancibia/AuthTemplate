@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
-import { AddressType } from "@prisma/client"
 import { useUserStore, type UserWithRelations, type Address, type AddressCreateData } from "@/stores/userStore"
 import { AddressForm } from "@/components/dashboard/address-form"
 import {
@@ -28,6 +27,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Home, Building, Plus, Edit, Trash2, Star } from "lucide-react"
+import { AddressType } from "@/types/auth"
 
 interface UserAddressesProps {
   user: UserWithRelations
@@ -42,10 +42,10 @@ export function UserAddresses({ user }: UserAddressesProps) {
 
   const addresses = user.addresses || []
   const shippingAddresses = addresses.filter(
-    (addr) => addr.addressType === AddressType.shipping || addr.addressType === AddressType.both,
+    (addr) => addr.addressType === AddressType.SHIPPING || addr.addressType === AddressType.BOTH,
   )
   const billingAddresses = addresses.filter(
-    (addr) => addr.addressType === AddressType.billing || addr.addressType === AddressType.both,
+    (addr) => addr.addressType === AddressType.BILLING || addr.addressType === AddressType.BOTH,
   )
 
   // Modificar la función handleAddAddress para que acepte ambos tipos
@@ -140,9 +140,9 @@ export function UserAddresses({ user }: UserAddressesProps) {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">
-                    {address.addressType === AddressType.shipping
+                    {address.addressType === AddressType.SHIPPING
                       ? "Dirección de envío"
-                      : address.addressType === AddressType.billing
+                      : address.addressType === AddressType.BILLING
                         ? "Dirección de facturación"
                         : "Dirección de envío y facturación"}
                   </span>

@@ -1,5 +1,6 @@
+import { AddressType, Role } from "@/types/auth"
 import { create } from "zustand"
-import type { Role, AddressType } from "@prisma/client"
+ 
 
 // Tipos para el usuario y sus relaciones
 export interface User {
