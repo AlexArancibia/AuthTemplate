@@ -75,7 +75,7 @@ export function PostCard({ content, index }: PostCardProps) {
             {content.title}
           </h3>
 
-          <p className="text-sm text-gray-600 line-clamp-3">{content.metadata?.excerpt || getExcerpt(content.body)}</p>
+          <p className="text-sm text-gray-600 line-clamp-3">{content.metadata?.excerpt || getExcerpt(content.body!)}</p>
 
           <div className="flex flex-wrap gap-3 pt-2 text-xs text-gray-500">
             {content.author && (

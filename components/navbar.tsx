@@ -206,18 +206,17 @@ export default function Navbar({ user }: NavbarProps) {
   return (
     <nav className="bg-background/95 backdrop-blur-md border-b sticky top-0 z-[180]">
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-14">
+        <div className="flex items-center justify-between h-18">
           {/* Logo */}
-          <div className="w-1/4 lg:w-1/4">
+          <div className="w-1/2 lg:w-1/4">
             <Link href="/" aria-label="Ir a la página de inicio" className="flex items-center">
               {loading ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : shopLogo ? (
-                <img src={shopLogo || "/placeholder.svg"} alt={shopName} className="h-6 w-auto mr-2" />
+                <img src={shopLogo || "/placeholder.svg"} alt={shopName} className="h-10 lg:h-12 w-auto mr-2" />
               ) : (
                 <Store className="h-5 w-5 mr-2" />
               )}
-              <span className="font-semibold text-base">{shopName}</span>
             </Link>
           </div>
 

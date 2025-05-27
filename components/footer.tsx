@@ -86,14 +86,6 @@ export function Footer() {
     { name: "Contáctenos", href: "/contactenos" },
   ]
 
-  const helpLinks = [
-    { name: "Centro de Ayuda", href: "/ayuda" },
-    { name: "Preguntas Frecuentes", href: "/faq" },
-    { name: "Envíos y Devoluciones", href: "/envios" },
-    { name: "Métodos de Pago", href: "/pagos" },
-    { name: "Soporte Técnico", href: "/soporte" },
-  ]
-
   const legalLinks = [
     { name: "Términos y Condiciones", href: "/terminos-y-condiciones", icon: FileText },
     { name: "Política de Privacidad", href: "/politica-de-privacidad", icon: Shield },
@@ -189,17 +181,24 @@ export function Footer() {
             </ul>
           </motion.div>
 
-          {/* Ayuda y soporte */}
+          {/* Enlaces legales */}
           <motion.div variants={itemVariants}>
-            <h3 className="text-lg font-semibold mb-4">Ayuda y Soporte</h3>
+            <h3 className="text-lg font-semibold mb-4">Legal</h3>
             <ul className="space-y-2">
-              {helpLinks.map((link) => (
-                <li key={link.name}>
-                  <Link href={link.href} className="text-gray-300 hover:text-white transition-colors text-sm">
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
+              {legalLinks.map((link) => {
+                const IconComponent = link.icon
+                return (
+                  <li key={link.name}>
+                    <Link
+                      href={link.href}
+                      className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors text-sm group"
+                    >
+                      <IconComponent className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                      <span>{link.name}</span>
+                    </Link>
+                  </li>
+                )
+              })}
             </ul>
           </motion.div>
 
@@ -248,33 +247,29 @@ export function Footer() {
 
         <Separator className="my-8 bg-gray-700" />
 
-        {/* Sección inferior */}
+        {/* Copyright y Redes Sociales */}
         <motion.div
-          variants={containerVariants}
+          variants={itemVariants}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="flex flex-col lg:flex-row justify-between items-center space-y-4 lg:space-y-0"
+          className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0"
         >
-          {/* Enlaces legales */}
-          <motion.div variants={itemVariants} className="flex flex-wrap justify-center lg:justify-start gap-6">
-            {legalLinks.map((link) => {
-              const IconComponent = link.icon
-              return (
-                <Link
-                  key={link.name}
-                  href={link.href}
-                  className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors text-sm group"
-                >
-                  <IconComponent className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                  <span>{link.name}</span>
-                </Link>
-              )
-            })}
-          </motion.div>
+          {/* Copyright */}
+          <div className="text-center md:text-left">
+            <p className="text-gray-400 text-sm flex items-center justify-center md:justify-start space-x-1">
+              <span>© {new Date().getFullYear()}</span>
+              <span>{shopInfo?.name || "Nuestra Empresa"}.</span>
+              <span>Todos los derechos reservados.</span>
+            </p>
+            <p className="text-gray-400 text-sm flex items-center justify-center md:justify-start space-x-1 mt-1">
+              <span>Desarrollado por Emet Studio</span>
+            </p>
+ 
+          </div>
 
           {/* Redes sociales */}
-          <motion.div variants={itemVariants} className="flex space-x-4">
+          <div className="flex space-x-4">
             {socialLinks.map((social) => {
               const IconComponent = social.icon
               return (
@@ -288,34 +283,7 @@ export function Footer() {
                 </Link>
               )
             })}
-          </motion.div>
-        </motion.div>
-
-        <Separator className="my-6 bg-gray-700" />
-
-        {/* Copyright */}
-        <motion.div
-          variants={itemVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          className="text-center"
-        >
-          <p className="text-gray-400 text-sm flex items-center justify-center space-x-1">
-            <span>© {new Date().getFullYear()}</span>
-            <span>{shopInfo?.name || "Nuestra Empresa"}.</span>
-            <span>Todos los derechos reservados.</span>
-            <span>Hecho con</span>
-            <Heart className="w-4 h-4 text-red-500 fill-current" />
-            <span>en Perú</span>
-          </p>
-          {shopInfo?.domain && (
-            <p className="text-gray-500 text-xs mt-2">
-              <Link href={shopInfo.domain} className="hover:text-gray-300 transition-colors">
-                {shopInfo.domain}
-              </Link>
-            </p>
-          )}
+          </div>
         </motion.div>
       </div>
     </footer>

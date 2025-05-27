@@ -21,13 +21,7 @@ export default function PoliticaDePrivacidadPage() {
       <div className="bg-white border-b border-gray-200">
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-4xl mx-auto">
-            <Link
-              href="/contacto"
-              className="inline-flex items-center text-primary hover:text-primary/80 transition-colors mb-6"
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver al contacto
-            </Link>
+ 
 
             <motion.div
               initial={{ opacity: 0, y: 20 }}

@@ -6,6 +6,7 @@ import { Toaster } from "sonner"
 import Navbar from "@/components/navbar"
 import { auth } from "@/auth"
 import { Footer } from "@/components/footer"
+import { PreFooterContact } from "@/components/PreFooter"
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -31,6 +32,7 @@ export default async function RootLayout({
         <Toaster position="top-center" richColors />
         <Navbar user={session?.user} />
         <main className="  ">{children}</main>
+         <PreFooterContact />
         <Footer />
       </body>
     </html>

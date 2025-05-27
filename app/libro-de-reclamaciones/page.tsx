@@ -335,9 +335,7 @@ Hora: ${new Date().toLocaleTimeString("es-PE")}
                 >
                   Registrar otro reclamo
                 </Button>
-                <Button asChild className="w-full">
-                  <Link href="/">Volver al inicio</Link>
-                </Button>
+ 
               </div>
             </motion.div>
           </div>

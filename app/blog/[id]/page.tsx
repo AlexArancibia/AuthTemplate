@@ -40,10 +40,10 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
     <main className="min-h-screen bg-white md:bg-muted/80 pb-16">
       <div className="container-section py-16 md:py-16 bg-[url('/fondoproduct.jpg')] bg-cover">
         <motion.div className="content-section text-left" {...fadeIn}>
-          <h2 className="text-white mb-2">{currentContent.title}</h2>
-          <p className="text-white/90 text-lg">
+          <h2 className="text-white text-3xl lg:text-5xl mb-2">{currentContent.title}</h2>
+          {/* <p className="text-white/90 text-lg">
             {currentContent.author?.firstName} {currentContent.author?.lastName}
-          </p>
+          </p> */}
         </motion.div>
       </div>
 

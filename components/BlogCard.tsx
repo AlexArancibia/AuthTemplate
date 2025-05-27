@@ -28,18 +28,24 @@ export function BlogCard({ content }: BlogCardProps) {
 
       {/* Content */}
       <div className="p-6 space-y-4 rounded-b-xl border border-border border-t-0" >
-        <Badge variant="secondary" className="bg-primary/10 text-accent hover:bg-primary/20 ">
+        <Badge variant="secondary" className="bg-primary/10 text-blue-600 hover:bg-primary/20 ">
           {content.type}
         </Badge>
 
         <h3 className="text-xl font-semibold text-secondary line-clamp-2 group-hover:text-primary transition-colors">
           {content.title}
         </h3>
+        {content.body && <p
+  className="line-clamp-3"
+  dangerouslySetInnerHTML={{
+    __html: content.body.replace(/<[^>]+>/g, ''),
+  }}
+></p>}
+       
+
 
         <div className="flex items-center gap-3 ">
           <div className="flex gap-2 text-sm text-muted-foreground">
-            {content.author ? <span>{content.author.firstName} {content.author.lastName}</span> : <span>Autor desconocido</span>}
-            <span>·</span>
             {publishedDate && (
               <time dateTime={publishedDate.toISOString()}>
                 {publishedDate.toLocaleDateString()}

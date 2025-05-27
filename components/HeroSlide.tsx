@@ -23,6 +23,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
     backgroundImage,
     mobileBackgroundImage,
     backgroundVideo,
+    mobileBackgroundVideo,
     buttonText,
     buttonLink,
     styles = {},
@@ -54,6 +55,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
   }
 
   const youtubeId = backgroundVideo ? getYouTubeId(backgroundVideo) : null
+  const mobileYoutubeId = mobileBackgroundVideo ? getYouTubeId(mobileBackgroundVideo) : null
   const hasVideo = Boolean(youtubeId)
 
   // Clases para el contenedor principal
@@ -62,7 +64,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
   }`
 
   // Clases para la imagen de fondo
-  const backgroundImageClasses = `object-cover ${styles.backgroundSize || ""} ${styles.backgroundPosition || ""}`
+  const backgroundImageClasses = `object-cover ${styles.backgroundSize || ""}`
 
   // Clases para el iframe de video
   const videoClasses = `absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] min-h-full min-w-full transition-opacity duration-300 ${
@@ -82,11 +84,11 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
   } ${styles.verticalAlign || "items-center"}`
 
   // Clases para el div de contenido
-  const contentDivClasses = `space-y-4 md:space-y-6 ${styles.textAlign || ""} ${styles.contentWidth?.mobile || ""} md:${
+  const contentDivClasses = ` space-y-4 md:space-y-6 ${styles.textAlign || ""} ${styles.contentWidth?.mobile || ""} md:${
     styles.contentWidth?.tablet || ""
   } lg:${styles.contentWidth?.desktop || ""} ${styles.contentPadding?.mobile || ""} md:${
     styles.contentPadding?.tablet || ""
-  } lg:${styles.contentPadding?.desktop || ""}`
+  } lg:${styles.contentPadding?.desktop || ""} w-full  lg:w-1/2 `
 
   // Clases para el título
   const titleClasses = `${styles.titleColor || ""} ${styles.titleSize?.mobile || ""} md:${
@@ -96,7 +98,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
   // Clases para el subtítulo
   const subtitleClasses = `${styles.subtitleColor || ""} ${styles.subtitleSize?.mobile || ""} md:${
     styles.subtitleSize?.tablet || ""
-  } lg:${styles.subtitleSize?.desktop || ""} max-w-prose`
+  } lg:${styles.subtitleSize?.desktop || "text-xl"} max-w-prose`
 
   // Clases para el contenedor del botón
   const buttonContainerClasses = `${
@@ -114,9 +116,10 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
         <div className="absolute inset-0 overflow-hidden">
           {/* Fallback image mientras carga el video */}
           {bgImage && !isVideoReady && (
-            <div className="absolute inset-0">
+            <>
+            <div className="absolute inset-0 block lg:hidden">
               <Image
-                src={bgImage || "/placeholder.svg"}
+                src={ mobileBackgroundImage    || "/placeholder.svg"}
                 alt={title || "Background"}
                 fill
                 className={backgroundImageClasses}
@@ -124,7 +127,21 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
                 sizes="100vw"
               />
             </div>
+
+            <div className="absolute inset-0 hidden lg:block">
+              <Image
+                src={ backgroundImage     || "/placeholder.svg"}
+                alt={title || "Background"}
+                fill
+                className={backgroundImageClasses}
+                priority
+                sizes="100vw"
+              />
+            </div>
+            </>
           )}
+
+          
 
           {/* Video de fondo */}
           <div className="absolute inset-0 w-full h-full">
@@ -133,7 +150,17 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
                 window.location.origin,
               )}`}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              className={videoClasses}
+              className={`${videoClasses} hidden lg:block`}
+              onLoad={() => setIsVideoReady(true)}
+              onError={() => setHasVideoError(true)}
+              frameBorder="0"
+            />
+            <iframe
+              src={`https://www.youtube.com/embed/${mobileYoutubeId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${mobileYoutubeId}&showinfo=0&rel=0&modestbranding=1&playsinline=1&enablejsapi=1&origin=${encodeURIComponent(
+                window.location.origin,
+              )}`}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              className={`${videoClasses} block lg:hidden`}
               onLoad={() => setIsVideoReady(true)}
               onError={() => setHasVideoError(true)}
               frameBorder="0"
@@ -145,14 +172,31 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
         </div>
       ) : bgImage ? (
         <div className="absolute inset-0">
-          <Image
-            src={bgImage || "/placeholder.svg"}
-            alt={title || "Hero background"}
-            fill
-            priority
-            className={backgroundImageClasses}
-            quality={90}
-          />
+          <>
+            <div className="absolute inset-0 block lg:hidden">
+              <Image
+                src={ mobileBackgroundImage    || "/placeholder.svg"}
+                alt={title || "Background"}
+                fill
+                className={backgroundImageClasses}
+                priority
+                sizes="100vw"
+                quality={100}
+              />
+            </div>
+
+            <div className="absolute inset-0 hidden lg:block">
+              <Image
+                src={ backgroundImage     || "/placeholder.svg"}
+                alt={title || "Background"}
+                fill
+                className="object-cover"
+                priority
+                sizes="100vw"
+                quality={100}
+              />
+            </div>
+            </>
           <div className="absolute inset-0" style={getOverlayStyle()} />
         </div>
       ) : (
@@ -162,7 +206,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
       {/* Contenido */}
       <div className={contentContainerClasses}>
         <div className="container mx-auto px-4 md:px-6 h-full flex">
-          <div className={contentAlignClasses}>
+          <div className={`${contentAlignClasses} items-start lg:items-center pt-8 lg:pt-0 lg:pb-16`}>
             <motion.div
               className={contentDivClasses}
               initial={{ opacity: 0, y: 20 }}
@@ -171,7 +215,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
             >
               {title && (
                 <motion.h1
-                  className="text-[2em] lg:text-[3.5em] font-semibold"
+                  className={`text-[2.5em] lg:text-[3.5em] font-bold ${styles.titleColor || ""} `}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: animationDelay }}
@@ -182,7 +226,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
 
               {subtitle && (
                 <motion.p
-                  className={subtitleClasses}
+                  className={`text-base md:text-lg  ${styles.subtitleColor || ""}`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.1 + animationDelay }}
@@ -201,7 +245,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
                   <Button
                     variant={(styles.buttonVariant || "default") as any}
                     size={(styles.buttonSize || "default") as any}
-                    className="font-medium hover:scale-105 transition-transform shadow-lg"
+                    className="font-medium text-base hover:scale-105 transition-transform shadow-lg"
                     asChild
                   >
                     <Link href={buttonLink}>{buttonText}</Link>

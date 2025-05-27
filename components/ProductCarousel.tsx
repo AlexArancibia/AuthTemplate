@@ -78,7 +78,7 @@ const hasFetched = useRef(false);
               <Button
                 variant="secondary"
                 size="icon"
-                className="absolute -left-4 top-1/2 -translate-y-1/2 bg-white text-accent shadow-lg hover:bg-gray-100 disabled:opacity-50"
+                className="absolute -left-4 top-1/2 -translate-y-1/2 bg-primary text-accent shadow-lg hover:bg-secondary disabled:opacity-50"
                 onClick={scrollPrev}
                 disabled={!canScrollPrev}
               >
@@ -87,7 +87,7 @@ const hasFetched = useRef(false);
               <Button
                 variant="secondary"
                 size="icon"
-                className="absolute -right-4 top-1/2 -translate-y-1/2 bg-white text-accent shadow-lg hover:bg-gray-100 disabled:opacity-50"
+                className="absolute -right-4 top-1/2 -translate-y-1/2 bg-primary text-accent shadow-lg hover:bg-secondary disabled:opacity-50"
                 onClick={scrollNext}
                 disabled={!canScrollNext}
               >

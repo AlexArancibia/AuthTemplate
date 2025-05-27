@@ -254,7 +254,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr,300px] gap-8 lg:gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-[auto_300px] gap-8 lg:gap-12">
           {/* Product Content */}
           <div className="space-y-8">
             {/* Product Images and Purchase Options */}

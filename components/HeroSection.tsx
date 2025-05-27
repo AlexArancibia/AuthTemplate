@@ -38,8 +38,7 @@ export function HeroSection() {
           section.metadata &&
           typeof section.metadata === "object" &&
           "section" in section.metadata &&
-          (section.metadata.section?.toLowerCase() === "inicio" ||
-            section.metadata.section?.toLowerCase() === "home") &&
+          (section.metadata.section?.toLowerCase() === "inicio") &&
           section.isActive
         )
       })
