@@ -73,7 +73,7 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
     const attributes: Record<string, Set<string>> = {}
     products.forEach((product: Product) => {
       product.variants.forEach((variant) => {
-        Object.entries(variant.attributes).forEach(([key, value]) => {
+        Object.entries(variant.attributes!).forEach(([key, value]) => {
           if (key !== "type" && typeof value === "string") {
             if (!attributes[key]) {
               attributes[key] = new Set()

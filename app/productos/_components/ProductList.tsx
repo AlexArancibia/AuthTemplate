@@ -158,7 +158,7 @@ function ProductListContent({
 
       // Filter by category
       if (
-        filters.categories.length > 0 &&
+        filters.categories.length > 0 && product.categories &&
         !product.categories.some((cat: Category) => filters.categories.includes(cat.id))
       ) {
         return false
@@ -169,7 +169,7 @@ function ProductListContent({
         return (
           values.length === 0 ||
           product.variants.some((variant) =>
-            values.includes(variant.attributes[attribute as keyof typeof variant.attributes] as string),
+            values.includes(variant.attributes![attribute as keyof typeof variant.attributes] as string),
           )
         )
       })
