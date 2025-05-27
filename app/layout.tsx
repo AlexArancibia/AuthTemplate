@@ -7,6 +7,7 @@ import Navbar from "@/components/navbar"
 import { auth } from "@/auth"
 import { Footer } from "@/components/footer"
 import { PreFooterContact } from "@/components/PreFooter"
+import { WhatsAppButton } from "@/components/WhatsappButton"
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -34,6 +35,7 @@ export default async function RootLayout({
         <main className="  ">{children}</main>
          <PreFooterContact />
         <Footer />
+        <WhatsAppButton />
       </body>
     </html>
   )

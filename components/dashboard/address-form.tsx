@@ -8,9 +8,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2 } from "lucide-react"
 import type { Address, AddressCreateData } from "@/stores/userStore"
+import { AddressType } from "@/types/auth"
 
 interface AddressFormValues {
-  addressType: "shipping" | "billing" | "both"
+  addressType: AddressType
   address1: string
   address2?: string
   city: string
@@ -45,7 +46,7 @@ export function AddressForm({ onSubmit, isSubmitting, initialData, isFirstAddres
           isDefault: initialData.isDefault,
         }
       : {
-          addressType: "shipping",
+          addressType: "SHIPPING" as AddressType, // Use the correct enum value
           address1: "",
           address2: "",
           city: "",
@@ -117,19 +118,19 @@ export function AddressForm({ onSubmit, isSubmitting, initialData, isFirstAddres
                 >
                   <FormItem className="flex items-center space-x-3 space-y-0">
                     <FormControl>
-                      <RadioGroupItem value="shipping" />
+                      <RadioGroupItem value="SHIPPING" />
                     </FormControl>
                     <FormLabel className="font-normal">Dirección de envío</FormLabel>
                   </FormItem>
                   <FormItem className="flex items-center space-x-3 space-y-0">
                     <FormControl>
-                      <RadioGroupItem value="billing" />
+                      <RadioGroupItem value="BILLING" />
                     </FormControl>
                     <FormLabel className="font-normal">Dirección de facturación</FormLabel>
                   </FormItem>
                   <FormItem className="flex items-center space-x-3 space-y-0">
                     <FormControl>
-                      <RadioGroupItem value="both" />
+                      <RadioGroupItem value="BOTH" />
                     </FormControl>
                     <FormLabel className="font-normal">Ambos (envío y facturación)</FormLabel>
                   </FormItem>
