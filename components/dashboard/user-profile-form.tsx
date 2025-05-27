@@ -19,7 +19,7 @@ const profileFormSchema = z.object({
   phone: z.string().optional(),
   company: z.string().optional(),
   taxId: z.string().optional(),
-  acceptsMarketing: z.boolean().default(false),
+  acceptsMarketing: z.boolean(),
 })
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>
@@ -41,7 +41,7 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
       phone: user.phone || "",
       company: user.company || "",
       taxId: user.taxId || "",
-      acceptsMarketing: user.acceptsMarketing || false,
+      acceptsMarketing: user.acceptsMarketing ?? false,
     },
   })
 
