@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
 import type { NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-
+export const runtime = 'nodejs'
 import GitHub from "next-auth/providers/github"
 import Google from "next-auth/providers/google"
 
