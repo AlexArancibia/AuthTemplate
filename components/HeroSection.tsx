@@ -59,10 +59,8 @@ export function HeroSection() {
   if (error || storeError) {
     console.error("[HeroSection] Error:", error || storeError)
     return (
-      <div className="w-full h-[50vh] flex items-center justify-center">
-        <div className="text-red-500 max-w-md text-center p-4 bg-red-50 rounded-lg">
-          {error || storeError || "Error al cargar las secciones de héroe"}
-        </div>
+      <div className="w-full h-[100vh] flex items-center justify-center">
+ 
       </div>
     )
   }

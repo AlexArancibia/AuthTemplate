@@ -64,6 +64,7 @@ export default function Navbar({ user }: NavbarProps) {
   const [mounted, setMounted] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [showInitialLoading, setShowInitialLoading] = useState(true)
 
   // Simple fetch control
   const hasFetched = useRef(false)
@@ -71,6 +72,15 @@ export default function Navbar({ user }: NavbarProps) {
   // Handle hydration
   useEffect(() => {
     setMounted(true)
+  }, [])
+
+  // Show loading screen immediately and hide after 700ms
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowInitialLoading(false)
+    }, 700)
+
+    return () => clearTimeout(timer)
   }, [])
 
   // Fetch shop settings on mount
@@ -175,6 +185,22 @@ export default function Navbar({ user }: NavbarProps) {
       // Redirigir a la página de resultados de búsqueda
       window.location.href = `/productos?search=${encodeURIComponent(searchTerm.trim())}`
     }
+  }
+
+  // Show loading screen immediately on initial page load - BEFORE any other renders
+  if (showInitialLoading) {
+    return (
+      <div className="fixed inset-0 z-[9999] bg-white flex items-center justify-center" style={{ zIndex: 99999 }}>
+        <div className="flex flex-col items-center">
+          <img 
+            src="/fondo1.png" 
+            alt="Cargando" 
+            className="w-32 h-32 object-contain animate-pulse"
+            style={{ maxWidth: '128px', maxHeight: '128px' }}
+          />
+        </div>
+      </div>
+    )
   }
 
   // Si no está montado, no renderizamos nada o un placeholder simple
