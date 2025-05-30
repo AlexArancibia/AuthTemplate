@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useEffect, useMemo } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { ChevronLeft, ChevronRight, Minus, Plus, ShoppingCart, ChevronRightIcon, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Minus, Plus, ShoppingCart, ChevronRightIcon, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useMainStore } from "@/stores/mainStore"
@@ -15,12 +15,11 @@ import type { ProductVariant } from "@/types/productVariant"
 import { ProductSidebar } from "./ProductSidebar"
 import { motion, AnimatePresence } from "framer-motion"
 import useEmblaCarousel from "embla-carousel-react"
- 
+
 import { ProductCard } from "@/components/ProductCard"
 import { toast } from "sonner"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { auth } from "@/auth"
 import FrequentlyBoughtTogetherComponent from "./frequentlyBoughtTogether"
 
 interface ProductDetailsProps {
@@ -37,7 +36,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
   const [isZoomed, setIsZoomed] = useState(false)
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
   const [isLoading, setIsLoading] = useState(true)
-  
+
   // Carrusel para productos relacionados
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: "start",
@@ -76,29 +75,23 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
     return Object.fromEntries(Object.entries(options).map(([key, value]) => [key, Array.from(value)]))
   }, [product])
 
-  // Modificado para mostrar solo la imagen de la variante seleccionada cuando hay variaciones
+  // Modificado para mostrar solo las imágenes de la variante seleccionada
   const displayImages = useMemo(() => {
-    if (!product || !selectedVariant) return []
+    if (!product) return []
 
-    // Si el producto tiene variaciones (más de una variante o atributos específicos)
-    const hasVariations =
-      product.variants.length > 1 ||
-      (product.variants.length === 1 && 
-       selectedVariant.attributes && 
-       Object.keys(selectedVariant.attributes).some((key) => key !== "type"))
-
-    if (hasVariations && selectedVariant.imageUrl) {
-      // Si tiene variaciones y la variante seleccionada tiene imagen, mostrar solo esa imagen
-      return [selectedVariant.imageUrl]
-    } else {
-      // Si no tiene variaciones o la variante no tiene imagen, mostrar las imágenes generales
-      return [...product.imageUrls]
+    // Si hay una variante seleccionada y tiene imágenes, mostrar solo esas
+    if (selectedVariant && selectedVariant.imageUrls && selectedVariant.imageUrls.length > 0) {
+      return selectedVariant.imageUrls.map((url) => ({ url, variant: selectedVariant }))
     }
+
+    // Si no hay imágenes en la variante seleccionada, mostrar las imágenes del producto principal
+    // Asegúrate de que todos los objetos tengan la misma estructura (con variant: null)
+    return product.imageUrls.map((url) => ({ url, variant: null }))
   }, [product, selectedVariant])
 
   const getVariantForImage = (imageUrl: string): ProductVariant | null => {
     if (!product) return null
-    return product.variants.find((variant) => variant.imageUrl === imageUrl) || null
+    return product.variants.find((variant) => variant.imageUrls && variant.imageUrls.includes(imageUrl)) || null
   }
 
   // Productos relacionados: productos que comparten categorías con el producto actual
@@ -108,7 +101,9 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
     const productCategoryIds = product.categories.map((cat) => cat.id)
 
     return products
-      .filter((p) => p.id !== product.id && p.categories && p.categories.some((cat) => productCategoryIds.includes(cat.id)))
+      .filter(
+        (p) => p.id !== product.id && p.categories && p.categories.some((cat) => productCategoryIds.includes(cat.id)),
+      )
       .slice(0, 8)
   }, [product, products])
 
@@ -143,10 +138,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
 
   const handleThumbnailClick = (index: number) => {
     setCurrentImageIndex(index)
-    const variant = getVariantForImage(displayImages[index])
-    if (variant) {
-      setSelectedVariant(variant)
-    }
+    // Ya no necesitamos cambiar la variante aquí porque las imágenes son solo de la variante seleccionada
   }
 
   const isVariantAvailable = (variant: ProductVariant) => {
@@ -158,10 +150,10 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
 
     const newVariant = product.variants.find(
       (variant) =>
-        variant.attributes && 
+        variant.attributes &&
         variant.attributes[optionKey] === optionValue &&
         // Fix: Add null check before Object.entries
-        selectedVariant.attributes && 
+        selectedVariant.attributes &&
         Object.entries(selectedVariant.attributes).every(
           ([key, value]) => key === optionKey || (variant.attributes && variant.attributes[key] === value),
         ),
@@ -169,13 +161,8 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
     if (newVariant && isVariantAvailable(newVariant)) {
       setSelectedVariant(newVariant)
 
-      // Si la variante tiene una imagen, buscarla en displayImages
-      if (newVariant.imageUrl) {
-        const variantImageIndex = displayImages.findIndex((img) => img === newVariant.imageUrl)
-        if (variantImageIndex !== -1) {
-          setCurrentImageIndex(variantImageIndex)
-        }
-      }
+      // Resetear el índice de imagen cuando cambie la variante
+      setCurrentImageIndex(0)
 
       setQuantity(1) // Reset quantity when changing variant
     }
@@ -184,12 +171,12 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
   const handleAddToCart = () => {
     if (product && selectedVariant) {
       addItem(product, selectedVariant, quantity)
-      
+
       // Fix: Add null check before accessing attributes
-      const attributeDisplay = selectedVariant.attributes 
+      const attributeDisplay = selectedVariant.attributes
         ? `(${Object.values(selectedVariant.attributes).filter(Boolean).join(", ")})`
-        : '';
-      
+        : ""
+
       toast.success("Producto añadido al carrito", {
         description: `${quantity} x ${product.title} ${attributeDisplay}`,
       })
@@ -201,10 +188,10 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
 
     const variant = product.variants.find(
       (v) =>
-        v.attributes && 
+        v.attributes &&
         v.attributes[optionKey] === optionValue &&
         // Fix: Add null check before Object.entries
-        selectedVariant.attributes && 
+        selectedVariant.attributes &&
         Object.entries(selectedVariant.attributes).every(
           ([key, value]) => key === optionKey || (v.attributes && v.attributes[key] === value),
         ),
@@ -280,7 +267,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                     onMouseMove={handleMouseMove}
                   >
                     <Image
-                      src={displayImages[currentImageIndex] || "/placeholder.svg"}
+                      src={displayImages[currentImageIndex]?.url || "/placeholder.svg"}
                       alt={product.title}
                       fill
                       className={`object-contain p-4 transition-transform duration-200 ease-out ${isZoomed ? "scale-[200%]" : "scale-100"}`}
@@ -288,15 +275,13 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                         transformOrigin: `${mousePosition.x}% ${mousePosition.y}%`,
                       }}
                     />
-                    {getVariantForImage(displayImages[currentImageIndex]) && (
+                    {selectedVariant && displayImages[currentImageIndex]?.variant && (
                       <Badge className="absolute top-2 right-2 bg-white" variant="outline">
-                        {/* Fix: Add null check before Object.values */}
                         {(() => {
-                          const variant = getVariantForImage(displayImages[currentImageIndex]);
-                          if (variant && variant.attributes) {
-                            return Object.values(variant.attributes).filter(Boolean).join(" - ");
+                          if (selectedVariant.attributes) {
+                            return Object.values(selectedVariant.attributes).filter(Boolean).join(" - ")
                           }
-                          return '';
+                          return selectedVariant.title || "Variante"
                         })()}
                       </Badge>
                     )}
@@ -305,11 +290,11 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
 
                 {/* Galería de miniaturas */}
                 <div className="flex gap-2 overflow-x-auto pb-2 p-2 scrollbar-hide">
-                  {displayImages.map((url, index) => (
+                  {displayImages.map((imageData, index) => (
                     <motion.button
-                      key={`${url}-${index}`}
+                      key={`${imageData.url}-${index}`}
                       onClick={() => handleThumbnailClick(index)}
-                      className={`relative w-16 h-16 rounded-md overflow-hidden flex-shrink-0 transition-all duration-200  ${
+                      className={`relative w-16 h-16 rounded-md overflow-hidden flex-shrink-0 transition-all duration-200 ${
                         index === currentImageIndex
                           ? "ring-2 ring-primary scale-105 z-10"
                           : "opacity-70 hover:opacity-100"
@@ -318,14 +303,20 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                       whileTap={{ scale: 0.95 }}
                     >
                       <Image
-                        src={url || "/placeholder.svg"}
+                        src={imageData.url || "/placeholder.svg"}
                         alt={`${product.title} ${index + 1}`}
                         fill
                         className="object-contain p-2"
                       />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                     
+                      </div>
                     </motion.button>
                   ))}
                 </div>
+
+                {/* Agregar después de la galería de miniaturas */}
+ 
               </motion.div>
 
               {/* Purchase Options */}
@@ -351,9 +342,8 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                           <Button
                             key={optionValue}
                             variant={
-                              selectedVariant.attributes && 
-                              selectedVariant.attributes[optionKey] === optionValue 
-                                ? "default" 
+                              selectedVariant.attributes && selectedVariant.attributes[optionKey] === optionValue
+                                ? "default"
                                 : "outline"
                             }
                             onClick={() => handleVariantChange(optionKey, optionValue)}
@@ -413,11 +403,9 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                 )}
 
                 {/* Display new product fields */}
- 
+
                 {product.viewCount && product.viewCount > 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    {product.viewCount} personas han visto este producto
-                  </p>
+                  <p className="text-sm text-muted-foreground">{product.viewCount} personas han visto este producto</p>
                 )}
               </motion.div>
             </div>
@@ -429,15 +417,15 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.6, duration: 0.5 }}
             > */}
-              {/* Check if fbt exists before passing it */}
-              {/* <FrequentlyBoughtTogether 
+            {/* Check if fbt exists before passing it */}
+            {/* <FrequentlyBoughtTogether 
                 mainProduct={product} 
                 mainVariant={selectedVariant} 
                 fbt={product.fbt || []} 
               />
             </motion.div> */}
 
-             <motion.div
+            <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.6, duration: 0.5 }}

@@ -128,7 +128,7 @@ export function Footer() {
           {/* Información de la empresa */}
           <motion.div variants={itemVariants} className="space-y-4">
             <div>
-              <h3 className="text-xl font-bold mb-4">{shopInfo?.name || "Nuestra Empresa"}</h3>
+              <img src={shopSettings[0]?.logo3 } className="h-32 w-32 mb-3"></img>
               <p className="text-gray-300 text-sm leading-relaxed">
                 {shopInfo?.description ||
                   "Comprometidos con la excelencia y la satisfacción de nuestros clientes. Ofrecemos productos y servicios de la más alta calidad."}
@@ -136,35 +136,7 @@ export function Footer() {
             </div>
 
             {/* Newsletter */}
-            <div className="pt-4">
-              <h4 className="font-semibold mb-3">Newsletter</h4>
-              <p className="text-gray-300 text-sm mb-3">Suscríbete para recibir ofertas especiales</p>
-              <form onSubmit={handleNewsletterSubmit} className="flex gap-2">
-                <Input
-                  type="email"
-                  placeholder="Tu email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="bg-gray-800 border-gray-700 text-white placeholder-gray-400"
-                  required
-                />
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={isSubscribing}
-                  className="bg-primary hover:bg-primary/90"
-                  style={{
-                    backgroundColor: shopInfo?.primaryColor || undefined,
-                  }}
-                >
-                  {isSubscribing ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
-                </Button>
-              </form>
-            </div>
+           
           </motion.div>
 
           {/* Enlaces de navegación */}

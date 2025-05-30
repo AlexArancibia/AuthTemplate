@@ -78,7 +78,7 @@ export default function Navbar({ user }: NavbarProps) {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowInitialLoading(false)
-    }, 700)
+    }, 1000)
 
     return () => clearTimeout(timer)
   }, [])
@@ -192,11 +192,11 @@ export default function Navbar({ user }: NavbarProps) {
     return (
       <div className="fixed inset-0 z-[9999] bg-white flex items-center justify-center" style={{ zIndex: 99999 }}>
         <div className="flex flex-col items-center">
-          <img 
-            src="/fondo1.png" 
-            alt="Cargando" 
+          <img
+            src="/fondo1.png"
+            alt="Cargando"
             className="w-32 h-32 object-contain animate-pulse"
-            style={{ maxWidth: '128px', maxHeight: '128px' }}
+            style={{ maxWidth: "128px", maxHeight: "128px" }}
           />
         </div>
       </div>
@@ -331,9 +331,9 @@ export default function Navbar({ user }: NavbarProps) {
                       items.map((item) => (
                         <div key={item.variant.id} className="flex items-center gap-3 py-3 border-b">
                           <div className="relative h-14 w-14 bg-gray-100 rounded overflow-hidden flex-shrink-0">
-                            {item.variant.imageUrl ? (
+                            {item.variant.imageUrls && item.variant.imageUrls.length > 0 ? (
                               <img
-                                src={item.variant.imageUrl || "/placeholder.svg"}
+                                src={item.variant.imageUrls[0] || "/placeholder.svg"}
                                 alt={item.product.title}
                                 className="object-cover h-full w-full"
                               />

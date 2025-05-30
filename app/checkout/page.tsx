@@ -1063,7 +1063,7 @@ export default function CheckoutPage() {
       <div className="container max-w-6xl mx-auto px-4 sm:px-6">
         {/* Checkout Header */}
         <div className="max-w-4xl mx-auto mb-12">
-          <h1 className="text-3xl md:text-4xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700">
+          <h1 className="text-2xl md:text-4xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700">
             Checkout
           </h1>
 

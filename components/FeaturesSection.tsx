@@ -48,7 +48,7 @@ function FeatureCard({ card, index, isInView }: { card: Card; index: number; isI
       initial={{ opacity: 0, y: 20 }}
       animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
       transition={{ duration: 0.5, delay: 0.2 + index * 0.1 }}
-      className="bg-white/50 hover:bg-white/80 rounded-3xl p-6 shadow-lg shadow-secondary/5 hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+      className="bg-white/50 hover:bg-white/80 rounded-2xl p-6 shadow-lg shadow-secondary/5 hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
     >
       <div className="space-y-4">
         <div className={`w-16 h-16 rounded-2xl ${featureStyle.iconBg} flex items-center justify-center`}>
@@ -86,7 +86,7 @@ function CardSectionRenderer({ cardSection }: { cardSection: CardSection }) {
               initial={{ opacity: 0, y: 20 }}
               animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
               transition={{ duration: 0.5 }}
-              className="text-secondary tracking-tight font-bold text-3xl md:text-4xl"
+              className="text-secondary tracking-tight font-bold text-2xl md:text-4xl"
             >
               {cardSection.title}
             </motion.h2>

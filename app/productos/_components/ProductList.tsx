@@ -151,6 +151,20 @@ function ProductListContent({
 
   const filteredProducts = useMemo(() => {
     return products.filter((product: Product) => {
+      // Filtrar productos en estado DRAFT
+      if (product.status === "DRAFT") {
+        return false
+      }
+
+      // Filtrar productos sin stock que no permiten backorder
+      if (!product.allowBackorder) {
+        // Verificar si alguna variante tiene stock disponible
+        const hasStock = product.variants.some((variant) => variant.inventoryQuantity > 0)
+        if (!hasStock) {
+          return false
+        }
+      }
+
       // Filter by search term
       if (filters.searchTerm && !product.title.toLowerCase().includes(filters.searchTerm.toLowerCase())) {
         return false
@@ -158,7 +172,8 @@ function ProductListContent({
 
       // Filter by category
       if (
-        filters.categories.length > 0 && product.categories &&
+        filters.categories.length > 0 &&
+        product.categories &&
         !product.categories.some((cat: Category) => filters.categories.includes(cat.id))
       ) {
         return false
@@ -297,31 +312,33 @@ function ProductListContent({
 
 export default function ProductList(props: ProductListProps) {
   return (
-    <Suspense fallback={
-      <div className="flex flex-col lg:flex-row gap-16">
-        <aside className="hidden lg:block w-72 flex-shrink-0">
-          {/* Placeholder para los filtros */}
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-gray-200 rounded"></div>
-            <div className="h-4 bg-gray-200 rounded"></div>
-            <div className="h-4 bg-gray-200 rounded"></div>
-            <div className="h-8 bg-gray-200 rounded"></div>
-          </div>
-        </aside>
-        <div className="flex-1">
-          {/* Placeholder para los productos */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="animate-pulse">
-                <div className="h-64 bg-gray-200 rounded"></div>
-                <div className="mt-2 h-4 bg-gray-200 rounded"></div>
-                <div className="mt-2 h-4 bg-gray-200 w-3/4   rounded"></div>
-              </div>
-            ))}
+    <Suspense
+      fallback={
+        <div className="flex flex-col lg:flex-row gap-16">
+          <aside className="hidden lg:block w-72 flex-shrink-0">
+            {/* Placeholder para los filtros */}
+            <div className="animate-pulse space-y-4">
+              <div className="h-8 bg-gray-200 rounded"></div>
+              <div className="h-4 bg-gray-200 rounded"></div>
+              <div className="h-4 bg-gray-200 rounded"></div>
+              <div className="h-8 bg-gray-200 rounded"></div>
+            </div>
+          </aside>
+          <div className="flex-1">
+            {/* Placeholder para los productos */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="animate-pulse">
+                  <div className="h-64 bg-gray-200 rounded"></div>
+                  <div className="mt-2 h-4 bg-gray-200 rounded"></div>
+                  <div className="mt-2 h-4 bg-gray-200 w-3/4   rounded"></div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <ProductListContent {...props} />
     </Suspense>
   )

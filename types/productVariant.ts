@@ -11,7 +11,7 @@ export interface ProductVariant {
   sku?: string | null; // Ajustado según schema (puede ser null)
   attributes: Record<string, any> | null; // Ajustado según schema (puede ser null)
   isActive: boolean; // No opcional según schema
-  imageUrl?: string | null; // Ajustado según schema (puede ser null)
+  imageUrls?: string[]; // Ajustado según schema (puede ser null)
   prices: VariantPrice[];
   inventoryQuantity: number;
   weightValue?: number | null; // Ajustado según schema (puede ser null)

@@ -79,7 +79,7 @@ function CardSectionRenderer({ cardSection }: { cardSection: CardSection }) {
           viewport={{ once: true }}
           className="text-center mb-12"
         >
-          <h2 className="text-3xl font-bold mb-2">{cardSection.title || "Sectores a los que servimos"}</h2>
+          <h2 className="text-2xl md:text-4xl font-bold mb-2">{cardSection.title || "Sectores a los que servimos"}</h2>
           {(cardSection.subtitle || cardSection.description) && (
             <p className="text-base text-gray-600">{cardSection.subtitle || cardSection.description}</p>
           )}

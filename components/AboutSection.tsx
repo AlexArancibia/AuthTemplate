@@ -128,7 +128,7 @@ export function AboutSection({ contentId = "cnt_363018db-f61b" }: AboutSectionPr
   }
 
   return (
-    <section className="container-section py-8 lg:py-16 bg-white">
+    <section className="container-section py-16 lg:py-16 bg-white">
       <div className="content-section bg-white">
         <div className="flex flex-col-reverse lg:flex-row items-center justify-between gap-8 lg:gap-0">
           {/* Image Collage - 40% width on desktop */}
@@ -169,7 +169,7 @@ export function AboutSection({ contentId = "cnt_363018db-f61b" }: AboutSectionPr
             initial="visible"
             animate="visible"
           >
-            <motion.h2 className="font-bold text-3xl md:text-4xl text-secondary" variants={itemAnimation}>
+            <motion.h2 className="font-bold text-2xl md:text-4xl text-secondary" variants={itemAnimation}>
               {content.title}
             </motion.h2>
             <motion.p className="text-sm lg:text-base text-gray-700" variants={itemAnimation}>
@@ -182,7 +182,7 @@ export function AboutSection({ contentId = "cnt_363018db-f61b" }: AboutSectionPr
                   <Check className="w-5 h-5 p-1 rounded-full bg-blue-100 text-blue-600 flex-shrink-0" />
                   <h3 className="text-lg font-semibold text-gray-900">{section.title}</h3>
                 </div>
-                <p className="text-sm lg:text-base pl-7 text-gray-700">{section.content}</p>
+                <p className="text-sm lg:text-base pl-7 text-gray-600">{section.content}</p>
               </motion.div>
             ))}
           </motion.div>

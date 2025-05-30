@@ -113,7 +113,7 @@ export default function CatalogSection({ id = "cs_9235fb0d-a4d0", metadata }: Ca
         {/* Sección del título con fondo */}
         <div className="py-20 bg-[url('/fondoproduct.jpg')] bg-cover bg-center">
           <motion.div className="relative text-center" {...fadeIn}>
-            <h2 className="text-3xl md:text-4xl font-semibold text-white">Nuestro Catálogo</h2>
+            <h2 className="text-2xl md:text-4xl font-semibold text-white">Nuestro Catálogo</h2>
           </motion.div>
         </div>
 
@@ -132,7 +132,7 @@ export default function CatalogSection({ id = "cs_9235fb0d-a4d0", metadata }: Ca
         {/* Sección del título con fondo */}
         <div className="py-20 bg-[url('/fondoproduct.jpg')] bg-cover bg-center">
           <motion.div className="relative text-center" {...fadeIn}>
-            <h2 className="text-3xl md:text-4xl font-semibold text-white">Nuestro Catálogo</h2>
+            <h2 className="text-2xl md:text-4xl font-semibold text-white">Nuestro Catálogo</h2>
           </motion.div>
         </div>
 
@@ -151,7 +151,7 @@ export default function CatalogSection({ id = "cs_9235fb0d-a4d0", metadata }: Ca
         {/* Sección del título con fondo */}
         <div className="py-20 bg-[url('/fondoproduct.jpg')] bg-cover bg-center">
           <motion.div className="relative text-center" {...fadeIn}>
-            <h2 className="text-3xl md:text-4xl font-semibold text-white">Nuestro Catálogo</h2>
+            <h2 className="text-2xl md:text-4xl font-semibold text-white">Nuestro Catálogo</h2>
           </motion.div>
         </div>
 
@@ -174,7 +174,7 @@ export default function CatalogSection({ id = "cs_9235fb0d-a4d0", metadata }: Ca
       {/* Sección del título con fondo */}
       <div className="py-20 bg-[url('/fondoproduct.jpg')] bg-cover bg-center">
         <motion.div className="relative text-center" {...fadeIn}>
-          <h2 className="text-3xl md:text-4xl font-semibold text-white">
+          <h2 className="text-2xl md:text-4xl font-semibold text-white">
             {catalogSection.title || "Nuestro Catálogo"}
           </h2>
         </motion.div>

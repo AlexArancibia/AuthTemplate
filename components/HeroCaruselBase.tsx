@@ -271,7 +271,7 @@ export function HeroCarouselBase({
     <div className="w-full overflow-hidden relative" ref={carouselRef}>
       {/* Carrusel principal */}
       <div
-        className="relative h-[92vh]  "
+        className="relative h-[100vh] min-h-[600px] lg:h-[92vh] "
         // style={{
         //   height: containerHeight,
         //   willChange: "transform", // Optimización de rendimiento
@@ -323,7 +323,7 @@ export function HeroCarouselBase({
 
       {/* Botones de navegación */}
       {showControls && (
-        <div className="absolute inset-0 px-4 md:px-8 flex items-center justify-between pointer-events-none">
+        <div className="absolute inset-0 px-4 md:px-2 flex items-center justify-between pointer-events-none mt-90 lg:mt-0">
           <Button
             variant="ghost"
             size="icon"
@@ -395,4 +395,3 @@ export function HeroCarouselBase({
     </div>
   )
 }
-

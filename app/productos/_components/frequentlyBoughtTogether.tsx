@@ -152,7 +152,10 @@ export default function FrequentlyBoughtTogetherComponent({ product }: Frequentl
         .join(", ")
     }
 
-    const imageUrl = currentVariant.imageUrl || product.imageUrls?.[0] || "/placeholder.svg"
+    const imageUrl =
+      (currentVariant.imageUrls && currentVariant.imageUrls.length > 0 ? currentVariant.imageUrls[0] : null) ||
+      product.imageUrls?.[0] ||
+      "/placeholder.svg"
 
     return {
       product,
@@ -343,7 +346,11 @@ export default function FrequentlyBoughtTogetherComponent({ product }: Frequentl
                                   >
                                     <div className="relative h-12 mb-1">
                                       <Image
-                                        src={v.imageUrl || productInfo.product.imageUrls?.[0] || "/placeholder.svg"}
+                                        src={
+                                          (v.imageUrls && v.imageUrls.length > 0 ? v.imageUrls[0] : null) ||
+                                          productInfo.product.imageUrls?.[0] ||
+                                          "/placeholder.svg"
+                                        }
                                         alt={variantDisplay}
                                         fill
                                         className="object-contain"

@@ -38,7 +38,7 @@ export function DeliveryHeroSection() {
     <section className="overflow-hidden">
       <div className="container-section py-4 lg:py-0 mb-8">
         <motion.div
-          className={`content-section rounded-3xl overflow-hidden flex ${verticalAlignClass} py-10 relative`}
+          className={`content-section rounded-2xl overflow-hidden flex ${verticalAlignClass} py-10 relative`}
           style={{
             backgroundImage: `url(${bgImage})`,
             backgroundSize: "cover",
@@ -66,7 +66,7 @@ export function DeliveryHeroSection() {
               className={`max-w-xl p-4 md:p-8 ${textAlignClass}`}
             >
               {title && (
-                <h2 className={`text-3xl md:text-3xl lg:text-4xl font-bold mb-4 ${titleColorClass}`}>{title}</h2>
+                <h2 className={`text-2xl md:text-2xl lg:text-4xl font-bold mb-4 ${titleColorClass}`}>{title}</h2>
               )}
 
               {subtitle && (

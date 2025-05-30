@@ -106,7 +106,7 @@ export function WashingTestDialog({ open, onOpenChange }: WashingTestDialogProps
                   <Input
                     id="name"
                     name="name"
-                    placeholder="Juan Pérez"
+                    placeholder="Nombre"
                     required
                     disabled={isLoading}
                     autoComplete="name"
@@ -117,7 +117,7 @@ export function WashingTestDialog({ open, onOpenChange }: WashingTestDialogProps
                   <Input
                     id="email"
                     name="email"
-                    placeholder="juan@ejemplo.com"
+                    placeholder="E-mail"
                     type="email"
                     required
                     disabled={isLoading}

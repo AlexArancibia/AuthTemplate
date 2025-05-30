@@ -26,7 +26,7 @@ export function DeliveryButton() {
         <Button
           variant="ghost"
           onClick={() => setOpen(true)}
-          className="relative flex justify-start items-start border border-blue-200 rounded-2xl p-4 bg-blue-50 hover:bg-blue-100 w-full h-auto transition-all"
+          className="relative cursor-pointer flex justify-start items-start border border-blue-200 rounded-2xl p-4 bg-blue-50 hover:bg-blue-100 w-full h-auto transition-all"
         >
           <div className="flex items-center gap-3">
             <div className="bg-white p-2 rounded-lg">

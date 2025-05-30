@@ -53,6 +53,8 @@ export interface ShopSettings {
   email?: string 
   shopOwner?: string 
   logo?: string 
+  logo2?: string 
+  logo3?: string 
   description?: string 
   address1?: string 
   address2?: string 

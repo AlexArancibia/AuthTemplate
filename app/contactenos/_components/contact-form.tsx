@@ -227,19 +227,7 @@ export function ContactForm() {
                   </motion.div>
 
                   {/* Información adicional de la tienda */}
-                  {shopInfo?.domain && (
-                    <motion.div variants={itemVariants} className="mt-6 pt-6 border-t border-primary-foreground/20">
-                      <p className="text-sm font-medium mb-2">Sitio web</p>
-                      <a
-                        href={shopInfo.domain}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary-foreground/90 hover:text-white transition-colors"
-                      >
-                        {shopInfo.domain}
-                      </a>
-                    </motion.div>
-                  )}
+ 
                 </div>
               </motion.div>
 

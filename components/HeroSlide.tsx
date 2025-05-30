@@ -64,7 +64,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
   }`
 
   // Clases para la imagen de fondo
-  const backgroundImageClasses = `object-cover ${styles.backgroundSize || ""}`
+  const backgroundImageClasses = `object-cover ${styles.backgroundSize || ""} object-center`
 
   // Clases para el iframe de video
   const videoClasses = `absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] min-h-full min-w-full transition-opacity duration-300 ${
@@ -117,31 +117,29 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
           {/* Fallback image mientras carga el video */}
           {bgImage && !isVideoReady && (
             <>
-            <div className="absolute inset-0 block lg:hidden">
-              <Image
-                src={ mobileBackgroundImage    || "/placeholder.svg"}
-                alt={title || "Background"}
-                fill
-                className={backgroundImageClasses}
-                priority
-                sizes="100vw"
-              />
-            </div>
+              <div className="absolute inset-0 block lg:hidden">
+                <Image
+                  src={mobileBackgroundImage || "/placeholder.svg"}
+                  alt={title || "Background"}
+                  fill
+                  className={backgroundImageClasses}
+                  priority
+                  sizes="100vw"
+                />
+              </div>
 
-            <div className="absolute inset-0 hidden lg:block">
-              <Image
-                src={ backgroundImage     || "/placeholder.svg"}
-                alt={title || "Background"}
-                fill
-                className={backgroundImageClasses}
-                priority
-                sizes="100vw"
-              />
-            </div>
+              <div className="absolute inset-0 hidden lg:block">
+                <Image
+                  src={backgroundImage || "/placeholder.svg"}
+                  alt={title || "Background"}
+                  fill
+                  className={backgroundImageClasses}
+                  priority
+                  sizes="100vw"
+                />
+              </div>
             </>
           )}
-
-          
 
           {/* Video de fondo */}
           <div className="absolute inset-0 w-full h-full">
@@ -175,10 +173,10 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
           <>
             <div className="absolute inset-0 block lg:hidden">
               <Image
-                src={ mobileBackgroundImage    || "/placeholder.svg"}
+                src={mobileBackgroundImage || "/placeholder.svg"}
                 alt={title || "Background"}
                 fill
-                className={backgroundImageClasses}
+                className="object-cover object-center"
                 priority
                 sizes="100vw"
                 quality={100}
@@ -187,16 +185,16 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
 
             <div className="absolute inset-0 hidden lg:block">
               <Image
-                src={ backgroundImage     || "/placeholder.svg"}
+                src={backgroundImage || "/placeholder.svg"}
                 alt={title || "Background"}
                 fill
-                className="object-cover"
+                className="object-cover object-center"
                 priority
                 sizes="100vw"
                 quality={100}
               />
             </div>
-            </>
+          </>
           <div className="absolute inset-0" style={getOverlayStyle()} />
         </div>
       ) : (
@@ -205,7 +203,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
 
       {/* Contenido */}
       <div className={contentContainerClasses}>
-        <div className="container mx-auto px-4 md:px-6 h-full flex">
+        <div className="container mx-auto px-2 md:px-4 h-full flex">
           <div className={`${contentAlignClasses} items-start lg:items-center pt-8 lg:pt-0 lg:pb-16`}>
             <motion.div
               className={contentDivClasses}
@@ -215,7 +213,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
             >
               {title && (
                 <motion.h1
-                  className={`text-[2.5em] lg:text-[3.5em] font-bold ${styles.titleColor || ""} `}
+                  className={`text-[2em] lg:text-[3.5em] font-bold mt-[120px] lg:mt-0 ${styles.titleColor || ""} `}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: animationDelay }}
@@ -226,7 +224,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
 
               {subtitle && (
                 <motion.p
-                  className={`text-base md:text-lg  ${styles.subtitleColor || ""}`}
+                  className={`text-sm md:text-lg  ${styles.subtitleColor || ""}`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.1 + animationDelay }}
@@ -245,7 +243,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
                   <Button
                     variant={(styles.buttonVariant || "default") as any}
                     size={(styles.buttonSize || "default") as any}
-                    className="font-medium text-base hover:scale-105 transition-transform shadow-lg"
+                    className="font-medium text-sm hover:scale-105 transition-transform shadow-lg"
                     asChild
                   >
                     <Link href={buttonLink}>{buttonText}</Link>

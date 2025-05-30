@@ -1,28 +1,16 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import useEmblaCarousel from "embla-carousel-react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
- 
+
 import { ProductCard } from "./ProductCard"
 import { useMainStore } from "@/stores/mainStore"
-import type {Product} from "@/types/product"
+import { ProductStatus } from "@/types/common"
+
 export function ProductCarousel() {
-
-  const { products } = useMainStore();
-const [isLoading, setIsLoading] = useState(true);
-const [caruselProducts, setCaruselProducts] = useState<Product[]>([]);
-const hasFetched = useRef(false);
-
-
-  // Este efecto se ejecuta cuando `products` cambia
-  useEffect(() => {
-    if (products.length > 0) {
-      setCaruselProducts(products.slice(-10)); // Obtiene los últimos 10 productos
-    }
-  }, [products]);
-
+  const { products } = useMainStore()
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: "start",
@@ -46,11 +34,14 @@ const hasFetched = useRef(false);
     }
   }, [emblaApi])
 
+  // Filtrar productos que no estén en estado DRAFT
+  const activeProducts = products.filter((product) => product.status !== ProductStatus.DRAFT)
+
   return (
-    <section className="py-16 lg:py-24">
+    <section className="py-16 lg:py-24 pb-8 lg:pb-24">
       <div className="container-section">
         <div className="content-section">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-4  md:mb-8">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-4 md:mb-8">
             <h2 className=" ">NUESTROS PRODUCTOS</h2>
             <a
               href="/productos"
@@ -65,7 +56,7 @@ const hasFetched = useRef(false);
             {/* Carousel */}
             <div className="overflow-hidden pt-4" ref={emblaRef}>
               <div className="flex">
-                {products.slice(0, 6).map((product) => (
+                {activeProducts.slice(0, 6).map((product) => (
                   <div key={product.id} className="flex-[0_0_100%] min-w-0 sm:flex-[0_0_50%] lg:flex-[0_0_25%] px-3">
                     <ProductCard product={product} />
                   </div>
@@ -100,4 +91,3 @@ const hasFetched = useRef(false);
     </section>
   )
 }
-
