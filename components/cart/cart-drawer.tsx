@@ -80,9 +80,9 @@ export default function CartDrawer() {
                   >
                     <div className="relative h-20 w-20 bg-gray-100 rounded-md overflow-hidden flex-shrink-0">
                       {/* Use variant imageUrl if available, otherwise use first product imageUrl */}
-                      {item.variant.imageUrl ? (
+                      {item.variant.imageUrls ? (
                         <Image
-                          src={item.variant.imageUrl || "/placeholder.svg"}
+                          src={item.variant.imageUrls[0] || "/placeholder.svg"}
                           alt={item.product.title}
                           fill
                           className="object-cover"
