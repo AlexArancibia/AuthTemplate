@@ -36,6 +36,8 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
   const [isZoomed, setIsZoomed] = useState(false)
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
   const [isLoading, setIsLoading] = useState(true)
+  const [imageLoading, setImageLoading] = useState(false)
+  const [preloadedImages, setPreloadedImages] = useState<Set<string>>(new Set())
 
   // Carrusel para productos relacionados
   const [emblaRef, emblaApi] = useEmblaCarousel({
@@ -44,6 +46,55 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
     dragFree: true,
     slidesToScroll: 1,
   })
+
+  // Función para precargar imágenes
+  const preloadImage = (src: string): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      if (preloadedImages.has(src)) {
+        resolve()
+        return
+      }
+
+      const img = new window.Image()
+      img.crossOrigin = "anonymous"
+      img.onload = () => {
+        setPreloadedImages((prev) => new Set([...prev, src]))
+        resolve()
+      }
+      img.onerror = reject
+      img.src = src
+    })
+  }
+
+  // Precargar todas las imágenes de variantes cuando se carga el producto
+  useEffect(() => {
+    if (!product) return
+
+    const imagesToPreload: string[] = []
+
+    // Agregar imágenes del producto principal
+    if (product.imageUrls) {
+      imagesToPreload.push(...product.imageUrls)
+    }
+
+    // Agregar imágenes de todas las variantes
+    if (product.variants) {
+      product.variants.forEach((variant) => {
+        if (variant.imageUrls) {
+          imagesToPreload.push(...variant.imageUrls)
+        }
+      })
+    }
+
+    // Precargar todas las imágenes en paralelo
+    const preloadPromises = imagesToPreload.map((url) =>
+      preloadImage(url).catch((err) => console.warn(`Failed to preload image: ${url}`, err)),
+    )
+
+    Promise.allSettled(preloadPromises).then(() => {
+      console.log("All images preloaded")
+    })
+  }, [product])
 
   useEffect(() => {
     const loadProduct = async () => {
@@ -102,7 +153,11 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
 
     return products
       .filter(
-        (p) => p.id !== product.id && p.categories && p.categories.some((cat) => productCategoryIds.includes(cat.id)),
+        (p) =>
+          p.id !== product.id &&
+          p.status === "ACTIVE" && // Solo productos activos
+          p.categories &&
+          p.categories.some((cat) => productCategoryIds.includes(cat.id)),
       )
       .slice(0, 8)
   }, [product, products])
@@ -159,11 +214,23 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
         ),
     )
     if (newVariant && isVariantAvailable(newVariant)) {
-      setSelectedVariant(newVariant)
+      // Mostrar estado de carga solo si las imágenes de la nueva variante no están precargadas
+      const hasUnpreloadedImages = newVariant.imageUrls?.some((url) => !preloadedImages.has(url))
 
+      if (hasUnpreloadedImages) {
+        setImageLoading(true)
+        // Precargar las imágenes faltantes
+        const preloadPromises =
+          newVariant.imageUrls?.filter((url) => !preloadedImages.has(url)).map((url) => preloadImage(url)) || []
+
+        Promise.allSettled(preloadPromises).finally(() => {
+          setImageLoading(false)
+        })
+      }
+
+      setSelectedVariant(newVariant)
       // Resetear el índice de imagen cuando cambie la variante
       setCurrentImageIndex(0)
-
       setQuantity(1) // Reset quantity when changing variant
     }
   }
@@ -254,39 +321,52 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                 className="space-y-4"
               >
                 {/* Imagen principal */}
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={currentImageIndex}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="relative aspect-square rounded-xl overflow-hidden bg-gray-100 cursor-zoom-in"
-                    onMouseEnter={() => setIsZoomed(true)}
-                    onMouseLeave={() => setIsZoomed(false)}
-                    onMouseMove={handleMouseMove}
-                  >
-                    <Image
-                      src={displayImages[currentImageIndex]?.url || "/placeholder.svg"}
-                      alt={product.title}
-                      fill
-                      className={`object-contain p-4 transition-transform duration-200 ease-out ${isZoomed ? "scale-[200%]" : "scale-100"}`}
-                      style={{
-                        transformOrigin: `${mousePosition.x}% ${mousePosition.y}%`,
-                      }}
-                    />
-                    {selectedVariant && displayImages[currentImageIndex]?.variant && (
-                      <Badge className="absolute top-2 right-2 bg-white" variant="outline">
-                        {(() => {
-                          if (selectedVariant.attributes) {
-                            return Object.values(selectedVariant.attributes).filter(Boolean).join(" - ")
-                          }
-                          return selectedVariant.title || "Variante"
-                        })()}
-                      </Badge>
-                    )}
-                  </motion.div>
-                </AnimatePresence>
+                <div className="relative">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={`${selectedVariant.id}-${currentImageIndex}`}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="relative aspect-square rounded-xl overflow-hidden bg-gray-100 cursor-zoom-in"
+                      onMouseEnter={() => setIsZoomed(true)}
+                      onMouseLeave={() => setIsZoomed(false)}
+                      onMouseMove={handleMouseMove}
+                    >
+                      <Image
+                        src={displayImages[currentImageIndex]?.url || "/placeholder.svg"}
+                        alt={product.title}
+                        fill
+                        className={`object-contain p-4 transition-transform duration-200 ease-out ${isZoomed ? "scale-[200%]" : "scale-100"}`}
+                        style={{
+                          transformOrigin: `${mousePosition.x}% ${mousePosition.y}%`,
+                        }}
+                        priority={currentImageIndex === 0}
+                      />
+                      {selectedVariant && displayImages[currentImageIndex]?.variant && (
+                        <Badge className="absolute top-2 right-2 bg-white" variant="outline">
+                          {(() => {
+                            if (selectedVariant.attributes) {
+                              return Object.values(selectedVariant.attributes).filter(Boolean).join(" - ")
+                            }
+                            return selectedVariant.title || "Variante"
+                          })()}
+                        </Badge>
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+
+                  {/* Overlay de carga */}
+                  {imageLoading && (
+                    <div className="absolute inset-0 bg-white/80 flex items-center justify-center rounded-xl z-10">
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        <span className="text-sm text-gray-600">Cargando imagen...</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 {/* Galería de miniaturas */}
                 <div className="flex gap-2 overflow-x-auto pb-2 p-2 scrollbar-hide">
@@ -308,15 +388,13 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                         fill
                         className="object-contain p-2"
                       />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                     
-                      </div>
+                      {/* Indicador de imagen precargada */}
+                      {preloadedImages.has(imageData.url) && (
+                        <div className="absolute top-0 right-0 w-2 h-2 bg-green-500 rounded-full"></div>
+                      )}
                     </motion.button>
                   ))}
                 </div>
-
-                {/* Agregar después de la galería de miniaturas */}
- 
               </motion.div>
 
               {/* Purchase Options */}
@@ -338,17 +416,16 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                     <div className="flex flex-wrap gap-2">
                       {variantOptions[optionKey].map((optionValue) => {
                         const isDisabled = isOptionDisabled(optionKey, optionValue)
+                        const isSelected =
+                          selectedVariant.attributes && selectedVariant.attributes[optionKey] === optionValue
+
                         return (
                           <Button
                             key={optionValue}
-                            variant={
-                              selectedVariant.attributes && selectedVariant.attributes[optionKey] === optionValue
-                                ? "default"
-                                : "outline"
-                            }
+                            variant={isSelected ? "default" : "outline"}
                             onClick={() => handleVariantChange(optionKey, optionValue)}
-                            disabled={isDisabled}
-                            className={isDisabled ? "opacity-50" : ""}
+                            disabled={isDisabled || imageLoading}
+                            className={`${isDisabled ? "opacity-50" : ""} ${imageLoading ? "cursor-wait" : ""}`}
                           >
                             {optionValue}
                             {isDisabled && <X className="w-3 h-3 ml-1" />}
@@ -409,21 +486,6 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                 )}
               </motion.div>
             </div>
-
-            {/* Añadir el componente FrequentlyBoughtTogether aquí */}
-            {/* <motion.div
-              id="detalles"
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.6, duration: 0.5 }}
-            > */}
-            {/* Check if fbt exists before passing it */}
-            {/* <FrequentlyBoughtTogether 
-                mainProduct={product} 
-                mainVariant={selectedVariant} 
-                fbt={product.fbt || []} 
-              />
-            </motion.div> */}
 
             <motion.div
               initial={{ y: 20, opacity: 0 }}

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Slider } from "@/components/ui/slider"
+import { Separator } from "@/components/ui/separator"
 import type { Category } from "@/types/category"
 import type { Product } from "@/types/product"
 import { useMainStore } from "@/stores/mainStore"
@@ -23,6 +24,11 @@ interface Filters {
   categories: string[]
   variants: Record<string, string[]>
   priceRange: [number, number]
+}
+
+interface GroupedPresentation {
+  unit: string
+  values: string[]
 }
 
 function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPrice }: ProductFiltersProps) {
@@ -66,24 +72,102 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
 
     if (hasChanged) {
       onFilterChange(currentFilters)
-    }
-  }, [debouncedSearchTerm, selectedCategories, selectedVariants, priceRange, onFilterChange, initialFilters])
 
-  const variantAttributes = useMemo(() => {
-    const attributes: Record<string, Set<string>> = {}
+      // Update URL with proper format for presentations
+      const params = new URLSearchParams(searchParams.toString())
+
+      // Handle presentations with special format
+      if (selectedVariants.Presentaciones && selectedVariants.Presentaciones.length > 0) {
+        const presentationsParam = selectedVariants.Presentaciones.map((value) => value.replace(/\s/g, "+")).join(",")
+        params.set("variant_Presentaciones", presentationsParam)
+      } else {
+        params.delete("variant_Presentaciones")
+      }
+
+      // Handle other filters
+      if (debouncedSearchTerm) {
+        params.set("search", debouncedSearchTerm)
+      } else {
+        params.delete("search")
+      }
+
+      if (selectedCategories.length > 0) {
+        params.set("categories", selectedCategories.join(","))
+      } else {
+        params.delete("categories")
+      }
+
+      if (priceRange[0] !== minPrice || priceRange[1] !== maxPrice) {
+        params.set("minPrice", priceRange[0].toString())
+        params.set("maxPrice", priceRange[1].toString())
+      } else {
+        params.delete("minPrice")
+        params.delete("maxPrice")
+      }
+
+      const newUrl = `${pathname}?${params.toString()}`
+      router.replace(newUrl, { scroll: false })
+    }
+  }, [
+    debouncedSearchTerm,
+    selectedCategories,
+    selectedVariants,
+    priceRange,
+    onFilterChange,
+    initialFilters,
+    searchParams,
+    pathname,
+    router,
+    minPrice,
+    maxPrice,
+  ])
+
+  const groupedPresentations = useMemo(() => {
+    const presentations = new Set<string>()
+
+    // Recopilar todas las presentaciones
     products.forEach((product: Product) => {
       product.variants.forEach((variant) => {
         Object.entries(variant.attributes!).forEach(([key, value]) => {
-          if (key !== "type" && typeof value === "string") {
-            if (!attributes[key]) {
-              attributes[key] = new Set()
-            }
-            attributes[key].add(value)
+          if (key === "Presentaciones" && typeof value === "string") {
+            presentations.add(value)
           }
         })
       })
     })
-    return Object.fromEntries(Object.entries(attributes).map(([key, value]) => [key, Array.from(value)]))
+
+    // Filtrar y agrupar por unidad
+    const groups: Record<string, string[]> = {}
+    const validPattern = /^(\d+(?:\.\d+)?)\s+(KG|L|G|ML|LB|OZ)$/i
+
+    Array.from(presentations).forEach((presentation) => {
+      const match = presentation.match(validPattern)
+      if (match) {
+        const [, number, unit] = match
+        const normalizedUnit = unit.toUpperCase()
+
+        if (!groups[normalizedUnit]) {
+          groups[normalizedUnit] = []
+        }
+        groups[normalizedUnit].push(presentation)
+      }
+    })
+
+    // Ordenar cada grupo numéricamente
+    Object.keys(groups).forEach((unit) => {
+      groups[unit].sort((a, b) => {
+        const numA = Number.parseFloat(a.match(/\d+(\.\d+)?/)?.[0] || "0")
+        const numB = Number.parseFloat(b.match(/\d+(\.\d+)?/)?.[0] || "0")
+        return numA - numB
+      })
+    })
+
+    // Convertir a array de grupos ordenados por unidad
+    const sortedGroups: GroupedPresentation[] = Object.entries(groups)
+      .sort(([unitA], [unitB]) => unitA.localeCompare(unitB))
+      .map(([unit, values]) => ({ unit, values }))
+
+    return sortedGroups
   }, [products])
 
   const handleCategoryChange = (categoryId: string) => {
@@ -117,7 +201,7 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
     setSelectedCategories([])
     setSelectedVariants({})
     setPriceRange([minPrice, maxPrice])
-    router.replace(pathname)
+    router.replace(pathname, { scroll: false })
   }
 
   return (
@@ -134,7 +218,7 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
       {/* Categories */}
       <div>
         <h3 className="text-lg font-medium mb-4">Categorías</h3>
-        <div className="space-y-2 max-h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300">
+        <div className="space-y-2">
           {categories.map((category: Category) => (
             <div key={category.id} className="flex items-center space-x-2">
               <Checkbox
@@ -178,26 +262,39 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
         </div>
       </div>
 
-      {/* Variant Attributes */}
-      {Object.entries(variantAttributes).map(([attribute, values]) => (
-        <div key={attribute}>
-          <h3 className="text-lg font-medium mb-4">{attribute}</h3>
-          <div className="space-y-2 max-h-40 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300">
-            {values.map((value) => (
-              <div key={`${attribute}-${value}`} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`${attribute}-${value}`}
-                  checked={(selectedVariants[attribute] || []).includes(value)}
-                  onCheckedChange={() => handleVariantChange(attribute, value)}
-                />
-                <label htmlFor={`${attribute}-${value}`} className="text-sm text-gray-700 cursor-pointer">
-                  {value}
-                </label>
+      {/* Grouped Presentations */}
+      {groupedPresentations.length > 0 && (
+        <div>
+          <h3 className="text-lg font-medium mb-4">Presentaciones</h3>
+          <div className="space-y-4 ">
+            {groupedPresentations.map((group, groupIndex) => (
+              <div key={group.unit}>
+                {/* Unit Label */}
+                <div className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">{group.unit}</div>
+
+                {/* Values for this unit */}
+                <div className="space-y-2 mb-3">
+                  {group.values.map((value) => (
+                    <div key={`Presentaciones-${value}`} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`Presentaciones-${value}`}
+                        checked={(selectedVariants["Presentaciones"] || []).includes(value)}
+                        onCheckedChange={() => handleVariantChange("Presentaciones", value)}
+                      />
+                      <label htmlFor={`Presentaciones-${value}`} className="text-sm text-gray-700 cursor-pointer">
+                        {value}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Separator between groups (except for the last one) */}
+                {groupIndex < groupedPresentations.length - 1 && <Separator className="my-3 bg-gray-200" />}
               </div>
             ))}
           </div>
         </div>
-      ))}
+      )}
 
       <Button onClick={resetFilters} className="w-full bg-secondary text-white hover:bg-blue-700 transition">
         Resetear Filtros
@@ -208,51 +305,53 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
 
 export function ProductFilters(props: ProductFiltersProps) {
   return (
-    <Suspense fallback={
-      <div className="w-72 bg-white space-y-6 animate-pulse">
-        {/* Search Placeholder */}
-        <div className="h-10 bg-gray-200 rounded"></div>
-        
-        {/* Categories Placeholder */}
-        <div>
-          <div className="h-6 w-24 bg-gray-200 rounded mb-4"></div>
-          <div className="space-y-2">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="flex items-center space-x-2">
-                <div className="h-4 w-4 bg-gray-200 rounded"></div>
-                <div className="h-4 w-24 bg-gray-200 rounded"></div>
-              </div>
-            ))}
+    <Suspense
+      fallback={
+        <div className="w-72 bg-white space-y-6 animate-pulse">
+          {/* Search Placeholder */}
+          <div className="h-10 bg-gray-200 rounded"></div>
+
+          {/* Categories Placeholder */}
+          <div>
+            <div className="h-6 w-24 bg-gray-200 rounded mb-4"></div>
+            <div className="space-y-2">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-center space-x-2">
+                  <div className="h-4 w-4 bg-gray-200 rounded"></div>
+                  <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-        
-        {/* Price Range Placeholder */}
-        <div>
-          <div className="h-6 w-16 bg-gray-200 rounded mb-4"></div>
-          <div className="h-2 bg-gray-200 rounded-full"></div>
-          <div className="flex justify-between mt-2">
-            <div className="h-4 w-12 bg-gray-200 rounded"></div>
-            <div className="h-4 w-12 bg-gray-200 rounded"></div>
+
+          {/* Price Range Placeholder */}
+          <div>
+            <div className="h-6 w-16 bg-gray-200 rounded mb-4"></div>
+            <div className="h-2 bg-gray-200 rounded-full"></div>
+            <div className="flex justify-between mt-2">
+              <div className="h-4 w-12 bg-gray-200 rounded"></div>
+              <div className="h-4 w-12 bg-gray-200 rounded"></div>
+            </div>
           </div>
-        </div>
-        
-        {/* Variant Attributes Placeholder */}
-        <div>
-          <div className="h-6 w-32 bg-gray-200 rounded mb-4"></div>
-          <div className="space-y-2">
-            {[...Array(2)].map((_, i) => (
-              <div key={i} className="flex items-center space-x-2">
-                <div className="h-4 w-4 bg-gray-200 rounded"></div>
-                <div className="h-4 w-20 bg-gray-200 rounded"></div>
-              </div>
-            ))}
+
+          {/* Presentations Placeholder */}
+          <div>
+            <div className="h-6 w-32 bg-gray-200 rounded mb-4"></div>
+            <div className="space-y-2">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="flex items-center space-x-2">
+                  <div className="h-4 w-4 bg-gray-200 rounded"></div>
+                  <div className="h-4 w-16 bg-gray-200 rounded"></div>
+                </div>
+              ))}
+            </div>
           </div>
+
+          {/* Button Placeholder */}
+          <div className="h-10 bg-gray-200 rounded"></div>
         </div>
-        
-        {/* Button Placeholder */}
-        <div className="h-10 bg-gray-200 rounded"></div>
-      </div>
-    }>
+      }
+    >
       <ProductFiltersContent {...props} />
     </Suspense>
   )

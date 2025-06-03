@@ -220,67 +220,72 @@ export default function FrequentlyBoughtTogetherComponent({ product }: Frequentl
   }
 
   return (
-    <div className="w-full py-8 bg-muted/30 rounded-lg px-6">
+    <div className="w-full py-4 md:py-8 bg-muted/30 rounded-lg px-3 md:px-6">
       {/* Título */}
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold text-foreground mb-1">¡Haz tu compra aún mejor!</h2>
-        <p className="text-sm text-muted-foreground">Nuestros clientes vieron también estos productos</p>
+      <div className="mb-4 md:mb-6">
+        <h2 className="text-base md:text-lg font-semibold text-foreground mb-1">¡Haz tu compra aún mejor!</h2>
+        <p className="text-xs md:text-sm text-muted-foreground">Nuestros clientes vieron también estos productos</p>
       </div>
 
-      {/* Productos en línea horizontal */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4 flex-1">
-          {productList.map((productId, index) => {
-            const productInfo = getProductInfo(productId)
-            if (!productInfo) return null
+      {/* Layout responsivo */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 lg:gap-6 mb-4 md:mb-6">
+        {/* Productos - Scroll horizontal en móvil, flex normal en desktop */}
+        <div className="flex-1 min-w-0">
+          <div className="overflow-x-auto pb-2 lg:overflow-x-visible lg:pb-0">
+            <div className="flex items-center gap-2 md:gap-4 min-w-max lg:min-w-0 lg:justify-start">
+              {productList.map((productId, index) => {
+                const productInfo = getProductInfo(productId)
+                if (!productInfo) return null
 
-            return (
-              <div key={productId} className="flex items-center">
-                {index > 0 && (
-                  <div className="mx-2 text-muted-foreground">
-                    <Plus className="w-5 h-5" />
-                  </div>
-                )}
-
-                <div className="flex flex-col items-center relative">
-                  <div
-                    className={`w-24 h-24 border-2 rounded-lg p-2 bg-background flex items-center justify-center cursor-pointer transition-all duration-200 shadow-sm ${
-                      selectedProducts[productId]
-                        ? "border-primary ring-2 ring-primary/20"
-                        : "border-border hover:border-primary/50 opacity-50"
-                    }`}
-                    onClick={() => handleProductSelection(productId)}
-                  >
-                    <Image
-                      src={productInfo.imageUrl || "/placeholder.svg"}
-                      alt={productInfo.product.title}
-                      width={80}
-                      height={80}
-                      className="object-contain"
-                    />
-
-                    {/* Indicador de selección */}
-                    {selectedProducts[productId] && (
-                      <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-md">
-                        ✓
+                return (
+                  <div key={productId} className="flex items-center flex-shrink-0">
+                    {index > 0 && (
+                      <div className="mx-1 md:mx-2 text-muted-foreground">
+                        <Plus className="w-4 h-4 md:w-5 md:h-5" />
                       </div>
                     )}
+
+                    <div className="flex flex-col items-center relative">
+                      <div
+                        className={`w-16 h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 border-2 rounded-lg p-1 md:p-2 bg-background flex items-center justify-center cursor-pointer transition-all duration-200 shadow-sm ${
+                          selectedProducts[productId]
+                            ? "border-primary ring-2 ring-primary/20"
+                            : "border-border hover:border-primary/50 opacity-50"
+                        }`}
+                        onClick={() => handleProductSelection(productId)}
+                      >
+                        <Image
+                          src={productInfo.imageUrl || "/placeholder.svg"}
+                          alt={productInfo.product.title}
+                          width={80}
+                          height={80}
+                          className="object-contain w-full h-full"
+                        />
+
+                        {/* Indicador de selección */}
+                        {selectedProducts[productId] && (
+                          <div className="absolute -top-1 -right-1 md:-top-2 md:-right-2 bg-primary text-primary-foreground rounded-full w-4 h-4 md:w-6 md:h-6 flex items-center justify-center text-xs font-bold shadow-md">
+                            ✓
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            )
-          })}
+                )
+              })}
+            </div>
+          </div>
         </div>
 
         {/* Resumen de precio */}
-        <div className="ml-8 text-right">
+        <div className="flex-shrink-0 text-center lg:text-right">
           <div className="mb-3">
-            <p className="text-sm text-muted-foreground">Total:</p>
-            <p className="text-2xl font-bold text-primary">{formatCurrency(totalPrice, currency)}</p>
+            <p className="text-xs md:text-sm text-muted-foreground">Total:</p>
+            <p className="text-lg md:text-2xl font-bold text-primary">{formatCurrency(totalPrice, currency)}</p>
           </div>
           <Button
             onClick={handleAddAllToCart}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2 rounded-md font-medium shadow-md"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 md:px-6 py-2 rounded-md font-medium shadow-md w-full lg:w-auto"
           >
             Añadir combo
           </Button>
@@ -288,14 +293,14 @@ export default function FrequentlyBoughtTogetherComponent({ product }: Frequentl
       </div>
 
       {/* Lista de productos con checkboxes */}
-      <div className="space-y-3">
+      <div className="space-y-2 md:space-y-3">
         {productList.map((productId) => {
           const productInfo = getProductInfo(productId)
           if (!productInfo) return null
 
           return (
-            <div key={`list-${productId}`} className="flex items-center gap-3">
-              <div className="flex items-center justify-center">
+            <div key={`list-${productId}`} className="flex items-start gap-2 md:gap-3">
+              <div className="flex items-center justify-center pt-1">
                 <Checkbox
                   checked={selectedProducts[productId] || false}
                   onCheckedChange={() => handleProductSelection(productId)}
@@ -303,20 +308,23 @@ export default function FrequentlyBoughtTogetherComponent({ product }: Frequentl
                 />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm text-foreground">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <p className="text-xs md:text-sm text-foreground">
                     <span className="font-medium">({formatCurrency(productInfo.price, currency)})</span>{" "}
-                    {productInfo.product.title}
+                    <span className="break-words">{productInfo.product.title}</span>
                     {productInfo.variantDescription && (
-                      <span className="text-muted-foreground">, {productInfo.variantDescription}</span>
+                      <span className="text-muted-foreground block sm:inline">
+                        <span className="hidden sm:inline">, </span>
+                        {productInfo.variantDescription}
+                      </span>
                     )}
                   </p>
-                  <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     {productInfo.hasMultipleVariants && (
                       <Popover>
                         <PopoverTrigger asChild>
-                          <Button variant="outline" size="sm" className="text-xs px-2 py-1 h-7">
-                            Cambiar variante
+                          <Button variant="outline" size="sm" className="text-xs px-2 py-1 h-6 md:h-7">
+                            Cambiar
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-64 p-3" align="end">
@@ -370,7 +378,7 @@ export default function FrequentlyBoughtTogetherComponent({ product }: Frequentl
                     )}
                     <Link
                       href={`/productos/${productInfo.product.slug || ""}`}
-                      className="text-primary hover:text-primary/80 text-sm font-medium underline whitespace-nowrap"
+                      className="text-primary hover:text-primary/80 text-xs md:text-sm font-medium underline whitespace-nowrap"
                     >
                       Ver
                     </Link>
