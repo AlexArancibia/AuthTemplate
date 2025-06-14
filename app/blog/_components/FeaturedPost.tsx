@@ -17,7 +17,7 @@ interface FeaturedContentProps {
 export function FeaturedContent({ content }: FeaturedContentProps) {
   const formatDate = (date?: Date) =>
     date
-      ? new Date(date).toLocaleDateString("es-ES", {
+      ? new Date(date).toLocaleDateString("es-PE", {
           year: "numeric",
           month: "long",
           day: "numeric",

@@ -9,7 +9,11 @@ import { ProductCard } from "./ProductCard"
 import { useMainStore } from "@/stores/mainStore"
 import { ProductStatus } from "@/types/common"
 
-export function ProductCarousel() {
+interface ProductCarouselProps {
+  collectionName?: string
+}
+
+export function ProductCarousel({ collectionName }: ProductCarouselProps) {
   const { products } = useMainStore()
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
@@ -35,19 +39,28 @@ export function ProductCarousel() {
   }, [emblaApi])
 
   // Filtrar productos que no estén en estado DRAFT
-  const activeProducts = products.filter((product) => product.status !== ProductStatus.DRAFT)
+  let filteredProducts = products.filter((product) => product.status !== ProductStatus.DRAFT)
+
+  // Si existe collectionName, filtrar por colección específica
+  if (collectionName) {
+    filteredProducts = filteredProducts.filter((product) =>
+      product.collections?.some((c) => c.title === collectionName),
+    )
+  }
+
+  // Determinar título y enlace basado en si hay colección específica
+  const title =  "NUESTROS PRODUCTOS"
+  const linkText = "Explora nuestra tienda"
+  const linkHref = "/productos"
 
   return (
     <section className="py-16 lg:py-24 pb-8 lg:pb-24">
       <div className="container-section">
         <div className="content-section">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-4 md:mb-8">
-            <h2 className=" ">NUESTROS PRODUCTOS</h2>
-            <a
-              href="/productos"
-              className="text-primary hover:text-primary/90 transition-colors flex items-center gap-2"
-            >
-              Explora nuestra tienda
+            <h2 className=" ">{title}</h2>
+            <a href={linkHref} className="text-primary hover:text-primary/90 transition-colors flex items-center gap-2">
+              {linkText}
               <ChevronRight className="w-4 h-4" />
             </a>
           </div>
@@ -56,7 +69,7 @@ export function ProductCarousel() {
             {/* Carousel */}
             <div className="overflow-hidden pt-4" ref={emblaRef}>
               <div className="flex">
-                {activeProducts.slice(0, 6).map((product) => (
+                {filteredProducts.slice(0, 10).map((product) => (
                   <div key={product.id} className="flex-[0_0_100%] min-w-0 sm:flex-[0_0_50%] lg:flex-[0_0_25%] px-3">
                     <ProductCard product={product} />
                   </div>

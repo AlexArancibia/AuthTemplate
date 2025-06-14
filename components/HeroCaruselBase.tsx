@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { motion, AnimatePresence, type PanInfo } from "framer-motion"
 import type { HeroSection as HeroSectionType } from "@/types/heroSection"
 import { Button } from "@/components/ui/button"
@@ -26,6 +26,15 @@ export function HeroCarouselBase({
   showPauseButton = true,
   containerHeight = "calc(100vh)",
 }: HeroCarouselBaseProps) {
+  // Ordenar heroSections por prioridad (0 es más importante)
+  const sortedHeroSections = useMemo(() => {
+    return [...heroSections].sort((a, b) => {
+      const priorityA = a.metadata?.priority ?? Number.MAX_SAFE_INTEGER
+      const priorityB = b.metadata?.priority ?? Number.MAX_SAFE_INTEGER
+      return priorityA - priorityB
+    })
+  }, [heroSections])
+
   // Estados para el carrusel
   const [currentIndex, setCurrentIndex] = useState(0)
   const [direction, setDirection] = useState(0)
@@ -66,10 +75,10 @@ export function HeroCarouselBase({
 
   // Función para avanzar al siguiente slide
   const nextSlide = () => {
-    if (isTransitioning || heroSections.length <= 1) return
+    if (isTransitioning || sortedHeroSections.length <= 1) return
     setIsTransitioning(true)
     setDirection(1)
-    setCurrentIndex((prevIndex) => (prevIndex === heroSections.length - 1 ? 0 : prevIndex + 1))
+    setCurrentIndex((prevIndex) => (prevIndex === sortedHeroSections.length - 1 ? 0 : prevIndex + 1))
     resetProgress()
 
     // Desactivar el estado de transición después de que termine
@@ -80,10 +89,10 @@ export function HeroCarouselBase({
 
   // Función para retroceder al slide anterior
   const prevSlide = () => {
-    if (isTransitioning || heroSections.length <= 1) return
+    if (isTransitioning || sortedHeroSections.length <= 1) return
     setIsTransitioning(true)
     setDirection(-1)
-    setCurrentIndex((prevIndex) => (prevIndex === 0 ? heroSections.length - 1 : prevIndex - 1))
+    setCurrentIndex((prevIndex) => (prevIndex === 0 ? sortedHeroSections.length - 1 : prevIndex - 1))
     resetProgress()
 
     // Desactivar el estado de transición después de que termine
@@ -94,7 +103,7 @@ export function HeroCarouselBase({
 
   // Función para ir a un slide específico
   const goToSlide = (index: number) => {
-    if (index === currentIndex || isTransitioning || heroSections.length <= 1) return
+    if (index === currentIndex || isTransitioning || sortedHeroSections.length <= 1) return
 
     setIsTransitioning(true)
     setDirection(index > currentIndex ? 1 : -1)
@@ -141,7 +150,7 @@ export function HeroCarouselBase({
   }
 
   const handleDragEnd = (_: any, info: PanInfo) => {
-    if (isTransitioning || heroSections.length <= 1) return
+    if (isTransitioning || sortedHeroSections.length <= 1) return
 
     const dragEndX = info.point.x
     const diff = dragStartX.current - dragEndX
@@ -203,7 +212,7 @@ export function HeroCarouselBase({
 
   // Efecto para el autoplay y progreso
   useEffect(() => {
-    if (heroSections.length <= 1) return
+    if (sortedHeroSections.length <= 1) return
 
     if (!isPaused && !isTransitioning) {
       startAutoplay()
@@ -231,12 +240,12 @@ export function HeroCarouselBase({
         clearInterval(progressTimerRef.current)
       }
     }
-  }, [isPaused, isTransitioning, currentIndex, heroSections.length, autoplayInterval])
+  }, [isPaused, isTransitioning, currentIndex, sortedHeroSections.length, autoplayInterval])
 
   // Manejar eventos de teclado
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (heroSections.length <= 1) return
+      if (sortedHeroSections.length <= 1) return
 
       if (e.key === "ArrowLeft") {
         prevSlide()
@@ -251,18 +260,18 @@ export function HeroCarouselBase({
     return () => {
       window.removeEventListener("keydown", handleKeyDown)
     }
-  }, [isTransitioning, heroSections.length])
+  }, [isTransitioning, sortedHeroSections.length])
 
   // Si no hay secciones, no mostrar nada
-  if (heroSections.length === 0) {
+  if (sortedHeroSections.length === 0) {
     return null
   }
 
   // Si solo hay una sección, mostrarla sin controles
-  if (heroSections.length === 1) {
+  if (sortedHeroSections.length === 1) {
     return (
       <div className="w-full overflow-hidden">
-        <HeroSlide heroSection={heroSections[0]} />
+        <HeroSlide heroSection={sortedHeroSections[0]} />
       </div>
     )
   }
@@ -316,7 +325,7 @@ export function HeroCarouselBase({
               modifyTarget: (target) => Math.round(target / window.innerWidth) * window.innerWidth,
             }}
           >
-            <HeroSlide heroSection={heroSections[currentIndex]} />
+            <HeroSlide heroSection={sortedHeroSections[currentIndex]} />
           </motion.div>
         </AnimatePresence>
       </div>
@@ -353,7 +362,7 @@ export function HeroCarouselBase({
           {/* Barras de progreso */}
           {showIndicators && (
             <div className="flex gap-2 items-center">
-              {heroSections.map((_, index) => (
+              {sortedHeroSections.map((_, index) => (
                 <button
                   key={index}
                   onClick={() => goToSlide(index)}

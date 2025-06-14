@@ -23,6 +23,7 @@ interface ProductListProps {
   initialMinPrice?: number
   initialMaxPrice?: number
   initialVariantFilters?: Record<string, string[]>
+  collectionName?: string
 }
 
 interface Filters {
@@ -40,6 +41,7 @@ function ProductListContent({
   initialMinPrice,
   initialMaxPrice,
   initialVariantFilters = {},
+  collectionName,
 }: ProductListProps) {
   const { products, shopSettings } = useMainStore()
   const router = useRouter()
@@ -203,7 +205,41 @@ function ProductListContent({
   }, [products, filters, defaultCurrency])
 
   const sortedProducts = useMemo(() => {
-    return [...filteredProducts].sort((a, b) => {
+    let sorted = [...filteredProducts]
+
+    // First, apply collection prioritization if collectionName is provided
+    if (collectionName) {
+      sorted = sorted.sort((a, b) => {
+        const aHasCollection =
+          a.collections?.some((collection) => collection.title?.toLowerCase() === collectionName.toLowerCase()) || false
+        const bHasCollection =
+          b.collections?.some((collection) => collection.title?.toLowerCase() === collectionName.toLowerCase()) || false
+
+        // If only one product has the collection, prioritize it
+        if (aHasCollection && !bHasCollection) return -1
+        if (!aHasCollection && bHasCollection) return 1
+
+        // If both or neither have the collection, continue with regular sorting
+        return 0
+      })
+    }
+
+    // Then apply the selected sorting method
+    return sorted.sort((a, b) => {
+      // If we have collection prioritization, maintain it for products with same collection status
+      if (collectionName) {
+        const aHasCollection =
+          a.collections?.some((collection) => collection.title?.toLowerCase() === collectionName.toLowerCase()) || false
+        const bHasCollection =
+          b.collections?.some((collection) => collection.title?.toLowerCase() === collectionName.toLowerCase()) || false
+
+        // Only apply secondary sorting if both products have the same collection status
+        if (aHasCollection !== bHasCollection) {
+          return aHasCollection ? -1 : 1
+        }
+      }
+
+      // Apply the selected sorting method
       switch (sortBy) {
         case "price-asc":
           return (
@@ -221,7 +257,7 @@ function ProductListContent({
           return 0
       }
     })
-  }, [filteredProducts, sortBy, defaultCurrency])
+  }, [filteredProducts, sortBy, defaultCurrency, collectionName])
 
   const totalPages = Math.ceil(sortedProducts.length / PRODUCTS_PER_PAGE)
 

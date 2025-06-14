@@ -103,6 +103,7 @@ function ProductsContent() {
               initialMinPrice={minPrice}
               initialMaxPrice={maxPrice}
               initialVariantFilters={variantFilters}
+              collectionName="Destacados"
             />
           </motion.div>
         </div>

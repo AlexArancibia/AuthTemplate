@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useMemo, useEffect, Suspense } from "react"
+import { useState, useMemo, useEffect, Suspense, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -37,6 +37,10 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
   const searchParams = useSearchParams()
   const { categories, products, shopSettings } = useMainStore()
 
+  // Usar refs para evitar comparaciones innecesarias - con valores iniciales correctos
+  const lastFiltersRef = useRef<string>("")
+  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
   const [searchTerm, setSearchTerm] = useState(initialFilters.searchTerm)
   const [selectedCategories, setSelectedCategories] = useState<string[]>(initialFilters.categories)
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string[]>>(initialFilters.variants)
@@ -45,7 +49,7 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
 
   const defaultCurrency = shopSettings[0]?.defaultCurrency
 
-  // Debounce search term to avoid too many updates
+  // Debounce search term
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm)
@@ -54,8 +58,8 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
     return () => clearTimeout(timer)
   }, [searchTerm])
 
-  // Apply filters when they change
-  useEffect(() => {
+  // Función estable para actualizar filtros
+  const updateFilters = useCallback(() => {
     const currentFilters = {
       searchTerm: debouncedSearchTerm,
       categories: selectedCategories,
@@ -63,64 +67,93 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
       priceRange,
     }
 
-    const hasChanged =
-      initialFilters.searchTerm !== currentFilters.searchTerm ||
-      JSON.stringify(initialFilters.categories) !== JSON.stringify(currentFilters.categories) ||
-      JSON.stringify(initialFilters.variants) !== JSON.stringify(currentFilters.variants) ||
-      initialFilters.priceRange[0] !== currentFilters.priceRange[0] ||
-      initialFilters.priceRange[1] !== currentFilters.priceRange[1]
+    // Crear una clave única para comparar filtros
+    const filtersKey = JSON.stringify({
+      searchTerm: currentFilters.searchTerm,
+      categories: [...currentFilters.categories].sort(),
+      variants: Object.fromEntries(
+        Object.entries(currentFilters.variants).map(([key, values]) => [key, [...values].sort()]),
+      ),
+      priceRange: currentFilters.priceRange,
+    })
 
-    if (hasChanged) {
-      onFilterChange(currentFilters)
+    // Solo actualizar si los filtros realmente cambiaron
+    if (filtersKey !== lastFiltersRef.current) {
+      lastFiltersRef.current = filtersKey
 
-      // Update URL with proper format for presentations
-      const params = new URLSearchParams(searchParams.toString())
+      // Limpiar timeout anterior
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current)
+        updateTimeoutRef.current = null
+      }
+
+      // Debounce la actualización de filtros
+      updateTimeoutRef.current = setTimeout(() => {
+        onFilterChange(currentFilters)
+
+        // Actualizar URL solo si no estamos en móvil o si el drawer está cerrado
+        const isMobile = window.innerWidth < 1024
+        if (!isMobile) {
+          updateURL(currentFilters)
+        }
+        updateTimeoutRef.current = null
+      }, 100)
+    }
+  }, [debouncedSearchTerm, selectedCategories, selectedVariants, priceRange, onFilterChange])
+
+  // Función separada para actualizar URL
+  const updateURL = useCallback(
+    (filters: Filters) => {
+      const params = new URLSearchParams()
 
       // Handle presentations with special format
-      if (selectedVariants.Presentaciones && selectedVariants.Presentaciones.length > 0) {
-        const presentationsParam = selectedVariants.Presentaciones.map((value) => value.replace(/\s/g, "+")).join(",")
+      if (filters.variants.Presentaciones && filters.variants.Presentaciones.length > 0) {
+        const presentationsParam = filters.variants.Presentaciones.map((value) => value.replace(/\s/g, "+")).join(",")
         params.set("variant_Presentaciones", presentationsParam)
-      } else {
-        params.delete("variant_Presentaciones")
       }
 
       // Handle other filters
-      if (debouncedSearchTerm) {
-        params.set("search", debouncedSearchTerm)
-      } else {
-        params.delete("search")
+      if (filters.searchTerm) {
+        params.set("search", filters.searchTerm)
       }
 
-      if (selectedCategories.length > 0) {
-        params.set("categories", selectedCategories.join(","))
-      } else {
-        params.delete("categories")
+      if (filters.categories.length > 0) {
+        params.set("categories", filters.categories.join(","))
       }
 
-      if (priceRange[0] !== minPrice || priceRange[1] !== maxPrice) {
-        params.set("minPrice", priceRange[0].toString())
-        params.set("maxPrice", priceRange[1].toString())
-      } else {
-        params.delete("minPrice")
-        params.delete("maxPrice")
+      if (filters.priceRange[0] !== minPrice || filters.priceRange[1] !== maxPrice) {
+        params.set("minPrice", filters.priceRange[0].toString())
+        params.set("maxPrice", filters.priceRange[1].toString())
       }
 
       const newUrl = `${pathname}?${params.toString()}`
       router.replace(newUrl, { scroll: false })
+    },
+    [pathname, router, minPrice, maxPrice],
+  )
+
+  // Efecto principal para actualizar filtros
+  useEffect(() => {
+    updateFilters()
+
+    // Cleanup function
+    return () => {
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current)
+        updateTimeoutRef.current = null
+      }
     }
-  }, [
-    debouncedSearchTerm,
-    selectedCategories,
-    selectedVariants,
-    priceRange,
-    onFilterChange,
-    initialFilters,
-    searchParams,
-    pathname,
-    router,
-    minPrice,
-    maxPrice,
-  ])
+  }, [updateFilters])
+
+  // Limpiar timeouts al desmontar
+  useEffect(() => {
+    return () => {
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current)
+        updateTimeoutRef.current = null
+      }
+    }
+  }, [])
 
   const groupedPresentations = useMemo(() => {
     const presentations = new Set<string>()
@@ -170,13 +203,13 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
     return sortedGroups
   }, [products])
 
-  const handleCategoryChange = (categoryId: string) => {
+  const handleCategoryChange = useCallback((categoryId: string) => {
     setSelectedCategories((prev) =>
       prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [...prev, categoryId],
     )
-  }
+  }, [])
 
-  const handleVariantChange = (attribute: string, value: string) => {
+  const handleVariantChange = useCallback((attribute: string, value: string) => {
     setSelectedVariants((prev) => {
       const currentValues = prev[attribute] || []
       return {
@@ -186,23 +219,28 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
           : [...currentValues, value],
       }
     })
-  }
+  }, [])
 
-  const handlePriceChange = (value: number[]) => {
+  const handlePriceChange = useCallback((value: number[]) => {
     setPriceRange([value[0], value[1]])
-  }
+  }, [])
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value)
-  }
+  }, [])
 
-  const resetFilters = () => {
+  const resetFilters = useCallback(() => {
     setSearchTerm("")
     setSelectedCategories([])
     setSelectedVariants({})
     setPriceRange([minPrice, maxPrice])
+
+    // Limpiar la referencia
+    lastFiltersRef.current = ""
+
+    // Actualizar URL
     router.replace(pathname, { scroll: false })
-  }
+  }, [minPrice, maxPrice, pathname, router])
 
   return (
     <div className="w-72 bg-white space-y-6">
@@ -212,7 +250,7 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
         placeholder="Buscar productos"
         value={searchTerm}
         onChange={handleSearchChange}
-        className="w-full"
+        className="w-full mt-2 text-sm"
       />
 
       {/* Categories */}
@@ -296,7 +334,7 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
         </div>
       )}
 
-      <Button onClick={resetFilters} className="w-full bg-secondary text-white hover:bg-blue-700 transition">
+      <Button onClick={resetFilters} className="w-full bg-secondary text-white hover:bg-blue-700 transition mb-4">
         Resetear Filtros
       </Button>
     </div>

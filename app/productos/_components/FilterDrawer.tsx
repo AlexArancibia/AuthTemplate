@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Filter } from "lucide-react"
@@ -23,24 +23,28 @@ interface Filters {
 export function FilterDrawer({ onFilterChange, initialFilters, minPrice, maxPrice }: FilterDrawerProps) {
   const [open, setOpen] = useState(false)
 
-  const handleFilterChange = (filters: Filters) => {
-    onFilterChange(filters)
-    setOpen(false)
-  }
+  // Usar useCallback para evitar re-renders innecesarios
+  const handleFilterChange = useCallback(
+    (filters: Filters) => {
+      onFilterChange(filters)
+      setOpen(false)
+    },
+    [onFilterChange],
+  )
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="outline" size="sm" className="lg:hidden">
-          <Filter className="mr-2 h-4 w-4" />
-          Filtros
+        <Button variant="outline" size="sm" className="lg:hidden p-[18]">
+          <Filter className="mr-2 h-4 w-4 " />
+          <span className="font-normal ">Filtros</span>
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-[350px] sm:w-[400px]">
         <SheetHeader>
           <SheetTitle>Filtros</SheetTitle>
         </SheetHeader>
-        <div className="mt-4 overflow-y-auto h-[calc(100vh-5rem)]">
+        <div className="mt-4 pl-5 overflow-y-auto h-[calc(100vh-5rem)] block lg:hidden">
           <ProductFilters
             onFilterChange={handleFilterChange}
             initialFilters={initialFilters}
@@ -52,4 +56,3 @@ export function FilterDrawer({ onFilterChange, initialFilters, minPrice, maxPric
     </Sheet>
   )
 }
-

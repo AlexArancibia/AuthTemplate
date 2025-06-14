@@ -312,7 +312,7 @@ export default function FrequentlyBoughtTogetherComponent({ product }: Frequentl
                   <p className="text-xs md:text-sm text-foreground">
                     <span className="font-medium">({formatCurrency(productInfo.price, currency)})</span>{" "}
                     <span className="break-words">{productInfo.product.title}</span>
-                    {productInfo.variantDescription && (
+                    {productInfo.variantDescription && productInfo.variantDescription !== "type: simple" && (
                       <span className="text-muted-foreground block sm:inline">
                         <span className="hidden sm:inline">, </span>
                         {productInfo.variantDescription}
@@ -333,7 +333,7 @@ export default function FrequentlyBoughtTogetherComponent({ product }: Frequentl
                             <div className="grid grid-cols-2 gap-2">
                               {productInfo.product.variants?.map((v) => {
                                 let variantDisplay = v.title || ""
-                                if (!variantDisplay && v.attributes) {
+                                if (!variantDisplay && v.attributes ) {
                                   variantDisplay = Object.values(v.attributes).filter(Boolean).join(", ")
                                 }
                                 if (!variantDisplay) {
@@ -376,12 +376,12 @@ export default function FrequentlyBoughtTogetherComponent({ product }: Frequentl
                         </PopoverContent>
                       </Popover>
                     )}
-                    <Link
+                    <a target="_blank"
                       href={`/productos/${productInfo.product.slug || ""}`}
                       className="text-primary hover:text-primary/80 text-xs md:text-sm font-medium underline whitespace-nowrap"
                     >
                       Ver
-                    </Link>
+                    </a>
                   </div>
                 </div>
               </div>

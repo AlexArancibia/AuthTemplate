@@ -78,7 +78,7 @@ export function UserDashboard() {
           <CardDescription className="text-base mb-6">
             Por favor inicia sesión para acceder a tu dashboard
           </CardDescription>
-          <Button onClick={() => router.push("/login")}>Iniciar sesión</Button>
+          <Button className="cursor-pointer" onClick={() => router.push("/login")}>Iniciar sesión</Button>
         </Card>
       </div>
     )

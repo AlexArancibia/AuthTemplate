@@ -9,7 +9,7 @@ export default function TerminosYCondicionesPage() {
   const { shopSettings } = useMainStore()
   const shopInfo = shopSettings?.[0]
 
-  const currentDate = new Date().toLocaleDateString("es-ES", {
+  const currentDate = new Date().toLocaleDateString("es-PE", {
     year: "numeric",
     month: "long",
     day: "numeric",

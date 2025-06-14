@@ -388,7 +388,7 @@ const baseTemplate = (content: string, title: string, shopSettings?: ShopSetting
 // Función para formatear moneda usando la configuración de la tienda
 const formatCurrency = (amount: number, currencyCode = "PEN", shopSettings?: ShopSettings) => {
   const currency = currencyCode || shopSettings?.defaultCurrency?.code || "PEN"
-  const locale = shopSettings?.country === "PE" ? "es-PE" : "es-ES"
+  const locale = shopSettings?.country === "PE" ? "es-PE" : "es-PE"
 
   return new Intl.NumberFormat(locale, {
     style: "currency",
@@ -435,7 +435,7 @@ export const orderConfirmationClientTemplate = (order: Order, shopSettings?: Sho
         
         <div class="card">
             <h3>Pedido #${order.orderNumber}</h3>
-            <p style="margin-bottom: 20px;"><strong>Fecha:</strong> ${new Date(order.createdAt).toLocaleDateString("es-ES")}</p>
+            <p style="margin-bottom: 20px;"><strong>Fecha:</strong> ${new Date(order.createdAt).toLocaleDateString("es-PE")}</p>
             
             <h4>Productos:</h4>
             ${order.lineItems
@@ -502,7 +502,7 @@ export const orderConfirmationClientTemplate = (order: Order, shopSettings?: Sho
             <h4>🚚 Método de Envío</h4>
             <p>${order.shippingMethod.name}</p>
             ${order.trackingNumber ? `<p><strong>Seguimiento:</strong> ${order.trackingNumber}</p>` : ""}
-            ${order.estimatedDeliveryDate ? `<p><strong>Entrega estimada:</strong> ${new Date(order.estimatedDeliveryDate).toLocaleDateString("es-ES")}</p>` : ""}
+            ${order.estimatedDeliveryDate ? `<p><strong>Entrega estimada:</strong> ${new Date(order.estimatedDeliveryDate).toLocaleDateString("es-PE")}</p>` : ""}
         </div>
         `
             : ""
@@ -556,7 +556,7 @@ export const orderNotificationAdminTemplate = (order: Order, shopSettings?: Shop
         
         <div class="card">
             <h3>📋 Pedido #${order.orderNumber}</h3>
-            <p><strong>Fecha:</strong> ${new Date(order.createdAt).toLocaleDateString("es-ES")} - ${new Date(order.createdAt).toLocaleTimeString("es-ES")}</p>
+            <p><strong>Fecha:</strong> ${new Date(order.createdAt).toLocaleDateString("es-PE")} - ${new Date(order.createdAt).toLocaleTimeString("es-PE")}</p>
             <p><strong>Total:</strong> <span style="font-size: 20px; color: #059669; font-weight: bold;">${formatCurrency(order.totalPrice, order.currency.code, shopSettings)}</span></p>
             
             <h4>📦 Productos</h4>
@@ -649,7 +649,7 @@ export const orderNotificationAdminTemplate = (order: Order, shopSettings?: Shop
         <div class="info-section">
             <h4>🚚 Información de Envío</h4>
             <p><strong>Método:</strong> ${order.shippingMethod.name}</p>
-            ${order.preferredDeliveryDate ? `<p><strong>Fecha preferida:</strong> ${new Date(order.preferredDeliveryDate).toLocaleDateString("es-ES")}</p>` : ""}
+            ${order.preferredDeliveryDate ? `<p><strong>Fecha preferida:</strong> ${new Date(order.preferredDeliveryDate).toLocaleDateString("es-PE")}</p>` : ""}
             ${order.trackingNumber ? `<p><strong>Seguimiento:</strong> ${order.trackingNumber}</p>` : ""}
         </div>
         `
@@ -706,7 +706,7 @@ export const contactFormTemplate = (
             <p><strong>Email:</strong> <a href="mailto:${formData.email}" style="color: #1e40af; text-decoration: none;">${formData.email}</a></p>
             ${formData.phone ? `<p><strong>Teléfono:</strong> <a href="tel:${formData.phone}" style="color: #1e40af; text-decoration: none;">${formData.phone}</a></p>` : ""}
             <p><strong>Asunto:</strong> ${formData.subject}</p>
-            <p><strong>Fecha:</strong> ${new Date().toLocaleDateString("es-ES")} - ${new Date().toLocaleTimeString("es-ES")}</p>
+            <p><strong>Fecha:</strong> ${new Date().toLocaleDateString("es-PE")} - ${new Date().toLocaleTimeString("es-PE")}</p>
         </div>
         
         <div class="card">
@@ -746,7 +746,7 @@ export const contactAutoReplyTemplate = (
         <div class="card">
             <h4>📋 Resumen de tu mensaje</h4>
             <p><strong>Asunto:</strong> ${formData.subject}</p>
-            <p><strong>Fecha:</strong> ${new Date().toLocaleDateString("es-ES")} - ${new Date().toLocaleTimeString("es-ES")}</p>
+            <p><strong>Fecha:</strong> ${new Date().toLocaleDateString("es-PE")} - ${new Date().toLocaleTimeString("es-PE")}</p>
             
             <div style="background-color: #f8fafc; padding: 18px; border-radius: 8px; margin-top: 12px; border-left: 3px solid #1e40af; font-style: italic;">
                 ${formData.message.replace(/\n/g, "<br>")}

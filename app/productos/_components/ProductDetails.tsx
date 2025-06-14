@@ -38,6 +38,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [imageLoading, setImageLoading] = useState(false)
   const [preloadedImages, setPreloadedImages] = useState<Set<string>>(new Set())
+  const [showContinueShopping, setShowContinueShopping] = useState(false)
 
   // Carrusel para productos relacionados
   const [emblaRef, emblaApi] = useEmblaCarousel({
@@ -247,6 +248,14 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
       toast.success("Producto añadido al carrito", {
         description: `${quantity} x ${product.title} ${attributeDisplay}`,
       })
+
+      // Show continue shopping button
+      setShowContinueShopping(true)
+
+      // Hide the button after 5 seconds
+      setTimeout(() => {
+        setShowContinueShopping(false)
+      }, 5000)
     }
   }
 
@@ -449,21 +458,45 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                   </div>
                 </div>
 
-                <div className="flex gap-4">
+                <div className="flex gap-4 items-start">
                   <div className="flex items-center gap-2">
                     <span className="text-2xl font-bold text-primary">
                       {mainPrice?.currency?.symbol}
                       {Number(price).toFixed(2)}
                     </span>
                   </div>
-                  <Button
-                    className="w-[200px]"
-                    onClick={handleAddToCart}
-                    disabled={!isVariantAvailable(selectedVariant)}
-                  >
-                    <ShoppingCart className="w-4 h-4 mr-2" />
-                    {isVariantAvailable(selectedVariant) ? "Agregar al carrito" : "Sin stock"}
-                  </Button>
+                  <div className="flex gap-3 items-center">
+                    <Button
+                      className="w-[200px]"
+
+                      onClick={handleAddToCart}
+                      disabled={!isVariantAvailable(selectedVariant)}
+                    >
+                      <ShoppingCart className="w-4 h-4 mr-2" />
+                      {isVariantAvailable(selectedVariant) ? "Agregar al carrito" : "Sin stock"}
+                    </Button>
+
+                    <AnimatePresence>
+                      {showContinueShopping && (
+                        <motion.div
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -10 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <Link href="/productos">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="whitespace-nowrap border-primary/20 text-primary hover:bg-primary/5 font-extralight"
+                            >
+                              Continuar comprando
+                            </Button>
+                          </Link>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </div>
 
                 {selectedVariant.inventoryQuantity === 0 && product.allowBackorder ? (
@@ -501,6 +534,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.55, duration: 0.5 }}
               className="border-t pt-8"
+              id="detalles"
             >
               <h2 className="text-xl font-semibold mb-4">Detalles del Producto</h2>
               <ProductTabsDescription description={product.description ?? ""} />

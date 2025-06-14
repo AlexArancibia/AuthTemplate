@@ -19,7 +19,7 @@ export function PostCard({ content, index }: PostCardProps) {
   // Función para formatear la fecha
   const formatDate = (date: Date | undefined) => {
     if (!date) return "Sin fecha"
-    return new Date(date).toLocaleDateString("es-ES", {
+    return new Date(date).toLocaleDateString("es-PE", {
       year: "numeric",
       month: "long",
       day: "numeric",

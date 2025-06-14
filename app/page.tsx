@@ -25,7 +25,7 @@ export default function HomePage() {
     <Suspense fallback={<div className="h-96 bg-muted animate-pulse" />}>
         <FeaturesSection id="cs_5c596d6f-a27c" />
       </Suspense>
-      <ProductCarousel />
+      <ProductCarousel collectionName="Destacados" />
       <DeliveryHeroSection />
        <BlogSection />
     

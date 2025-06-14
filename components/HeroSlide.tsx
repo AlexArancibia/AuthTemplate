@@ -223,15 +223,14 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
               )}
 
               {subtitle && (
-                <motion.p
-                  className={`text-sm md:text-lg  ${styles.subtitleColor || ""}`}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.1 + animationDelay }}
-                >
-                  {subtitle}
-                </motion.p>
-              )}
+              <motion.div
+                className={`text-sm md:text-lg ${styles.subtitleColor || ""} [&_*]:text-sm [&_*]:md:text-lg [&_*]:!text-inherit`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 + animationDelay }}
+                dangerouslySetInnerHTML={{ __html: subtitle }}
+              />
+            )}
 
               {buttonText && buttonLink && (
                 <motion.div

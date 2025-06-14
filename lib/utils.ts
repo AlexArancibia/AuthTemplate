@@ -10,7 +10,7 @@ export function formatCurrency(amount: number | null | undefined, currencyCode =
     return "-"
   }
 
-  return new Intl.NumberFormat("es-ES", {
+  return new Intl.NumberFormat("es-PE", {
     style: "currency",
     currency: currencyCode,
     minimumFractionDigits: 2,
@@ -18,7 +18,7 @@ export function formatCurrency(amount: number | null | undefined, currencyCode =
 }
 
 export function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat("es-ES", {
+  return new Intl.DateTimeFormat("es-PE", {
     day: "numeric",
     month: "long",
     year: "numeric",

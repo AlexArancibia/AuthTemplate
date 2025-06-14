@@ -64,18 +64,35 @@ export function ProductSidebar({ product }: ProductSidebarProps) {
 
       {/* Métodos de pago */}
       <div className="border rounded-lg p-4 shadow-md bg-gray-50/90 shadow-slate-200/30">
-        <h3 className="font-normal text-base mb-3 flex items-center gap-2">
-          <CreditCard className="w-5 h-5" />
-          Métodos de pago
-        </h3>
-        <div className="flex flex-wrap gap-2">
-          {paymentProviders.map((provider) => (
-            <div key={provider.id} className="bg-gray-100 text-gray-800 px-3 py-1 rounded-full text-sm">
-              {provider.name}
-            </div>
-          ))}
+          <h3 className="font-normal text-base mb-3 flex items-center gap-2">
+            <CreditCard className="w-5 h-5" />
+            Métodos de pago
+          </h3>
+          <div className="flex flex-wrap gap-3">
+            {paymentProviders.map((provider) => (
+              <div 
+                key={provider.id} 
+                className="  rounded-lg text-sm flex items-center gap-2  "
+              >
+                {provider.imgUrl ? (
+                  <div className="w-6 h-6 flex-shrink-0 overflow-hidden rounded">
+                    <img
+                      src={provider.imgUrl || "/placeholder.svg"}
+                      alt={provider.name}
+                      className="w-full h-full object-contain"
+                      crossOrigin="anonymous"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-6 h-6 flex-shrink-0 bg-gradient-to-br from-blue-100 to-blue-200 rounded flex items-center justify-center">
+                    <CreditCard className="w-3 h-3 text-blue-600" />
+                  </div>
+                )}
+                <span className="text-gray-700 font-normal">{provider.name}</span>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
 
       {/* Últimos productos */}
       <div className="border rounded-lg p-4 shadow-md bg-gray-50/90 shadow-slate-200/30">
