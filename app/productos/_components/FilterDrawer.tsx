@@ -21,19 +21,15 @@ interface Filters {
 }
 
 export function FilterDrawer({ onFilterChange, initialFilters, minPrice, maxPrice }: FilterDrawerProps) {
-  const [open, setOpen] = useState(false)
-
-  // Usar useCallback para evitar re-renders innecesarios
   const handleFilterChange = useCallback(
     (filters: Filters) => {
       onFilterChange(filters)
-      setOpen(false)
     },
     [onFilterChange],
   )
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet>
       <SheetTrigger asChild>
         <Button variant="outline" size="sm" className="lg:hidden p-[18]">
           <Filter className="mr-2 h-4 w-4 " />
@@ -41,8 +37,8 @@ export function FilterDrawer({ onFilterChange, initialFilters, minPrice, maxPric
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-[350px] sm:w-[400px]">
-        <SheetHeader>
-          <SheetTitle>Filtros</SheetTitle>
+        <SheetHeader className="h-4 ">
+          <SheetTitle className="text-xl">Filtros</SheetTitle>
         </SheetHeader>
         <div className="mt-4 pl-5 overflow-y-auto h-[calc(100vh-5rem)] block lg:hidden">
           <ProductFilters

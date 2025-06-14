@@ -55,6 +55,43 @@ export function CustomerInfoStep({
 }: CustomerInfoStepProps) {
   const router = useRouter()
 
+  // Función para verificar si los campos requeridos están completos
+  const isFormValid = () => {
+    // Verificar información de contacto básica
+    const basicInfoValid = formData.firstName && 
+                         formData.lastName && 
+                         formData.email && 
+                         formData.phone
+
+    // Verificar dirección de envío
+    let shippingValid = false
+    if (isAuthenticated && currentUser?.addresses?.length > 0 && selectedShippingAddressId) {
+      shippingValid = true
+    } else {
+      shippingValid = formData.address && 
+                     formData.shippingPhone && 
+                     formData.city && 
+                     formData.state && 
+                     formData.zipCode
+    }
+
+    // Verificar dirección de facturación si es diferente
+    let billingValid = true
+    if (!formData.sameBillingAddress) {
+      if (isAuthenticated && currentUser?.addresses?.length > 0 && selectedBillingAddressId) {
+        billingValid = true
+      } else {
+        billingValid = formData.billingAddress && 
+                      formData.billingPhone && 
+                      formData.billingCity && 
+                      formData.billingState && 
+                      formData.billingZipCode
+      }
+    }
+
+    return basicInfoValid && shippingValid && billingValid
+  }
+
   // Render an address card
   const renderAddressCard = (address: Address, isSelected: boolean, onSelect: () => void, isShipping: boolean) => (
     <Card
@@ -360,7 +397,7 @@ export function CustomerInfoStep({
           <ArrowLeft className="mr-2 h-4 w-4" />
           Atrás
         </Button>
-        <Button onClick={nextStep}>
+        <Button onClick={nextStep} disabled={!isFormValid()}>
           Continuar
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>

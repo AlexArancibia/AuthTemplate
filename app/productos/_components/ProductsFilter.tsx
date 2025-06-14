@@ -259,7 +259,7 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
         placeholder="Buscar productos"
         value={searchTerm}
         onChange={handleSearchChange}
-        className="w-full"
+        className="w-full text-sm mt-1"
       />
 
       {/* Categories */}

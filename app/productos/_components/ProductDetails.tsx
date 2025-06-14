@@ -481,19 +481,26 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                   </div>
                 </div>
 
-                <div className="flex gap-4 items-start">
+                <div className="space-y-4">
                   {hasValidPrice(selectedVariant) && (
                     <div className="flex items-center gap-2">
                       <span className="text-2xl font-bold text-primary">
                         {mainPrice?.currency?.symbol}
-                        {Number(price).toFixed(2)}
+                        {Number(price * quantity).toFixed(2)}
                       </span>
+                      {quantity > 1 && (
+                        <span className="text-sm text-muted-foreground">
+                          ({mainPrice?.currency?.symbol}
+                          {Number(price).toFixed(2)} c/u)
+                        </span>
+                      )}
                     </div>
                   )}
-                  <div className="flex gap-3 items-center">
+
+                  <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
                     {hasValidPrice(selectedVariant) ? (
                       <Button
-                        className="w-[200px]"
+                        className="w-full sm:w-[200px]"
                         onClick={handleAddToCart}
                         disabled={!isVariantAvailable(selectedVariant)}
                       >
@@ -502,7 +509,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                       </Button>
                     ) : (
                       <Button
-                        className="   hover:bg-green-700 text-white border border-border "
+                        className="w-full sm:w-[200px] bg-green-600 hover:bg-green-700"
                         onClick={handleWhatsAppConsult}
                         disabled={!shopSettings || !shopSettings[0]?.phone}
                       >
@@ -516,16 +523,17 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                     <AnimatePresence>
                       {showContinueShopping && hasValidPrice(selectedVariant) && (
                         <motion.div
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: -10 }}
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
                           transition={{ duration: 0.3 }}
+                          className="w-full sm:w-auto"
                         >
                           <Link href="/productos">
                             <Button
                               variant="outline"
                               size="sm"
-                              className="whitespace-nowrap border-primary/20 text-primary hover:bg-primary/5 font-extralight"
+                              className="w-full sm:w-auto whitespace-nowrap border-primary/20 text-primary hover:bg-primary/5 font-extralight"
                             >
                               Continuar comprando
                             </Button>
@@ -674,13 +682,17 @@ function ProductSimpleDescription({ description }: { description: string }) {
 
   return (
     <div
-      className="text-secondary/90 leading-relaxed [&_p]:mb-4 [&_a]:text-blue-600 [&_a]:underline 
-          [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 
-          [&_h1]:text-2xl [&_h1]:font-bold [&_h3]:text-lg [&_h3]:font-medium 
-          [&_blockquote]:border-l-4 [&_blockquote]:border-gray-400 [&_blockquote]:pl-4 [&_blockquote]:italic 
-          [&_table]:w-full [&_table]:border [&_table]:border-gray-300 [&_table]:border-collapse [&_table]:mb-4
-          [&_th]:bg-gray-100 [&_th]:border [&_th]:border-gray-300 [&_th]:text-left [&_th]:px-4 [&_th]:py-3 [&_th]:font-bold 
-          [&_td]:border [&_td]:border-gray-300 [&_td]:px-4 [&_td]:py-3 [&_td]:text-gray-700"
+      className="text-secondary/90 leading-relaxed overflow-x-auto max-w-full
+        [&_p]:mb-4 [&_a]:text-blue-600 [&_a]:underline 
+        [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 
+        [&_h1]:text-2xl [&_h1]:font-bold [&_h3]:text-lg [&_h3]:font-medium 
+        [&_blockquote]:border-l-4 [&_blockquote]:border-gray-400 [&_blockquote]:pl-4 [&_blockquote]:italic 
+        [&_table]:w-full [&_table]:border [&_table]:border-gray-300 [&_table]:border-collapse [&_table]:mb-4 [&_table]:min-w-[600px]
+        [&_th]:bg-gray-100 [&_th]:border [&_th]:border-gray-300 [&_th]:text-left [&_th]:px-4 [&_th]:py-3 [&_th]:font-bold [&_th]:whitespace-nowrap
+        [&_td]:border [&_td]:border-gray-300 [&_td]:px-4 [&_td]:py-3 [&_td]:text-gray-700 [&_td]:whitespace-nowrap
+        [&_img]:max-w-full [&_img]:h-auto
+        [&_pre]:overflow-x-auto [&_pre]:max-w-full
+        [&_code]:break-words"
       dangerouslySetInnerHTML={{ __html: introContent }}
     />
   )
@@ -748,14 +760,18 @@ function ProductTabsDescription({ description }: { description: string }) {
       {sections.map((section) => (
         <TabsContent key={section.title} value={section.title}>
           <div
-            className="text-secondary/90 leading-relaxed [&_p]:mb-4 [&_a]:text-blue-600 [&_a]:underline 
-                      [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 
-                      [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:text-xl [&_h2]:font-semibold 
-                      [&_h3]:text-lg [&_h3]:font-medium 
-                      [&_blockquote]:border-l-4 [&_blockquote]:border-gray-400 [&_blockquote]:pl-4 [&_blockquote]:italic 
-                      [&_table]:w-full [&_table]:border [&_table]:border-gray-300 [&_table]:border-collapse [&_table]:mb-4
-                      [&_th]:bg-gray-100 [&_th]:border [&_th]:border-gray-300 [&_th]:text-left [&_th]:px-4 [&_th]:py-3 [&_th]:font-bold 
-                      [&_td]:border [&_td]:border-gray-300 [&_td]:px-4 [&_td]:py-3 [&_td]:text-gray-700"
+            className="text-secondary/90 leading-relaxed overflow-x-auto max-w-full
+                    [&_p]:mb-4 [&_a]:text-blue-600 [&_a]:underline 
+                    [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 
+                    [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:text-xl [&_h2]:font-semibold 
+                    [&_h3]:text-lg [&_h3]:font-medium 
+                    [&_blockquote]:border-l-4 [&_blockquote]:border-gray-400 [&_blockquote]:pl-4 [&_blockquote]:italic 
+                    [&_table]:w-full [&_table]:border [&_table]:border-gray-300 [&_table]:border-collapse [&_table]:mb-4 [&_table]:min-w-[600px]
+                    [&_th]:bg-gray-100 [&_th]:border [&_th]:border-gray-300 [&_th]:text-left [&_th]:px-4 [&_th]:py-3 [&_th]:font-bold [&_th]:whitespace-nowrap
+                    [&_td]:border [&_td]:border-gray-300 [&_td]:px-4 [&_td]:py-3 [&_td]:text-gray-700 [&_td]:whitespace-nowrap
+                    [&_img]:max-w-full [&_img]:h-auto
+                    [&_pre]:overflow-x-auto [&_pre]:max-w-full
+                    [&_code]:break-words"
             dangerouslySetInnerHTML={{ __html: section.content }}
           />
         </TabsContent>

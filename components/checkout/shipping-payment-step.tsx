@@ -1,9 +1,8 @@
 "use client"
 
 import type React from "react"
-
 import { motion } from "framer-motion"
-import { ArrowLeft, Loader2, Package, Truck } from "lucide-react"
+import { ArrowLeft, Loader2, Package, Truck, CreditCard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -12,6 +11,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import type { JSX } from "react"
+import { PaymentProvider } from "@/types/payments"
+import { ShippingMethod } from "@/types/shippingMethod"
+import Image from "next/image"
 
 interface ShippingPaymentStepProps {
   formData: any
@@ -21,8 +23,8 @@ interface ShippingPaymentStepProps {
   submitOrder: () => void
   isSubmitting: boolean
   isLoading: boolean
-  shippingMethods: any[]
-  paymentProviders: any[]
+  shippingMethods: ShippingMethod[]
+  paymentProviders: PaymentProvider[]
   getPaymentIcon: (paymentName: string) => JSX.Element
 }
 
@@ -56,7 +58,7 @@ export function ShippingPaymentStep({
           >
             {shippingMethods.map((method) => {
               const price = method.prices[0]?.price || 0
-              const isFree = price === 0 || price === "0" || price === "0.00"
+              const isFree = price === 0  
 
               return (
                 <div
@@ -83,7 +85,7 @@ export function ShippingPaymentStep({
                     </Badge>
                   ) : (
                     <span className="font-medium">
-                      {paymentProviders[0]?.currency || "$"}
+                      {paymentProviders[0]?.currency.symbol}
                       {Number(price).toFixed(2)}
                     </span>
                   )}
@@ -117,11 +119,26 @@ export function ShippingPaymentStep({
               >
                 <RadioGroupItem value={provider.id} id={provider.id} />
                 <Label htmlFor={provider.id} className="flex-1 cursor-pointer">
-                  <div className="flex items-center">
-                    {getPaymentIcon(provider.name)}
+                  <div className="flex items-center gap-3">
+                    {/* Mostrar imagen del proveedor si existe, si no mostrar icono de tarjeta */}
+                    {provider.imgUrl ? (
+                      <div className="relative h-10 w-10">
+                        <Image 
+                          src={provider.imgUrl}
+                          alt={provider.name}
+                          fill
+                          className="object-contain"
+                        />
+                      </div>
+                    ) : (
+                      <CreditCard className="h-5 w-5 text-primary" />
+                    )}
                     <div>
                       <p className="font-medium">{provider.name}</p>
-                      <p className="text-sm text-gray-500">{provider.description}</p>
+                      {/* Mostrar descripción si existe */}
+                      {provider.description && (
+                        <p className="text-sm text-gray-500">{provider.description}</p>
+                      )}
                     </div>
                   </div>
                 </Label>
@@ -200,7 +217,6 @@ export function ShippingPaymentStep({
           className="min-h-[100px]"
         />
       </div>
-
       <div className="flex justify-between pt-4">
         <Button variant="outline" onClick={prevStep}>
           <ArrowLeft className="mr-2 h-4 w-4" />
