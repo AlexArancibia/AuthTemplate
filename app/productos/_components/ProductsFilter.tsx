@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useMemo, useEffect, Suspense, useCallback, useRef } from "react"
+import { useState, useMemo, useEffect, useCallback, useRef, Suspense } from "react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -203,6 +203,15 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
     return sortedGroups
   }, [products])
 
+  // Sort categories by priority (0 = highest priority)
+  const sortedCategories = useMemo(() => {
+    return [...categories].sort((a, b) => {
+      const priorityA = a.priority ?? Number.MAX_SAFE_INTEGER
+      const priorityB = b.priority ?? Number.MAX_SAFE_INTEGER
+      return priorityA - priorityB
+    })
+  }, [categories])
+
   const handleCategoryChange = useCallback((categoryId: string) => {
     setSelectedCategories((prev) =>
       prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [...prev, categoryId],
@@ -250,14 +259,14 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
         placeholder="Buscar productos"
         value={searchTerm}
         onChange={handleSearchChange}
-        className="w-full mt-2 text-sm"
+        className="w-full"
       />
 
       {/* Categories */}
       <div>
         <h3 className="text-lg font-medium mb-4">Categorías</h3>
         <div className="space-y-2">
-          {categories.map((category: Category) => (
+          {sortedCategories.map((category: Category) => (
             <div key={category.id} className="flex items-center space-x-2">
               <Checkbox
                 id={category.id}
@@ -334,7 +343,7 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
         </div>
       )}
 
-      <Button onClick={resetFilters} className="w-full bg-secondary text-white hover:bg-blue-700 transition mb-4">
+      <Button onClick={resetFilters} className="w-full bg-secondary text-white hover:bg-blue-700 transition">
         Resetear Filtros
       </Button>
     </div>
