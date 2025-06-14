@@ -128,7 +128,7 @@ export function Footer() {
           {/* Información de la empresa */}
           <motion.div variants={itemVariants} className="space-y-4">
             <div>
-              <img src={shopSettings[0]?.logo3 } className="h-32 w-32 mb-3"></img>
+              <img src={shopSettings[0]?.logo3 } className="h-32 w-32 mb-3 object-contain"></img>
               <p className="text-gray-300 text-sm leading-relaxed">
                 {shopInfo?.description ||
                   "Comprometidos con la excelencia y la satisfacción de nuestros clientes. Ofrecemos productos y servicios de la más alta calidad."}

@@ -60,7 +60,7 @@ export default function Navbar({ user }: NavbarProps) {
     loading,
     error,
   } = useMainStore()
-  const { items, removeItem, getTotal, getItemsCount } = useCartStore()
+  const { items, removeItem, updateQuantity, getTotal, getItemsCount } = useCartStore()
   const [mounted, setMounted] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [isSearchOpen, setIsSearchOpen] = useState(false)
@@ -351,9 +351,30 @@ export default function Navbar({ user }: NavbarProps) {
                           </div>
                           <div className="flex-1 min-w-0">
                             <h4 className="font-medium text-sm truncate">{item.product.title}</h4>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {item.variant.title} - Cantidad: {item.quantity}
-                            </p>
+                            <p className="text-xs text-muted-foreground truncate mb-1">{item.variant.title}</p>
+
+                            {/* Quantity Controls */}
+                            <div className="flex items-center gap-2 mb-1">
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => updateQuantity(item.variant.id, Math.max(1, item.quantity - 1))}
+                                disabled={item.quantity <= 1}
+                              >
+                                <span className="text-xs">-</span>
+                              </Button>
+                              <span className="text-xs font-medium min-w-[20px] text-center">{item.quantity}</span>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => updateQuantity(item.variant.id, item.quantity + 1)}
+                              >
+                                <span className="text-xs">+</span>
+                              </Button>
+                            </div>
+
                             <p className="text-xs font-medium">
                               {item.variant.prices && item.variant.prices.length > 0
                                 ? formatCurrency(

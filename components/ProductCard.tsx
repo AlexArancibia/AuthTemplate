@@ -90,7 +90,7 @@ export function ProductCard({ product }: ProductCardProps) {
       const matchingPrice = variant.prices.find((p) => p.currencyId === defaultCurrency?.id)
       return matchingPrice ? matchingPrice.price : null
     })
-    .filter((price): price is number => price !== null) // Filtrar valores nulos
+    .filter((price): price is number => price !== null && price > 0) // Filtrar valores nulos Y cero
 
   // Si no hay precios válidos, usar un array con 0 para evitar errores
   const validPrices = prices.length > 0 ? prices : [0]
@@ -98,12 +98,14 @@ export function ProductCard({ product }: ProductCardProps) {
   const lowestPrice = Math.min(...validPrices)
   const highestPrice = Math.max(...validPrices)
 
-  const formatPrice = (price: number) => `${defaultCurrency?.symbol || "$"} ${price.toFixed(2)}`
+  const formatPrice = (price: number) => `${defaultCurrency?.symbol || "$"} ${Number(price).toFixed(2)}`
 
   const priceDisplay =
-    lowestPrice === highestPrice
-      ? formatPrice(lowestPrice)
-      : `${formatPrice(lowestPrice)} - ${formatPrice(highestPrice)}`
+    prices.length > 0
+      ? prices.length === 1 || Math.min(...prices) === Math.max(...prices)
+        ? formatPrice(prices[0])
+        : `${formatPrice(Math.min(...prices))} - ${formatPrice(Math.max(...prices))}`
+      : null
 
   // Verificar si el producto es nuevo (menos de 7 días)
   const isNew =
@@ -174,7 +176,7 @@ export function ProductCard({ product }: ProductCardProps) {
           </div>
 
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-md font-bold text-gray-700">{priceDisplay}</span>
+            {priceDisplay && <span className="text-md font-bold text-gray-700">{priceDisplay}</span>}
 
             {/* Etiqueta de prelanzamiento */}
             {hasUpcomingRelease && (

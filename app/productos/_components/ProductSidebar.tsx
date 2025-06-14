@@ -80,7 +80,7 @@ export function ProductSidebar({ product }: ProductSidebarProps) {
                       src={provider.imgUrl || "/placeholder.svg"}
                       alt={provider.name}
                       className="w-full h-full object-contain"
-                      crossOrigin="anonymous"
+              
                     />
                   </div>
                 ) : (
