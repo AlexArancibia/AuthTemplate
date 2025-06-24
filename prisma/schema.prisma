@@ -68,6 +68,15 @@ model VerificationToken {
   @@schema("clefast")
 }
 
+model PasswordResetToken {
+  identifier String   @unique
+  token      String
+  expires    DateTime
+
+  @@id([identifier])
+  @@schema("clefast")
+}
+
 // New model for user addresses
 model Address {
   id              String    @id @default(cuid())

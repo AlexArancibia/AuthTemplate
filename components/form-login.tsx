@@ -19,13 +19,20 @@ import ButtonSocial from "./button-social"
 import { Eye, EyeOff, Loader2, Github, Mail } from "lucide-react"
 
 interface FormLoginProps {
-  isVerified?: boolean
-  OAuthAccountNotLinked?: boolean
+  isVerified?: boolean;
+  OAuthAccountNotLinked?: boolean;
+  bottomMessage?: string | null;
+  messageType?: "success" | "error";
 }
 
-const FormLogin = ({ isVerified, OAuthAccountNotLinked }: FormLoginProps) => {
-  const [isPending, startTransition] = useTransition()
-  const [showPassword, setShowPassword] = useState(false)
+const FormLogin = ({
+  isVerified,
+  OAuthAccountNotLinked,
+  bottomMessage,
+  messageType = "success", // Default to success
+}: FormLoginProps) => {
+  const [isPending, startTransition] = useTransition();
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter()
 
   const form = useForm<z.infer<typeof loginSchema>>({
@@ -154,6 +161,17 @@ const FormLogin = ({ isVerified, OAuthAccountNotLinked }: FormLoginProps) => {
                     </FormItem>
                   )}
                 />
+
+                {/* Mostrar mensaje de error/éxito de reseteo de contraseña */}
+                {bottomMessage && (
+                  <div className={`p-3 text-sm rounded-md ${
+                    messageType === "error"
+                      ? "text-red-700 bg-red-100 border border-red-300"
+                      : "text-green-700 bg-green-100 border border-green-300"
+                  }`}>
+                    {bottomMessage}
+                  </div>
+                )}
 
                 <Button
                   type="submit"

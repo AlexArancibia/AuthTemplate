@@ -4,9 +4,26 @@ import authConfig from "./auth.config";
 
 const { auth } = NextAuth(authConfig);
 
-const publicRoutes = ["/", "/nosotros","/cart","/productos","/blog","/checkout","/contactenos","/api/email/send-verification","/terminos-y-condiciones","/politica-de-privacidad","/libro-de-reclamaciones","/promociones","/catalogo"];
-const publicPrefixes = ["/productos/","/blog/"];
-const authRoutes = ["/login", "/register"];
+// Añadir las nuevas rutas a publicRoutes para que sean accesibles sin login
+const publicRoutes = [
+  "/",
+  "/nosotros",
+  "/cart",
+  "/productos",
+  "/blog",
+  "/checkout",
+  "/contactenos",
+  "/api/email/send-verification", // Esta ya estaba, es para la verificación de email
+  "/terminos-y-condiciones",
+  "/politica-de-privacidad",
+  "/libro-de-reclamaciones",
+  "/promociones",
+  "/catalogo",
+  "/forgot-password", // Nueva ruta pública
+  "/reset-password", // Nueva ruta pública
+];
+const publicPrefixes = ["/productos/", "/blog/"];
+const authRoutes = ["/login", "/register"]; // Estas son las páginas a las que se redirige si ya está logueado
 const apiAuthPrefix = "/api/auth";
 
 export default auth((req) => {
