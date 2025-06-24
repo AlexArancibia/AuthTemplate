@@ -12,18 +12,27 @@ generator client {
 
 // Auth models in store-specific schema
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  password      String?
-  emailVerified DateTime?
-  image         String?
-  role          Role      @default(user)
+  id                String    @id @default(cuid())
+  name              String?
+  email             String    @unique
+  password          String?
+  emailVerified     DateTime?
+  image             String?
+  role              Role      @default(user)
   
-  accounts      Account[]
+  // Additional optional user information
+  firstName         String?
+  lastName          String?
+  phone             String?
+  company           String?
+  taxId             String?   // For tax identification (NIF/CIF)
+  acceptsMarketing  Boolean   @default(false)
+  
+  accounts          Account[]
+  addresses         Address[]
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   @@schema("clefast") // This would be different for each store
 }
@@ -59,22 +68,43 @@ model VerificationToken {
   @@schema("clefast")
 }
 
-enum Role {
-  user
-  admin
+// New model for user addresses
+model Address {
+  id              String    @id @default(cuid())
+  userId          String
+  isDefault       Boolean   @default(false)
+  addressType     AddressType @default(both)
+  
+  // Address information
+  address1        String
+  address2        String?
+  city            String
+  province        String?   // State/Province
+  zip             String
+  country         String
+  phone           String?
+  company         String?
+  
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@schema("clefast")
 }
 
-// Store-specific models
-model Product {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  price       Decimal
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+// Enum for address types
+enum AddressType {
+  shipping
+  billing
+  both
+
+  @@schema("clefast")
+}
+
+enum Role {
+  user
+  admin
 
   @@schema("clefast")
 }
