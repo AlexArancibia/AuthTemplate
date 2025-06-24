@@ -890,3 +890,108 @@ export const emailVerificationTemplate = (verificationToken: string, verifyUrl: 
     </html>
   `
 }
+
+
+export const passwordResetTemplate = (resetLink: string): string => {
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Reseteo de Contraseña</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+          }
+          .container {
+            background-color: #f9f9f9;
+            padding: 30px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 30px;
+          }
+          .header h1 {
+            color: #2c3e50;
+            margin: 0;
+          }
+          .content {
+            background-color: white;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+          }
+          .button {
+            display: inline-block;
+            background-color: #e74c3c; /* Color diferente para reseteo */
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 20px 0;
+          }
+          .button:hover {
+            background-color: #c0392b;
+          }
+          .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            margin-top: 20px;
+          }
+          .link-text {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+            border: 1px solid #e9ecef;
+            margin: 10px 0;
+            word-break: break-all;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Reseteo de Contraseña</h1>
+          </div>
+
+          <div class="content">
+            <h2>¿Olvidaste tu contraseña?</h2>
+            <p>Hemos recibido una solicitud para resetear la contraseña de tu cuenta.</p>
+            <p>Haz clic en el siguiente botón para establecer una nueva contraseña:</p>
+
+            <div style="text-align: center;">
+              <a href="${resetLink}" class="button">Resetear Contraseña</a>
+            </div>
+
+            <p>Si el botón no funciona, puedes copiar y pegar el siguiente enlace en tu navegador:</p>
+            <div class="link-text">${resetLink}</div>
+
+            <p><strong>Importante:</strong></p>
+            <ul>
+              <li>Este enlace expirará en 1 hora.</li>
+              <li>Si no solicitaste un reseteo de contraseña, puedes ignorar este email de forma segura.</li>
+              <li>Por tu seguridad, no compartas este enlace con nadie.</li>
+            </ul>
+          </div>
+
+          <div class="footer">
+            <p>Este es un email automático, por favor no respondas a este mensaje.</p>
+            <p>&copy; ${new Date().getFullYear()} ${process.env.SMTP_FROM_NAME || "Tu Tienda"}. Todos los derechos reservados.</p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `
+}
