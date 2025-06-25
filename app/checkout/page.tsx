@@ -40,9 +40,31 @@ const STEPS = {
 export default function CheckoutPage() {
   const router = useRouter()
   const { items, clearCart, getTotal } = useCartStore()
-  const { shopSettings, shippingMethods, paymentProviders, createOrder } = useMainStore()
+  const {
+    shopSettings,
+    shippingMethods, // Esta será la lista de métodos de envío, actualizada por la nueva función
+    paymentProviders,
+    createOrder,
+    fetchShippingMethodsByLocation, // <--- Nueva función importada
+    fetchGeoCountries,
+    fetchGeoStates,
+    fetchGeoCities,
+    calculateShippingCost, // <--- Importar la nueva función
+  } = useMainStore()
   const { currentUser, loading: userLoading, fetchUserByEmail, createAddress } = useUserStore()
-  const { sendOrderEmails } = useEmailStore() // Add email store hook
+  const { sendOrderEmails } = useEmailStore()
+
+  // --- INICIO: Estados para datos geográficos ---
+  const [countries, setCountries] = useState<GeoCountry[]>([])
+  const [states, setStates] = useState<GeoState[]>([])
+  const [geoCities, setGeoCities] = useState<GeoCity[]>([]) // Renombrado para evitar conflicto con formData.city
+
+  const [selectedCountryCode, setSelectedCountryCode] = useState<string | undefined>(undefined)
+  const [selectedStateCode, setSelectedStateCode] = useState<string | undefined>(undefined) // Almacenará el CÓDIGO del estado
+  const [selectedCityName, setSelectedCityName] = useState<string | undefined>(undefined)
+  const [calculatedShippingCostDetails, setCalculatedShippingCostDetails] = useState<any | null>(null) // <--- Nuevo estado
+  const [cartWeight, setCartWeight] = useState<number>(0) // <--- Nuevo estado para el peso del carrito
+  // --- FIN: Estados para datos geográficos ---
 
   // State for user session
   const [session, setSession] = useState<any>(null)
@@ -77,7 +99,9 @@ export default function CheckoutPage() {
     city: "",
     state: "",
     zipCode: "",
-    shippingPhone: "", // Campo separado para el teléfono de envío
+    shippingPhone: "",
+    countryCode: "", // Nuevo campo para el código de país seleccionado
+    stateCode: "", // Nuevo campo para el código de estado/provincia seleccionado
 
     // Billing info
     sameBillingAddress: true,
@@ -103,10 +127,11 @@ export default function CheckoutPage() {
     preferredDeliveryDate: new Date().toISOString(),
   })
 
-  // Initial page loading
+  // Initial page loading & Fetch Countries
   useEffect(() => {
     const loadInitialData = async () => {
       try {
+        await fetchGeoCountries().then(setCountries).catch(console.error);
         setPageLoading(false)
       } catch (error) {
         console.error("Error loading initial data:", error)
@@ -115,14 +140,9 @@ export default function CheckoutPage() {
     }
 
     loadInitialData()
-
-    // Fallback timeout to ensure we don't show loading state forever
-    const timeout = setTimeout(() => {
-      setPageLoading(false)
-    }, 3000)
-
+    const timeout = setTimeout(() => setPageLoading(false), 3000) // Fallback
     return () => clearTimeout(timeout)
-  }, [])
+  }, [fetchGeoCountries]) // Dependencia de fetchGeoCountries
 
   // Fetch user session and data
   useEffect(() => {
@@ -253,23 +273,47 @@ export default function CheckoutPage() {
 
           // Also populate shipping form fields with the selected address data
           console.log("📝 Populating shipping form fields with address data...")
-          setFormData((prev) => {
-            const newFormData = {
-              ...prev,
-              address: shippingAddressToUse.address1,
-              apartment: shippingAddressToUse.address2 || "",
-              city: shippingAddressToUse.city,
-              state: shippingAddressToUse.province || "",
-              zipCode: shippingAddressToUse.zip,
-              shippingPhone: shippingAddressToUse.phone || currentUser.phone || "",
-            }
-            console.log("📋 Shipping form fields updated:", {
-              address: newFormData.address,
-              city: newFormData.city,
-              zipCode: newFormData.zipCode,
-            })
-            return newFormData
-          })
+          setSelectedShippingAddressId(shippingAddressToUse.id)
+          setShippingAddressId(shippingAddressToUse.id)
+
+          // Poblar formData con la dirección existente
+          setFormData((prev) => ({
+            ...prev,
+            address: shippingAddressToUse.address1,
+            apartment: shippingAddressToUse.address2 || "",
+            city: shippingAddressToUse.city, // Nombre de la ciudad
+            state: shippingAddressToUse.province || "", // Nombre o código del estado. Asumimos que es el nombre aquí.
+            zipCode: shippingAddressToUse.zip,
+            shippingPhone: shippingAddressToUse.phone || currentUser.phone || "",
+            countryCode: shippingAddressToUse.country, // Código del país
+             // stateCode se establecerá después de cargar los estados
+          }))
+
+          setSelectedCountryCode(shippingAddressToUse.country);
+          setSelectedCityName(shippingAddressToUse.city); // Guardar nombre de ciudad para el fetch de shipping methods
+
+          // Cargar estados y luego ciudades, y finalmente el stateCode
+          if (shippingAddressToUse.country) {
+            fetchGeoStates(shippingAddressToUse.country).then(loadedStates => {
+              setStates(loadedStates);
+              // 'shippingAddressToUse.province' podría ser el nombre o el código.
+              // Intentamos encontrar el estado por nombre o código.
+              const stateObj = loadedStates.find(s => s.code === shippingAddressToUse.province || s.name === shippingAddressToUse.province);
+              if (stateObj) {
+                setSelectedStateCode(stateObj.code); // Guardar el CÓDIGO del estado
+                setFormData(prev => ({...prev, stateCode: stateObj.code, state: stateObj.name})); // Actualizar formData
+                fetchGeoCities(stateObj.id).then(loadedCities => {
+                  setGeoCities(loadedCities);
+                  // No es necesario setSelectedCityName aquí si ya se hizo arriba y formData.city se actualiza
+                }).catch(console.error);
+              } else if (shippingAddressToUse.province) {
+                // Si no se encontró el estado, al menos guardar el valor original en formData
+                // y asumir que shippingAddressToUse.province podría ser el código que necesitamos
+                setSelectedStateCode(shippingAddressToUse.province);
+                setFormData(prev => ({...prev, stateCode: shippingAddressToUse.province, state: shippingAddressToUse.province}));
+              }
+            }).catch(console.error);
+          }
         } else {
           console.log("🚚 No shipping address found, showing new address form")
           setShowNewShippingAddress(true)
@@ -329,21 +373,18 @@ export default function CheckoutPage() {
     } else {
       console.log("👤 No user data available")
     }
-  }, [currentUser])
+  }, [currentUser, fetchGeoStates, fetchGeoCities]) // Añadidas dependencias fetchGeoStates, fetchGeoCities
 
-  // Set loading to false since data is already being fetched elsewhere
-  useEffect(() => {
-    setIsLoading(false)
-  }, [])
 
-  // Set default shipping and payment methods once data is loaded
+  // Set default shipping (será manejado por el useEffect de abajo) y payment methods
   useEffect(() => {
-    if (shippingMethods.length > 0 && !formData.shippingMethod) {
-      setFormData((prev) => ({
-        ...prev,
-        shippingMethod: shippingMethods[0].id,
-      }))
-    }
+    // Quitar la lógica de shippingMethods de aquí, será manejada por el useEffect de abajo
+    // if (shippingMethods.length > 0 && !formData.shippingMethod) {
+    //   setFormData((prev) => ({
+    //     ...prev,
+    //     shippingMethod: shippingMethods[0].id,
+    //   }))
+    // }
 
     if (paymentProviders.length > 0 && !formData.paymentMethod) {
       setFormData((prev) => ({
@@ -351,18 +392,152 @@ export default function CheckoutPage() {
         paymentMethod: paymentProviders[0].id,
       }))
     }
-  }, [shippingMethods, paymentProviders, formData.shippingMethod, formData.paymentMethod])
+  }, [paymentProviders, formData.paymentMethod]) // Removido shippingMethods y formData.shippingMethod de dependencias
 
   // Handle form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
+
+    // Si cambia zipCode, el useEffect de fetchShippingMethodsByLocation se activará.
   }
 
-  // Handle select changes
+  // Handle select changes (geográficos y otros)
   const handleSelectChange = (name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }))
-  }
+    setFormData((prev) => ({ ...prev, [name]: value })); // Actualiza el campo correspondiente en formData
+
+    if (name === "countryCode") {
+      setSelectedCountryCode(value);
+      setStates([]);
+      setSelectedStateCode(undefined);
+      setFormData(p => ({...p, stateCode: "", state: ""})); // Limpia state y stateCode
+      setGeoCities([]);
+      setSelectedCityName(undefined);
+      setFormData(p => ({...p, city: ""})); // Limpia city
+      if (value) {
+        fetchGeoStates(value).then(setStates).catch(console.error);
+      } else {
+        // Si se deselecciona el país, limpiar también los métodos de envío
+        useMainStore.setState({ shippingMethods: [] });
+        setFormData(p => ({...p, shippingMethod: ""}));
+      }
+    } else if (name === "stateCode") {
+      setSelectedStateCode(value); // value es el CÓDIGO del estado
+      const stateObj = states.find(s => s.code === value);
+      setFormData(p => ({...p, state: stateObj?.name || value })); // Guardar nombre del estado en formData.state
+      setGeoCities([]);
+      setSelectedCityName(undefined);
+      setFormData(p => ({...p, city: ""}));
+      if (stateObj?.id) {
+        fetchGeoCities(stateObj.id).then(setGeoCities).catch(console.error);
+      }
+    } else if (name === "city") {
+      setSelectedCityName(value); // value es el NOMBRE de la ciudad
+      // Actualiza formData.city para que se muestre en el input (si es texto) o se use en submitOrder
+      setFormData(prev => ({...prev, city: value}));
+      const cityObj = geoCities.find(c => c.name === value);
+      if (cityObj?.postalCode) {
+        setFormData(p => ({...p, zipCode: cityObj.postalCode}));
+      }
+    }
+  };
+
+  // useEffect para cargar métodos de envío por ubicación
+  useEffect(() => {
+    if (selectedCountryCode) { // Solo intentar cargar si hay un país seleccionado
+      setIsLoading(true);
+      fetchShippingMethodsByLocation(
+        selectedCountryCode,
+        selectedStateCode,
+        selectedCityName,
+        formData.zipCode,
+      )
+        .then((methods) => {
+          if (methods && methods.length > 0) {
+            // Si el método actual no está en la nueva lista, o no hay ninguno, seleccionar el primero
+            if (!formData.shippingMethod || !methods.find(m => m.id === formData.shippingMethod)) {
+              setFormData((prev) => ({ ...prev, shippingMethod: methods[0].id }));
+            }
+          } else { // No hay métodos para la ubicación
+            setFormData((prev) => ({ ...prev, shippingMethod: "" }));
+            if (currentStep === STEPS.SHIPPING_PAYMENT && (selectedCountryCode || selectedStateCode || selectedCityName || formData.zipCode)) {
+                 toast.info("No hay métodos de envío disponibles para la ubicación seleccionada.");
+            }
+          }
+        })
+        .catch((error) => {
+          console.error("Error fetching shipping methods by location:", error);
+          if (currentStep === STEPS.SHIPPING_PAYMENT) { // Solo mostrar error si estamos en el paso de envío
+            toast.error("No se pudieron cargar los métodos de envío para tu ubicación.");
+          }
+          setFormData((prev) => ({ ...prev, shippingMethod: "" }));
+        })
+        .finally(() => setIsLoading(false));
+    } else {
+      // Si no hay país seleccionado, limpiar los métodos de envío.
+      useMainStore.setState({ shippingMethods: [] });
+      setFormData((prev) => ({ ...prev, shippingMethod: "" }));
+    }
+  }, [selectedCountryCode, selectedStateCode, selectedCityName, formData.zipCode, fetchShippingMethodsByLocation, currentStep]);
+  // Removido formData.shippingMethod de las dependencias para evitar bucles si la selección del primer método dispara el efecto.
+
+  // --- INICIO: Calcular peso del carrito ---
+  const calculateCartWeight = () => {
+    let totalWeight = 0;
+    items.forEach(item => {
+      const itemWeight = item.variant.weightValue || 0; // Usar 0 si no hay peso definido
+      if (item.variant.weightValue == null) { // null o undefined
+        console.warn(`[CART WEIGHT] Variante ${item.variant.title} (ID: ${item.variant.id}) no tiene peso definido. Usando 0kg.`);
+      }
+      totalWeight += itemWeight * item.quantity;
+    });
+    return totalWeight;
+  };
+
+  useEffect(() => {
+    setCartWeight(calculateCartWeight());
+  }, [items]);
+  // --- FIN: Calcular peso del carrito ---
+
+  // --- INICIO: useEffect para calcular costo de envío detallado ---
+  useEffect(() => {
+    if (formData.shippingMethod && selectedCountryCode && cartWeight > 0) { // Requiere método, país y peso
+      // setIsLoading(true); // Podríamos usar un loader específico para esto si no queremos usar el global
+      console.log(`Solicitando cálculo de costo: methodId=${formData.shippingMethod}, weight=${cartWeight}, country=${selectedCountryCode}, state=${selectedStateCode}, city=${selectedCityName}, zip=${formData.zipCode}`);
+      calculateShippingCost(
+        formData.shippingMethod,
+        cartWeight,
+        selectedCountryCode,
+        selectedStateCode,
+        selectedCityName,
+        formData.zipCode
+      )
+      .then(details => {
+        setCalculatedShippingCostDetails(details);
+        console.log("[SHIPPING COST] Detalles de costo calculado:", details);
+      })
+      .catch(error => {
+        console.error("Error calculating shipping cost details:", error);
+        setCalculatedShippingCostDetails(null); // Limpiar en caso de error
+        // No mostramos toast aquí directamente, getShippingCost() usará el precio base como fallback
+      })
+      // .finally(() => setIsLoading(false)); // Controlar loader si es específico
+    } else {
+      // Limpiar detalles si no se cumplen las condiciones para calcular
+      if (calculatedShippingCostDetails !== null) { // Evitar re-render innecesario
+        setCalculatedShippingCostDetails(null);
+      }
+    }
+  }, [
+    formData.shippingMethod,
+    cartWeight,
+    selectedCountryCode,
+    selectedStateCode,
+    selectedCityName,
+    formData.zipCode,
+    calculateShippingCost
+  ]);
+  // --- FIN: useEffect para calcular costo de envío detallado ---
 
   // Navigate to next step
   const nextStep = async () => {
@@ -429,16 +604,58 @@ export default function CheckoutPage() {
 
   // Handle selecting an existing address for shipping
   const handleSelectShippingAddress = (addressId: string) => {
-    setSelectedShippingAddressId(addressId)
-    setShippingAddressId(addressId)
-    setShowNewShippingAddress(false)
+    const address = currentUser?.addresses?.find(addr => addr.id === addressId);
+    if (address) {
+        setSelectedShippingAddressId(addressId);
+        setShippingAddressId(addressId);
+        setShowNewShippingAddress(false);
 
-    // If using same address for billing, update billing address too
-    if (formData.sameBillingAddress) {
-      setSelectedBillingAddressId(addressId)
-      setBillingAddressId(addressId)
+        // Poblar formData y estados geo como en el useEffect de currentUser
+        setFormData(prev => ({
+            ...prev,
+            address: address.address1,
+            apartment: address.address2 || "",
+            city: address.city,
+            state: address.province || "", // Nombre o código
+            zipCode: address.zip,
+            shippingPhone: address.phone || currentUser?.phone || "",
+            countryCode: address.country,
+            stateCode: "", // Se actualizará después de cargar estados
+        }));
+
+        setSelectedCountryCode(address.country);
+        setSelectedCityName(address.city); // Para el fetch de shipping methods
+        setStates([]); // Limpiar estados anteriores
+        setGeoCities([]); // Limpiar ciudades anteriores
+        setSelectedStateCode(undefined);
+
+
+        if (address.country) {
+            fetchGeoStates(address.country).then(loadedStates => {
+                setStates(loadedStates);
+                const stateObj = loadedStates.find(s => s.code === address.province || s.name === address.province);
+                if (stateObj) {
+                    setSelectedStateCode(stateObj.code);
+                    setFormData(prev => ({ ...prev, stateCode: stateObj.code, state: stateObj.name }));
+                    fetchGeoCities(stateObj.id).then(loadedCities => {
+                        setGeoCities(loadedCities);
+                        // El nombre de la ciudad ya está en formData.city
+                    }).catch(console.error);
+                } else if (address.province) {
+                    // Si no se encontró, asumir que address.province es el código
+                    setSelectedStateCode(address.province);
+                    setFormData(prev => ({ ...prev, stateCode: address.province, state: address.province }));
+                }
+            }).catch(console.error);
+        }
+
+        if (formData.sameBillingAddress) {
+            setSelectedBillingAddressId(addressId);
+            setBillingAddressId(addressId);
+            // También se deberían poblar los campos de billing address en formData si es necesario
+        }
     }
-  }
+  };
 
   // Handle selecting an existing address for billing
   const handleSelectBillingAddress = (addressId: string) => {
@@ -910,10 +1127,19 @@ export default function CheckoutPage() {
 
   // Update the shipping cost calculation based on the selected shipping method
   const getShippingCost = () => {
-    if (!formData.shippingMethod || shippingMethods.length === 0) return 0
-
-    const selectedMethod = shippingMethods.find((method) => method.id === formData.shippingMethod)
-    return selectedMethod?.prices[0]?.price || 0
+    // Si tenemos detalles del cálculo de la API, usamos el costo total de ahí
+    if (calculatedShippingCostDetails && typeof calculatedShippingCostDetails.totalCost === 'number') {
+      return calculatedShippingCostDetails.totalCost;
+    }
+    // Fallback al precio base del método si no hay cálculo detallado (o si el cálculo falló y es null)
+    // Esto mantiene el comportamiento anterior si el cálculo avanzado no está disponible.
+    if (!formData.shippingMethod || shippingMethods.length === 0) return 0;
+    const selectedMethod = shippingMethods.find((method) => method.id === formData.shippingMethod);
+    // Asegurarse que selectedMethod y selectedMethod.prices existen y tienen elementos
+    if (selectedMethod && selectedMethod.prices && selectedMethod.prices.length > 0) {
+        return selectedMethod.prices[0].price || 0;
+    }
+    return 0; // Fallback final si no se encuentra nada
   }
 
   // Calculate totals
@@ -1166,3 +1392,15 @@ export default function CheckoutPage() {
     </div>
   )
 }
+// --- INICIO: Tipos Geo ---
+// Estos tipos deben coincidir con los definidos en `stores/mainStore.ts`
+interface GeoCountry {
+  id: string; code: string; name: string; [key: string]: any;
+}
+interface GeoState {
+  id: string; code: string; name: string; countryCode: string; [key: string]: any;
+}
+interface GeoCity {
+  id: string; name: string; stateId: string; [key: string]: any;
+}
+// --- FIN: Tipos Geo ---

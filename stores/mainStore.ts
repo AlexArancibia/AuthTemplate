@@ -22,6 +22,44 @@ import type { FrequentlyBoughtTogether } from "@/types/fbt"
 // Definir duración del caché (5 minutos)
 const CACHE_DURATION = 5 * 60 * 1000
 
+// --- INICIO: Tipos para datos geográficos ---
+export interface GeoCountry {
+  id: string
+  code: string // Código ISO 3166-1 Alpha-2: "PE", "US", "CO"
+  code3: string // Código ISO 3166-1 Alpha-3: "PER", "USA", "COL"
+  name: string // "Peru", "United States", "Colombia"
+  nameLocal?: string // "Perú" (nombre en idioma local)
+  phoneCode?: string // "+51", "+1", "+57"
+  currency?: string // "PEN", "USD", "COP"
+}
+
+export interface GeoState {
+  id: string
+  countryCode: string // "PE", "US"
+  code: string // Código estándar: "LIM", "CA", "NY"
+  name: string // "Lima", "California", "New York"
+  nameLocal?: string // Nombre local si es diferente
+  type: string // "state", "province", "region", "department"
+  // country?: GeoCountry; // Podríamos anidar si la API lo devuelve así consistentemente
+}
+
+export interface GeoCity {
+  id: string
+  stateId: string
+  name: string // "Lima", "Miraflores", "Los Angeles"
+  nameLocal?: string // Nombre local
+  postalCode?: string // Código postal principal si aplica
+  // state?: GeoState; // Podríamos anidar
+}
+
+interface GeographicDataResponse<T> {
+  type: "countries" | "states" | "cities"
+  data: T[]
+  countryCode?: string
+  stateId?: string
+}
+// --- FIN: Tipos para datos geográficos ---
+
 // Duración del caché para shop settings (10 minutos en milisegundos)
 const SHOP_SETTINGS_CACHE_DURATION = 1 * 60 * 1000
 
@@ -54,6 +92,11 @@ interface MainStore {
   frequentlyBoughtTogether: FrequentlyBoughtTogether[]
   users: User[]
   shopSettings: ShopSettings[]
+  // --- INICIO: Estado para datos geográficos ---
+  countries: GeoCountry[]
+  states: GeoState[]
+  cities: GeoCity[]
+  // --- FIN: Estado para datos geográficos ---
   loading: boolean
   error: string | null
   lastFetch: {
@@ -75,6 +118,11 @@ interface MainStore {
     shopSettings: number | null
     currencies: number | null
     exchangeRates: number | null
+    // --- INICIO: Timestamps de caché para datos geográficos ---
+    countries: number | null
+    statesByCountry: Record<string, number | null> // Cache para estados por país
+    citiesByState: Record<string, number | null> // Cache para ciudades por estado
+    // --- FIN: Timestamps de caché para datos geográficos ---
   }
 
   setEndpoint: (endpoint: string) => void
@@ -98,6 +146,23 @@ interface MainStore {
   fetchCurrencies: () => Promise<Currency[]>
   fetchExchangeRates: () => Promise<ExchangeRate[]>
   fetchFrequentlyBoughtTogether: () => Promise<FrequentlyBoughtTogether[]>
+
+  // --- INICIO: Funciones para datos geográficos ---
+  fetchGeoCountries: () => Promise<GeoCountry[]>
+  fetchGeoStates: (countryCode: string) => Promise<GeoState[]>
+  fetchGeoCities: (stateId: string) => Promise<GeoCity[]>
+  // --- FIN: Funciones para datos geográficos ---
+
+  // --- INICIO: Función para calcular costo de envío ---
+  calculateShippingCost: (
+    methodId: string,
+    weight: number,
+    countryCode?: string,
+    stateCode?: string,
+    cityName?: string,
+    postalCode?: string,
+  ) => Promise<any> // El tipo de retorno debe coincidir con la respuesta del backend
+  // --- FIN: Función para calcular costo de envío ---
 
   // Métodos adicionales para FBT
   fetchFrequentlyBoughtTogetherById: (id: string) => Promise<FrequentlyBoughtTogether>
@@ -147,6 +212,11 @@ export const useMainStore = create<MainStore>((set, get) => ({
   paymentProviders: [],
   paymentTransactions: [],
   frequentlyBoughtTogether: [],
+  // --- INICIO: Inicialización de estado para datos geográficos ---
+  countries: [],
+  states: [],
+  cities: [],
+  // --- FIN: Inicialización de estado para datos geográficos ---
   loading: false,
   error: null,
   lastFetch: {
@@ -168,6 +238,11 @@ export const useMainStore = create<MainStore>((set, get) => ({
     currencies: null,
     exchangeRates: null,
     frequentlyBoughtTogether: null,
+    // --- INICIO: Inicialización de timestamps de caché para datos geográficos ---
+    countries: null,
+    statesByCountry: {},
+    citiesByState: {},
+    // --- FIN: Inicialización de timestamps de caché para datos geográficos ---
   },
 
   setEndpoint: (endpoint) => {
@@ -474,8 +549,8 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchShippingMethods mejorado con caché
-  fetchShippingMethods: async () => {
+  // Método fetchShippingMethods mejorado con caché (ahora obtiene todos los de la tienda, puede ser usado como fallback o en admin)
+  fetchShippingMethods: async (forceRefresh = false) => {
     const { shippingMethods, lastFetch } = get()
     const now = Date.now()
 
@@ -483,13 +558,14 @@ export const useMainStore = create<MainStore>((set, get) => ({
       throw new Error("No store ID provided in environment variables")
     }
 
-    // Verificar si hay métodos de envío en caché y si el caché aún es válido
-    if (shippingMethods.length > 0 && lastFetch.shippingMethods && now - lastFetch.shippingMethods < CACHE_DURATION) {
+    if (!forceRefresh && shippingMethods.length > 0 && lastFetch.shippingMethods && now - lastFetch.shippingMethods < CACHE_DURATION) {
+      console.log("[STORE] Usando datos de métodos de envío (todos) desde caché")
       return shippingMethods
     }
 
     set({ loading: true, error: null })
     try {
+      console.log("[STORE] Realizando fetch de todos los métodos de envío para la tienda")
       const response = await apiClient.get<ShippingMethod[]>(`/shipping-methods/store/${STORE_ID}`)
       set({
         shippingMethods: response.data,
@@ -498,7 +574,52 @@ export const useMainStore = create<MainStore>((set, get) => ({
       })
       return response.data
     } catch (error) {
-      set({ error: "Failed to fetch shipping methods", loading: false })
+      console.error("[STORE] Error al obtener todos los métodos de envío:", error)
+      set({ error: "Failed to fetch all shipping methods", loading: false })
+      throw error
+    }
+  },
+
+  // Nueva función para obtener métodos de envío por ubicación geográfica
+  fetchShippingMethodsByLocation: async (
+    countryCode?: string,
+    stateCode?: string,
+    cityName?: string,
+    postalCode?: string,
+  ) => {
+    if (!STORE_ID) {
+      throw new Error("No store ID provided in environment variables")
+    }
+
+    set({ loading: true, error: null })
+    try {
+      const params = new URLSearchParams()
+      if (countryCode) params.append("countryCode", countryCode)
+      if (stateCode) params.append("stateCode", stateCode)
+      if (cityName) params.append("cityName", cityName)
+      if (postalCode) params.append("postalCode", postalCode)
+
+      console.log(`[STORE] Realizando fetch de métodos de envío por ubicación: ${params.toString()}`)
+      const response = await apiClient.get<ShippingMethod[]>(
+        `/shipping-methods/store/${STORE_ID}/location?${params.toString()}`,
+      )
+
+      // Estos son los métodos de envío filtrados para la ubicación específica.
+      // Reemplazamos la lista general de shippingMethods con estos.
+      // Si se necesita mantener la lista completa y la filtrada por separado,
+      // se debería añadir otra propiedad al estado. Por ahora, la reemplazamos.
+      set({
+        shippingMethods: response.data, // Actualiza la lista de métodos de envío con los filtrados
+        loading: false,
+        // Podríamos querer un timestamp de caché separado para esto, o invalidar el general.
+        // Por ahora, actualizamos el timestamp general de shippingMethods.
+        lastFetch: { ...get().lastFetch, shippingMethods: Date.now() },
+      })
+      console.log(`[STORE] Encontrados ${response.data.length} métodos de envío para la ubicación.`)
+      return response.data
+    } catch (error) {
+      console.error("[STORE] Error al obtener métodos de envío por ubicación:", error)
+      set({ error: "Failed to fetch shipping methods by location", loading: false, shippingMethods: [] }) // Limpiar en caso de error
       throw error
     }
   },
@@ -764,6 +885,153 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
+  // --- INICIO: Implementación de funciones para datos geográficos ---
+  fetchGeoCountries: async () => {
+    const { countries, lastFetch } = get()
+    const now = Date.now()
+
+    if (countries.length > 0 && lastFetch.countries && now - lastFetch.countries < CACHE_DURATION) {
+      console.log("[STORE] Usando datos de países desde caché")
+      return countries
+    }
+
+    set({ loading: true, error: null })
+    try {
+      console.log("[STORE] Realizando fetch de países")
+      const response = await apiClient.get<GeographicDataResponse<GeoCountry>>("/shipping-methods/geographic-data")
+      if (response.data.type === "countries") {
+        set({
+          countries: response.data.data,
+          loading: false,
+          lastFetch: { ...get().lastFetch, countries: now },
+        })
+        return response.data.data
+      }
+      throw new Error("Respuesta inesperada para países")
+    } catch (error) {
+      console.error("[STORE] Error al obtener países:", error)
+      set({ error: "Failed to fetch countries", loading: false })
+      throw error
+    }
+  },
+
+  fetchGeoStates: async (countryCode: string) => {
+    const { states, lastFetch } = get()
+    const now = Date.now()
+    const cacheKey = `states_${countryCode}`
+
+    // Comprobar caché específico para este countryCode
+    // y también si los estados actuales en el store son para este countryCode
+    if (
+      states.length > 0 &&
+      states.every((s) => s.countryCode === countryCode) &&
+      lastFetch.statesByCountry[countryCode] &&
+      now - lastFetch.statesByCountry[countryCode]! < CACHE_DURATION
+    ) {
+      console.log(`[STORE] Usando datos de estados para ${countryCode} desde caché`)
+      return states.filter((s) => s.countryCode === countryCode) // Devolver solo los relevantes
+    }
+
+    set({ loading: true, error: null })
+    try {
+      console.log(`[STORE] Realizando fetch de estados para ${countryCode}`)
+      const response = await apiClient.get<GeographicDataResponse<GeoState>>(
+        `/shipping-methods/geographic-data?countryCode=${countryCode}`,
+      )
+      if (response.data.type === "states") {
+        // Actualizar solo los estados para este país o reemplazar si es necesario
+        // Aquí, simplemente reemplazamos y actualizamos el timestamp específico.
+        set((state) => ({
+          states: response.data.data, // Podríamos querer fusionar si manejamos múltiples países a la vez
+          loading: false,
+          lastFetch: {
+            ...state.lastFetch,
+            statesByCountry: { ...state.lastFetch.statesByCountry, [countryCode]: now },
+          },
+        }))
+        return response.data.data
+      }
+      throw new Error(`Respuesta inesperada para estados de ${countryCode}`)
+    } catch (error) {
+      console.error(`[STORE] Error al obtener estados para ${countryCode}:`, error)
+      set({ error: `Failed to fetch states for ${countryCode}`, loading: false })
+      throw error
+    }
+  },
+
+  fetchGeoCities: async (stateId: string) => {
+    const { cities, lastFetch } = get()
+    const now = Date.now()
+    // const cacheKey = `cities_${stateId}` // No se usa cacheKey directamente aquí
+
+    if (
+      cities.length > 0 &&
+      cities.every((c) => c.stateId === stateId) && // Asegurar que las ciudades cacheadas son del estado correcto
+      lastFetch.citiesByState[stateId] &&
+      now - lastFetch.citiesByState[stateId]! < CACHE_DURATION
+    ) {
+      console.log(`[STORE] Usando datos de ciudades para ${stateId} desde caché`)
+      return cities.filter((c) => c.stateId === stateId)
+    }
+
+    set({ loading: true, error: null })
+    try {
+      console.log(`[STORE] Realizando fetch de ciudades para ${stateId}`)
+      const response = await apiClient.get<GeographicDataResponse<GeoCity>>(
+        `/shipping-methods/geographic-data?stateId=${stateId}`,
+      )
+      if (response.data.type === "cities") {
+        set((state) => ({
+          cities: response.data.data,
+          loading: false,
+          lastFetch: {
+            ...state.lastFetch,
+            citiesByState: { ...state.lastFetch.citiesByState, [stateId]: now },
+          },
+        }))
+        return response.data.data
+      }
+      throw new Error(`Respuesta inesperada para ciudades de ${stateId}`)
+    } catch (error) {
+      console.error(`[STORE] Error al obtener ciudades para ${stateId}:`, error)
+      set({ error: `Failed to fetch cities for ${stateId}`, loading: false })
+      throw error
+    }
+  },
+  // --- FIN: Implementación de funciones para datos geográficos ---
+
+  // --- INICIO: Implementación de calcular costo de envío ---
+  calculateShippingCost: async (
+    methodId: string,
+    weight: number,
+    countryCode?: string,
+    stateCode?: string,
+    cityName?: string,
+    postalCode?: string,
+  ) => {
+    set({ loading: true, error: null });
+    try {
+      const params = new URLSearchParams();
+      params.append("weight", weight.toString());
+      if (countryCode) params.append("countryCode", countryCode);
+      if (stateCode) params.append("stateCode", stateCode);
+      if (cityName) params.append("cityName", cityName);
+      if (postalCode) params.append("postalCode", postalCode);
+
+      console.log(`[STORE] Calculando costo de envío para método ${methodId}: ${params.toString()}`);
+      const response = await apiClient.get(
+        `/shipping-methods/${methodId}/calculate-cost?${params.toString()}`,
+      );
+      set({ loading: false });
+      return response.data; // Devuelve la estructura completa: { basePrice, weightCharge, totalCost, currency, zoneName, estimatedDeliveryTime }
+    } catch (error) {
+      console.error(`[STORE] Error al calcular costo de envío para método ${methodId}:`, error);
+      set({ error: "Failed to calculate shipping cost", loading: false });
+      throw error;
+    }
+  },
+  // --- FIN: Implementación de calcular costo de envío ---
+
   // Método fetchFrequentlyBoughtTogether implementado correctamente para incluir el filtro por tienda
   fetchFrequentlyBoughtTogether: async () => {
     const { frequentlyBoughtTogether, lastFetch } = get()
@@ -990,6 +1258,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
         apiClient.get(`/card-section/store/${STORE_ID}`),
         apiClient.get(`/team-sections/store/${STORE_ID}`),
         apiClient.get(`/frequently-bought-together/store/${STORE_ID}`),
+        // No incluimos llamadas geográficas aquí, se cargarán bajo demanda
       ])
 
       const now = Date.now()
@@ -1033,6 +1302,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
           currencies: now,
           exchangeRates: now,
           frequentlyBoughtTogether: now,
+          // No reseteamos caché geográfico aquí, se maneja individualmente
         },
       })
 
@@ -1109,6 +1379,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
         get().fetchCollections(),
         get().fetchPaymentProviders(),
         get().fetchFrequentlyBoughtTogether(), // Añadido para cargar FBT al inicializar
+        // No llamamos a fetchGeoCountries aquí por defecto, se hará cuando sea necesario
       ])
     } finally {
       set({ loading: false })
