@@ -13,7 +13,8 @@ import { Separator } from "@/components/ui/separator"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useGeographicDataStore } from "@/stores/locationStore"
  
 import type { Address } from "@/stores/userStore"
 import { AddressType } from "@/types/auth"
@@ -56,12 +57,54 @@ export function CustomerInfoStep({
   copyShippingToBilling,
 }: CustomerInfoStepProps) {
 
-  // Opciones de ejemplo, reemplaza luego por datos de endpoints
-  const countries = ["Colombia", "México", "Argentina", "Chile"]
-  const states = ["Antioquia", "Cundinamarca", "Valle del Cauca"]
-  const cities = ["Medellín", "Bogotá", "Cali"]
-
   const router = useRouter()
+
+  const {
+    countries,
+    states,
+    cities,
+    fetchCountries,
+    fetchStates,
+    fetchCities
+  } = useGeographicDataStore()
+
+  useEffect(() => {
+    fetchCountries()
+  }, [fetchCountries])
+
+  useEffect(() => {
+    if (formData.countryCode3) fetchStates(formData.countryCode3)
+  }, [formData.countryCode3, fetchStates])
+
+  useEffect(() => {
+    if (formData.stateId) fetchCities(formData.stateId)
+  }, [formData.stateId, fetchCities])
+
+  const handleCountryChange = (value: string) => {
+    const country = countries.find(c => c.code3 === value)
+    handleInputChange({ target: { name: "country", value: country?.name || "" } } as any)
+    handleInputChange({ target: { name: "countryCode3", value } } as any)
+    // Limpiar estado y ciudad
+    handleInputChange({ target: { name: "state", value: "" } } as any)
+    handleInputChange({ target: { name: "stateId", value: "" } } as any)
+    handleInputChange({ target: { name: "city", value: "" } } as any)
+    handleInputChange({ target: { name: "cityId", value: "" } } as any)
+  }
+
+  const handleStateChange = (value: string) => {
+    const state = (states[formData.countryCode3] || []).find(s => s.id === value)
+    handleInputChange({ target: { name: "state", value: state?.name || "" } } as any)
+    handleInputChange({ target: { name: "stateId", value } } as any)
+    // Limpiar ciudad
+    handleInputChange({ target: { name: "city", value: "" } } as any)
+    handleInputChange({ target: { name: "cityId", value: "" } } as any)
+  }
+
+  const handleCityChange = (value: string) => {
+    const city = (cities[formData.stateId] || []).find(c => c.id === value)
+    handleInputChange({ target: { name: "city", value: city?.name || "" } } as any)
+    handleInputChange({ target: { name: "cityId", value } } as any)
+  }
 
   // Estados para filtros de búsqueda
   const [countryFilter, setCountryFilter] = useState("")
@@ -269,8 +312,8 @@ export function CustomerInfoStep({
             <div className="space-y-2">
               <Label htmlFor="country">País</Label>
               <Select
-                value={formData.country || ""}
-                onValueChange={(value) => handleInputChange({ target: { name: "country", value } } as any)}
+                value={formData.countryCode3 || ""}
+                onValueChange={handleCountryChange}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="-- Elija --" />
@@ -286,45 +329,19 @@ export function CustomerInfoStep({
                     />
                   </div>
                   {countries
-                    .filter(c => c.toLowerCase().includes(countryFilter.toLowerCase()))
+                    .filter(c => c.name.toLowerCase().includes(countryFilter.toLowerCase()))
                     .map(c => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
-                    ))}
+                      <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="city">Ciudad</Label>
+              <Label htmlFor="state">Departamento/Estado</Label>
               <Select
-                value={formData.city || ""}
-                onValueChange={(value) => handleInputChange({ target: { name: "city", value } } as any)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="-- Elija --" />
-                </SelectTrigger>
-                <SelectContent>
-                  <div className="p-2">
-                    <Input
-                      placeholder="Buscar ciudad..."
-                      value={cityFilter}
-                      onChange={e => setCityFilter(e.target.value)}
-                      className="mb-2"
-                      onKeyDown={e => e.stopPropagation()}
-                    />
-                  </div>
-                  {cities
-                    .filter(c => c.toLowerCase().includes(cityFilter.toLowerCase()))
-                    .map(c => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="state">Departamento/Provincia</Label>
-              <Select
-                value={formData.state || ""}
-                onValueChange={(value) => handleInputChange({ target: { name: "state", value } } as any)}
+                value={formData.stateId || ""}
+                onValueChange={handleStateChange}
+                disabled={!formData.countryCode3}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="-- Elija --" />
@@ -339,11 +356,39 @@ export function CustomerInfoStep({
                       onKeyDown={e => e.stopPropagation()}
                     />
                   </div>
-                  {states
-                    .filter(s => s.toLowerCase().includes(stateFilter.toLowerCase()))
+                  {(states[formData.countryCode3] || [])
+                    .filter(s => s.name.toLowerCase().includes(stateFilter.toLowerCase()))
                     .map(s => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
-                    ))}
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="city">Ciudad/Distrito</Label>
+              <Select
+                value={formData.cityId || ""}
+                onValueChange={handleCityChange}
+                disabled={!formData.stateId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="-- Elija --" />
+                </SelectTrigger>
+                <SelectContent>
+                  <div className="p-2">
+                    <Input
+                      placeholder="Buscar ciudad..."
+                      value={cityFilter}
+                      onChange={e => setCityFilter(e.target.value)}
+                      className="mb-2"
+                      onKeyDown={e => e.stopPropagation()}
+                    />
+                  </div>
+                  {(cities[formData.stateId] || [])
+                    .filter(c => c.name.toLowerCase().includes(cityFilter.toLowerCase()))
+                    .map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -456,10 +501,10 @@ export function CustomerInfoStep({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="billingCountry">País</Label>
+                  <Label htmlFor="country">País</Label>
                   <Select
-                    value={formData.billingCountry || ""}
-                    onValueChange={(value) => handleInputChange({ target: { name: "billingCountry", value } } as any)}
+                    value={formData.countryCode3 || ""}
+                    onValueChange={handleCountryChange}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="-- Elija --" />
@@ -468,52 +513,26 @@ export function CustomerInfoStep({
                       <div className="p-2">
                         <Input
                           placeholder="Buscar país..."
-                          value={billingCountryFilter}
-                          onChange={e => setBillingCountryFilter(e.target.value)}
+                          value={countryFilter}
+                          onChange={e => setCountryFilter(e.target.value)}
                           className="mb-2"
                           onKeyDown={e => e.stopPropagation()}
                         />
                       </div>
                       {countries
-                        .filter(c => c.toLowerCase().includes(billingCountryFilter.toLowerCase()))
+                        .filter(c => c.name.toLowerCase().includes(countryFilter.toLowerCase()))
                         .map(c => (
-                          <SelectItem key={c} value={c}>{c}</SelectItem>
-                        ))}
+                          <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="billingCity">Ciudad</Label>
+                  <Label htmlFor="state">Departamento/Estado</Label>
                   <Select
-                    value={formData.billingCity || ""}
-                    onValueChange={(value) => handleInputChange({ target: { name: "billingCity", value } } as any)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="-- Elija --" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <div className="p-2">
-                        <Input
-                          placeholder="Buscar ciudad..."
-                          value={billingCityFilter}
-                          onChange={e => setBillingCityFilter(e.target.value)}
-                          className="mb-2"
-                          onKeyDown={e => e.stopPropagation()}
-                        />
-                      </div>
-                      {cities
-                        .filter(c => c.toLowerCase().includes(billingCityFilter.toLowerCase()))
-                        .map(c => (
-                          <SelectItem key={c} value={c}>{c}</SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="billingState">Departamento/Provincia</Label>
-                  <Select
-                    value={formData.billingState || ""}
-                    onValueChange={(value) => handleInputChange({ target: { name: "billingState", value } } as any)}
+                    value={formData.stateId || ""}
+                    onValueChange={handleStateChange}
+                    disabled={!formData.countryCode3}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="-- Elija --" />
@@ -522,17 +541,45 @@ export function CustomerInfoStep({
                       <div className="p-2">
                         <Input
                           placeholder="Buscar departamento..."
-                          value={billingStateFilter}
-                          onChange={e => setBillingStateFilter(e.target.value)}
+                          value={stateFilter}
+                          onChange={e => setStateFilter(e.target.value)}
                           className="mb-2"
                           onKeyDown={e => e.stopPropagation()}
                         />
                       </div>
-                      {states
-                        .filter(s => s.toLowerCase().includes(billingStateFilter.toLowerCase()))
+                      {(states[formData.countryCode3] || [])
+                        .filter(s => s.name.toLowerCase().includes(stateFilter.toLowerCase()))
                         .map(s => (
-                          <SelectItem key={s} value={s}>{s}</SelectItem>
-                        ))}
+                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="city">Ciudad/Distrito</Label>
+                  <Select
+                    value={formData.cityId || ""}
+                    onValueChange={handleCityChange}
+                    disabled={!formData.stateId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="-- Elija --" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <div className="p-2">
+                        <Input
+                          placeholder="Buscar ciudad..."
+                          value={cityFilter}
+                          onChange={e => setCityFilter(e.target.value)}
+                          className="mb-2"
+                          onKeyDown={e => e.stopPropagation()}
+                        />
+                      </div>
+                      {(cities[formData.stateId] || [])
+                        .filter(c => c.name.toLowerCase().includes(cityFilter.toLowerCase()))
+                        .map(c => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
