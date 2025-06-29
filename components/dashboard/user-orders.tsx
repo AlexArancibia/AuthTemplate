@@ -176,14 +176,7 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
       <div className="text-center py-8 border rounded-lg bg-muted/20">
         <ShoppingBag className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
         <p className="text-muted-foreground mb-2">No hay pedidos disponibles</p>
-        <p className="text-sm text-muted-foreground mb-4">
-          DEBUG: Mostrando todas las órdenes sin filtrar por usuario.
-        </p>
-        <div className="text-xs text-left bg-gray-100 p-3 rounded max-w-md mx-auto mb-4 overflow-auto">
-          <p>Tipo de orders: {typeof orders}</p>
-          <p>Estructura: {JSON.stringify(orders && typeof orders === "object" ? Object.keys(orders) : {})}</p>
-          <p>userId: {userId}</p>
-        </div>
+ 
         <Button variant="outline" className="mt-4" onClick={() => fetchOrders()}>
           Recargar pedidos
         </Button>
