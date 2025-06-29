@@ -1,42 +1,56 @@
-import ResetPasswordForm from "@/components/reset-password-form";
-import { db } from "@/lib/db";
-import { redirect } from "next/navigation";
+import FormResetPassword from "@/components/form-reset-password";
 
 interface ResetPasswordPageProps {
-  searchParams: { [key: string]: string | string[] | undefined };
+  searchParams: {
+    token?: string;
+    // Errores específicos del reset de contraseña
+    error?: "invalid_token" | "expired_token" | "password_too_short" | "server_error";
+    // Mensaje de éxito
+    success?: string;
+  };
 }
 
-const ResetPasswordPage = async ({ searchParams }: ResetPasswordPageProps) => {
-  const token = searchParams.token as string | undefined;
+const ResetPasswordPage = ({ searchParams }: ResetPasswordPageProps) => {
+  const token = searchParams.token;
+  const error = searchParams.error;
+  const success = searchParams.success;
 
-  if (!token) {
-    // Podríamos redirigir a una página de error o a forgot-password con un mensaje
-    console.warn("Token no encontrado en los parámetros de búsqueda.");
-    redirect("/forgot-password?error=invalid_token");
+  let topMessage: string | null = null;
+  let messageType: "success" | "error" | "info" = "info";
+
+  // Manejo de errores
+  if (error === "invalid_token") {
+    topMessage = "El enlace para resetear la contraseña es inválido o ya ha sido utilizado.";
+    messageType = "error";
+  } else if (error === "expired_token") {
+    topMessage = "El enlace para resetear la contraseña ha expirado. Por favor, solicita uno nuevo.";
+    messageType = "error";
+  } else if (error === "password_too_short") {
+    topMessage = "La contraseña debe tener al menos 6 caracteres.";
+    messageType = "error";
+  } else if (error === "server_error") {
+    topMessage = "Ocurrió un error interno. Por favor, intenta de nuevo más tarde.";
+    messageType = "error";
   }
 
-  // Validar el token en el servidor
-  const passwordResetToken = await db.passwordResetToken.findUnique({
-    where: { token },
-  });
-
-  if (!passwordResetToken) {
-    console.warn(`Token de reseteo no encontrado en DB: ${token}`);
-    redirect("/forgot-password?error=invalid_token");
+  // Manejo de éxito
+  if (success) {
+    topMessage = success;
+    messageType = "success";
   }
 
-  if (passwordResetToken.expires < new Date()) {
-    console.warn(`Token de reseteo expirado: ${token}`);
-    // Opcionalmente, eliminar el token expirado de la DB
-    await db.passwordResetToken.delete({ where: { token } }).catch(console.error);
-    redirect("/forgot-password?error=expired_token");
+  // Si no hay token, mostrar mensaje informativo
+  if (!token && !error) {
+    topMessage = "Enlace de reseteo de contraseña no válido. Por favor, solicita uno nuevo.";
+    messageType = "error";
   }
 
-  // Si el token es válido y no ha expirado, mostrar el formulario
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen py-2">
-      <ResetPasswordForm token={token} />
-    </div>
+    <FormResetPassword
+      token={token}
+      topMessage={topMessage}
+      messageType={messageType}
+    />
   );
 };
 

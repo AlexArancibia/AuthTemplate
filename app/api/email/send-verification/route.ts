@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
 
     // URL base para verificación
     const baseUrl = verificationUrl || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-    const verifyUrl = `${baseUrl}/verify-email?token=${token}`
+    const verifyUrl = `${baseUrl}/api/auth/verify-email?token=${token}`
 
     const subject = "Verificación de Email - Confirma tu cuenta"
     const html = emailVerificationTemplate(token, verifyUrl)
