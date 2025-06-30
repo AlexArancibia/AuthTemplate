@@ -92,7 +92,7 @@ export function UserDashboard() {
     <div className="container max-w-6xl mx-auto py-10 px-4">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Mi Cuenta</h1>
           <p className="text-muted-foreground mt-1">
             Bienvenido{fullName ? `, ${fullName}` : ""}. Gestiona tu información, direcciones y pedidos.
           </p>

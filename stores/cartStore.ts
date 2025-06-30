@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware"
 import type { Product } from "@/types/product"
 import type { ProductVariant } from "@/types/productVariant"
 
-interface CartItem {
+export interface CartItem {
   product: Product
   variant: ProductVariant
   quantity: number

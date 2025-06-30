@@ -13,6 +13,8 @@ const publicRoutes = [
   "/blog",
   "/checkout",
   "/contactenos",
+  "/api/email/send-to-client",
+  "/api/email/send-to-admin",
   "/api/email/send-verification", // Esta ya estaba, es para la verificación de email
   "/terminos-y-condiciones",
   "/politica-de-privacidad",

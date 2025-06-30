@@ -2,7 +2,7 @@ import ForgotPasswordForm from "@/components/forgot-password-form";
 
 const ForgotPasswordPage = () => {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen py-2">
+    <div className=" w-full">
       <ForgotPasswordForm />
     </div>
   );

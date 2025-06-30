@@ -84,9 +84,9 @@ export function CartReviewStep({ items, currency, nextStep }: CartReviewStepProp
                   <h3 className="font-medium text-gray-800 group-hover:text-primary transition-colors">
                     {item.product.title || "Producto sin título"}
                   </h3>
-                  <p className="text-sm text-gray-500 mt-1">
+                  {/* <p className="text-sm text-gray-500 mt-1">
                     <span className="font-medium">Variante:</span> {item.variant.title || "Sin especificar"}
-                  </p>
+                  </p> */}
                   {item.variant.attributes && Object.entries(item.variant.attributes).length > 0 && (
                     <p className="text-sm text-gray-500 mt-1">
                       {Object.entries(item.variant.attributes || {})

@@ -428,105 +428,90 @@ export const orderConfirmationClientTemplate = (order: Order, shopSettings?: Sho
   const shippingAddress = order.shippingAddress as AddressInfo
 
   const content = `
-    <h1 class="title">¡Gracias por tu pedido!</h1>
-    <div class="content">
-        <p style="font-size: 16px; margin-bottom: 20px;">Hola <strong>${customerInfo.name || "Cliente"}</strong>,</p>
-        <p style="font-size: 16px; margin-bottom: 25px;">Hemos recibido tu pedido y lo estamos procesando. Aquí tienes los detalles:</p>
-        
-        <div class="card">
-            <h3>Pedido #${order.orderNumber}</h3>
-            <p style="margin-bottom: 20px;"><strong>Fecha:</strong> ${new Date(order.createdAt).toLocaleDateString("es-PE")}</p>
-            
-            <h4>Productos:</h4>
-            ${order.lineItems
-              .map(
-                (item: OrderItem) => `
-                <div class="order-item">
-                    <div class="order-item-name">${item.title}</div>
-                    <div class="order-item-price">${item.quantity} × ${formatCurrency(item.price, order.currency.code, shopSettings)}</div>
-                </div>
-            `,
-              )
-              .join("")}
-            
-            <div class="order-item">
-                <div class="order-item-name">Subtotal:</div>
-                <div class="order-item-price">${formatCurrency(order.subtotalPrice, order.currency.code, shopSettings)}</div>
-            </div>
-            ${
-              order.totalTax > 0
-                ? `
-            <div class="order-item">
-                <div class="order-item-name">Impuestos:</div>
-                <div class="order-item-price">${formatCurrency(order.totalTax, order.currency.code, shopSettings)}</div>
-            </div>
-            `
-                : ""
-            }
-            ${
-              order.totalDiscounts > 0
-                ? `
-            <div class="order-item">
-                <div class="order-item-name">Descuentos:</div>
-                <div class="order-item-price">-${formatCurrency(order.totalDiscounts, order.currency.code, shopSettings)}</div>
-            </div>
-            `
-                : ""
-            }
-            <div class="order-item">
-                <div class="order-item-name"><strong>Total:</strong></div>
-                <div class="order-item-price"><strong>${formatCurrency(order.totalPrice, order.currency.code, shopSettings)}</strong></div>
-            </div>
-        </div>
-        
-        ${
-          shippingAddress
-            ? `
-        <div class="info-section">
-            <h4>📦 Dirección de Envío</h4>
-            <p>${shippingAddress.name || ""}<br>
-            ${shippingAddress.address1 || ""}<br>
-            ${shippingAddress.address2 ? `${shippingAddress.address2}<br>` : ""}
-            ${shippingAddress.city || ""}, ${shippingAddress.state || ""} ${shippingAddress.postalCode || ""}<br>
-            ${shippingAddress.country || ""}</p>
-            ${shippingAddress.phone ? `<p>📞 ${shippingAddress.phone}</p>` : ""}
-        </div>
-        `
-            : ""
-        }
-        
-        ${
-          order.shippingMethod
-            ? `
-        <div class="info-section">
-            <h4>🚚 Método de Envío</h4>
-            <p>${order.shippingMethod.name}</p>
-            ${order.trackingNumber ? `<p><strong>Seguimiento:</strong> ${order.trackingNumber}</p>` : ""}
-            ${order.estimatedDeliveryDate ? `<p><strong>Entrega estimada:</strong> ${new Date(order.estimatedDeliveryDate).toLocaleDateString("es-PE")}</p>` : ""}
-        </div>
-        `
-            : ""
-        }
-        
-        ${
-          order.customerNotes
-            ? `
-        <div class="info-section">
-            <h4>📝 Notas</h4>
-            <p>${order.customerNotes}</p>
-        </div>
-        `
-            : ""
-        }
-        
-        <p style="font-size: 16px; margin: 25px 0;">Te enviaremos actualizaciones sobre el estado de tu pedido.</p>
-        
-        <div style="text-align: center; margin: 30px 0;">
-            <a href="${shopSettings?.domain || process.env.NEXT_PUBLIC_SITE_URL}/orders/${order.orderNumber}" class="button">
-                Ver Detalles del Pedido
-            </a>
-        </div>
+    <h1 class="title" style="color: #092b4e;">¡Gracias por tu pedido!</h1> 
+<div class="content">
+  <p style="font-size: 16px; margin-bottom: 20px;">Hola <strong>${customerInfo.name || "Cliente"}</strong>,</p>
+  <p style="font-size: 16px; margin-bottom: 25px;">Hemos recibido tu pedido y lo estamos procesando. Aquí tienes los detalles:</p>
+
+  <div class="card" style="border: 1px solid #ccc; border-radius: 8px; padding: 20px;">
+    <h3 style="color: #109c39;">Pedido #${order.orderNumber}</h3>
+    <p style="margin-bottom: 20px;"><strong>Fecha:</strong> ${new Date(order.createdAt).toLocaleDateString("es-PE")}</p>
+
+    <h4 style="color: #109c39;">Productos:</h4>
+    ${order.lineItems.map((item: OrderItem) => `
+      <div class="order-item">
+        <div class="order-item-name">${item.title}</div>
+        <div class="order-item-price">${item.quantity} × ${formatCurrency(item.price, order.currency.code, shopSettings)}</div>
+      </div>
+    `).join("")}
+
+    <div class="order-item">
+      <div class="order-item-name">Subtotal:</div>
+      <div class="order-item-price">${formatCurrency(order.subtotalPrice, order.currency.code, shopSettings)}</div>
     </div>
+    ${order.totalTax > 0 ? `
+      <div class="order-item">
+        <div class="order-item-name">IGV:</div>
+        <div class="order-item-price">${formatCurrency(order.totalTax, order.currency.code, shopSettings)}</div>
+      </div>
+    ` : ""}
+    <div class="order-item">
+      <div class="order-item-name"><strong>Total:</strong></div>
+      <div class="order-item-price"><strong>${formatCurrency(order.totalPrice, order.currency.code, shopSettings)}</strong></div>
+    </div>
+  </div>
+
+  ${shippingAddress ? `
+    <div class="info-section">
+      <h4 style="color: #109c39;">📦 Dirección de Envío</h4>
+      <p>${shippingAddress.name || ""}<br>
+      ${shippingAddress.address1 || ""}<br>
+      ${shippingAddress.address2 ? `${shippingAddress.address2}<br>` : ""}
+      ${shippingAddress.city || ""}, ${shippingAddress.state || ""} ${shippingAddress.postalCode || ""}<br>
+      ${shippingAddress.country || ""}</p>
+      ${shippingAddress.phone ? `<p>📞 ${shippingAddress.phone}</p>` : ""}
+    </div>
+  ` : ""}
+
+  ${order.customerNotes ? `
+    <div class="info-section">
+      <h4 style="color: #109c39;">📝 Notas</h4>
+      <p>${order.customerNotes}</p>
+    </div>
+  ` : ""}
+
+  <p style="font-size: 16px; margin: 25px 0;">Te enviaremos actualizaciones sobre el estado de tu pedido.</p>
+
+  <div style="text-align: center; margin: 30px 0;">
+    <a href="https://wa.me/51912345678?text=${encodeURIComponent(`
+¡Hola! Tengo una consulta sobre mi pedido #${order.orderNumber}
+
+${order.lineItems.map(
+  (item: OrderItem) => {
+    const attrs = item.variant?.attributes
+      ? Object.entries(item.variant.attributes)
+          .map(([k, v]) => `${k}: ${v}`)
+          .join(", ")
+      : "";
+
+    const price = `${order.currency.code}${Number(item.price).toFixed(2)}`;
+
+    return `- ${item.title}${attrs ? ` - ${attrs}` : ""} (${item.quantity} x ${price})`;
+  }
+).join("\n")}
+
+*Subtotal:* ${order.currency.code}${Number(order.subtotalPrice).toFixed(2)}
+*IGV:* ${order.currency.code}${Number(order.totalTax || 0).toFixed(2)}
+*Envío:* ${order.currency.code}${Number(order.shippingMethod?.prices[0].price || 0).toFixed(2)}
+*Total:* ${order.currency.code}${Number(order.totalPrice).toFixed(2)}
+`)}" 
+       class="button" 
+       style="background-color: #109c39; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+      📱 Hablar por WhatsApp
+    </a>
+  </div>
+</div>
+
   `
 
   return baseTemplate(content, `Confirmación de Pedido #${order.orderNumber}`, shopSettings)

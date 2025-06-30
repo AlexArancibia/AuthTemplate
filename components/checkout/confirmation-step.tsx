@@ -4,6 +4,7 @@ import { motion } from "framer-motion"
 import Link from "next/link"
 import { CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ShopSettings } from "@/types/store"
 
 interface ConfirmationStepProps {
   orderId: string | null
@@ -16,7 +17,7 @@ interface ConfirmationStepProps {
   shipping: number
   total: number
   currency: string
-  shopSettings: any
+  shopSettings: ShopSettings[]
 }
 
 export function ConfirmationStep({
@@ -66,7 +67,7 @@ export function ConfirmationStep({
 
       <div className="w-full max-w-md mb-8">
         <a
-          href={`https://wa.me/${shopSettings?.[0]?.phone?.replace(/\s+/g, "") || ""}?text=${encodeURIComponent(
+          href={`https://wa.me/${shopSettings[0].phone?.replace(/\s+/g, "") || ""}?text=${encodeURIComponent(
             `Hola, acabo de realizar el pedido #${orderId || `CL-${Math.floor(Math.random() * 10000)}`} y quisiera coordinar el pago.
 
 *Detalles del pedido:*

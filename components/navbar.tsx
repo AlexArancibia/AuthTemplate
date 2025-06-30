@@ -432,7 +432,7 @@ export default function Navbar({ user }: NavbarProps) {
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuContent className="w-56 z-[999]" align="end" forceMount>
                   <div className="flex flex-col space-y-1 p-2">
                     <p className="text-sm font-medium">{user.name}</p>
                     <p className="text-xs text-muted-foreground">{user.email}</p>
@@ -446,7 +446,7 @@ export default function Navbar({ user }: NavbarProps) {
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard" className="cursor-pointer flex items-center">
                       <User className="mr-2 h-4 w-4" />
-                      <span>Panel de control</span>
+                      <span>Mi Cuenta</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />

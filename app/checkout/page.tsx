@@ -856,7 +856,7 @@ export default function CheckoutPage() {
       // 8. Success
       console.log("Order process completed successfully")
       toast.success("¡Pedido realizado con éxito!", {
-        description: `Pedido #${orderId} creado. Recibirás un correo con los detalles de tu compra.`,
+        description: `Pedido creado. Recibirás un correo con los detalles de tu compra.`,
       })
 
       clearCart()

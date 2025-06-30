@@ -1,6 +1,7 @@
 "use client"
 
 import { Separator } from "@/components/ui/separator"
+import { CartItem } from "@/stores/cartStore"
 
 interface OrderSummaryProps {
   items: any[]
@@ -90,17 +91,17 @@ export function OrderSummary({
 
       <div className="space-y-4 mb-6">
         {validItems.length > 0 ? (
-          validItems.map((item) => {
+          validItems.map((item : CartItem) => {
             const itemTotal = getSafeItemTotal(item)
 
             return (
-              <div key={item.variant?.id || item.id || Math.random()} className="flex justify-between text-sm">
+              <div key={item.variant?.id || Math.random()} className="flex justify-between text-sm">
                 <span>
                   {item.product?.title || "Producto"} ({item.quantity || 1})
                 </span>
-                <span className="font-medium">
+                <span className="font-medium pl-1">
                   {currency}
-                  {itemTotal.toFixed(2)}
+                  {(Number(item.variant.prices[0].price)*item.quantity).toFixed(2)}
                 </span>
               </div>
             )
