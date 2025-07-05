@@ -163,7 +163,9 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
       product.variants.forEach((variant) => {
         Object.entries(variant.attributes!).forEach(([key, value]) => {
           if (key === "Presentaciones" && typeof value === "string") {
-            presentations.add(value)
+            // Convertir "Lt" a "L" para normalización
+            const normalizedValue = value.replace(/Lt/i, 'L')
+            presentations.add(normalizedValue)
           }
         })
       })
@@ -177,28 +179,47 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
       const match = presentation.match(validPattern)
       if (match) {
         const [, number, unit] = match
-        const normalizedUnit = unit.toUpperCase()
+        let normalizedUnit = unit.toUpperCase()
+        
+        // Convertir litros a mililitros internamente pero mantener visualización
+        if (normalizedUnit === 'L') {
+          normalizedUnit = 'ML'
+        }
 
         if (!groups[normalizedUnit]) {
           groups[normalizedUnit] = []
         }
-        groups[normalizedUnit].push(presentation)
+        
+        // Mantener la presentación original para visualización
+        groups[normalizedUnit].push(presentation.replace(/L$/i, 'Lt'))
       }
     })
 
-    // Ordenar cada grupo numéricamente
+    // Ordenar cada grupo numéricamente (convertir a mililitros para comparación si es litros)
     Object.keys(groups).forEach((unit) => {
       groups[unit].sort((a, b) => {
-        const numA = Number.parseFloat(a.match(/\d+(\.\d+)?/)?.[0] || "0")
-        const numB = Number.parseFloat(b.match(/\d+(\.\d+)?/)?.[0] || "0")
-        return numA - numB
+        const getMlValue = (str: string) => {
+          const match = str.match(/^(\d+(?:\.\d+)?)\s+(Lt?|ML)$/i)
+          if (!match) return 0
+          
+          const num = parseFloat(match[1])
+          const u = match[2].toUpperCase()
+          
+          if (u === 'L' || u === 'LT') return num * 1000
+          return num
+        }
+        
+        return getMlValue(a) - getMlValue(b)
       })
     })
 
     // Convertir a array de grupos ordenados por unidad
     const sortedGroups: GroupedPresentation[] = Object.entries(groups)
       .sort(([unitA], [unitB]) => unitA.localeCompare(unitB))
-      .map(([unit, values]) => ({ unit, values }))
+      .map(([unit, values]) => ({ 
+        unit: unit === 'ML' ? 'ML/Lt' : unit, // Mostrar ambas unidades juntas
+        values 
+      }))
 
     return sortedGroups
   }, [products])

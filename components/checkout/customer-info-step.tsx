@@ -139,7 +139,7 @@ export function CustomerInfoStep({
               <h3 className="font-medium text-blue-800">¿Ya tienes una cuenta?</h3>
               <p className="text-sm text-blue-700">Inicia sesión para agilizar el proceso de compra</p>
             </div>
-            <Button variant="outline" className="bg-white" onClick={() => router.push("/login")}>
+            <Button variant="outline" className="bg-white" onClick={() => router.push("/login?redirect=/checkout")}>
               Iniciar sesión
             </Button>
           </div>

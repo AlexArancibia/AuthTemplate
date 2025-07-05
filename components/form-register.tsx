@@ -124,7 +124,7 @@ const FormRegister = () => {
           </Card>
 
           <div className="mt-8 text-center text-xs text-slate-400">
-            © {new Date().getFullYear()} Tu Empresa. Todos los derechos reservados.
+            © {new Date().getFullYear()} Clefast. Todos los derechos reservados.
           </div>
         </div>
       </div>
@@ -293,7 +293,7 @@ const FormRegister = () => {
         </Card>
 
         <div className="mt-8 text-center text-xs text-slate-400">
-          © {new Date().getFullYear()} Tu Empresa. Todos los derechos reservados.
+          © {new Date().getFullYear()} Clefast. Todos los derechos reservados.
         </div>
       </div>
     </div>

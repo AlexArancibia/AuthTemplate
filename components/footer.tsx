@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { motion } from "framer-motion"
 import Link from "next/link"
 import { useState } from "react"
@@ -128,7 +127,7 @@ export function Footer() {
           {/* Información de la empresa */}
           <motion.div variants={itemVariants} className="space-y-4">
             <div>
-              <img src={shopSettings[0]?.logo3 } className="h-32 w-32 mb-3 object-contain"></img>
+              <img src={shopSettings[0]?.logo3} className="h-32 w-32 mb-3 object-contain" alt="Logo" />
               <p className="text-gray-300 text-sm leading-relaxed">
                 {shopInfo?.description ||
                   "Comprometidos con la excelencia y la satisfacción de nuestros clientes. Ofrecemos productos y servicios de la más alta calidad."}
@@ -237,7 +236,6 @@ export function Footer() {
             <p className="text-gray-400 text-sm flex items-center justify-center md:justify-start space-x-1 mt-1">
               <span>Desarrollado por Emet Studio</span>
             </p>
- 
           </div>
 
           {/* Redes sociales */}
@@ -245,14 +243,16 @@ export function Footer() {
             {socialLinks.map((social) => {
               const IconComponent = social.icon
               return (
-                <Link
+                <a
                   key={social.name}
                   href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-gray-800 rounded-full"
                   aria-label={social.name}
                 >
                   <IconComponent className="w-5 h-5" />
-                </Link>
+                </a>
               )
             })}
           </div>

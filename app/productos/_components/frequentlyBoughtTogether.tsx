@@ -86,8 +86,16 @@ export default function FrequentlyBoughtTogetherComponent({ product }: Frequentl
             if (fbtVariant) {
               initialVariantIds[prod.id] = fbtVariant.id
             } else if (prod.variants && prod.variants.length > 0) {
-              // Fallback a la primera variante si no se encuentra
-              initialVariantIds[prod.id] = prod.variants[0].id
+              // Fallback a la primera variante con precio diferente de 0
+              const firstVariantWithPrice = prod.variants.find(v => 
+                v.prices && v.prices.length > 0 && Number(v.prices[0]?.price || 0) !== 0
+              );
+              if (firstVariantWithPrice) {
+                initialVariantIds[prod.id] = firstVariantWithPrice.id
+              } else {
+                // Si todas las variantes tienen precio 0, usar la primera
+                initialVariantIds[prod.id] = prod.variants[0].id
+              }
             }
           })
 
@@ -163,7 +171,9 @@ export default function FrequentlyBoughtTogetherComponent({ product }: Frequentl
       price,
       variantDescription,
       imageUrl,
-      hasMultipleVariants: (product.variants?.length || 0) > 1,
+      hasMultipleVariants: (product.variants?.filter(v => 
+        v.prices && v.prices.length > 0 && Number(v.prices[0]?.price || 0) !== 0
+      ).length > 1),
     }
   }
 
@@ -331,46 +341,48 @@ export default function FrequentlyBoughtTogetherComponent({ product }: Frequentl
                           <div className="space-y-3">
                             <h4 className="font-medium text-sm text-foreground">Reemplazar variante</h4>
                             <div className="grid grid-cols-2 gap-2">
-                              {productInfo.product.variants?.map((v) => {
-                                let variantDisplay = v.title || ""
-                                if (!variantDisplay && v.attributes ) {
-                                  variantDisplay = Object.values(v.attributes).filter(Boolean).join(", ")
-                                }
-                                if (!variantDisplay) {
-                                  variantDisplay = `Variante ${v.id.substring(0, 4)}`
-                                }
+                              {productInfo.product.variants
+                                ?.filter(v => v.prices && v.prices.length > 0 && Number(v.prices[0]?.price || 0) !== 0)
+                                ?.map((v) => {
+                                  let variantDisplay = v.title || ""
+                                  if (!variantDisplay && v.attributes) {
+                                    variantDisplay = Object.values(v.attributes).filter(Boolean).join(", ")
+                                  }
+                                  if (!variantDisplay) {
+                                    variantDisplay = `Variante ${v.id.substring(0, 4)}`
+                                  }
 
-                                const isCurrentlySelected =
-                                  selectedVariantIds[productId] === v.id ||
-                                  (!selectedVariantIds[productId] && v.id === productInfo.variant.id)
+                                  const isCurrentlySelected =
+                                    selectedVariantIds[productId] === v.id ||
+                                    (!selectedVariantIds[productId] && v.id === productInfo.variant.id)
 
-                                return (
-                                  <div
-                                    key={v.id}
-                                    onClick={() => handleVariantChange(productId, v.id)}
-                                    className={`p-2 border rounded-lg cursor-pointer transition-all hover:bg-muted ${
-                                      isCurrentlySelected ? "border-primary bg-primary/10" : "border-border"
-                                    }`}
-                                  >
-                                    <div className="relative h-12 mb-1">
-                                      <Image
-                                        src={
-                                          (v.imageUrls && v.imageUrls.length > 0 ? v.imageUrls[0] : null) ||
-                                          productInfo.product.imageUrls?.[0] ||
-                                          "/placeholder.svg"
-                                        }
-                                        alt={variantDisplay}
-                                        fill
-                                        className="object-contain"
-                                      />
+                                  return (
+                                    <div
+                                      key={v.id}
+                                      onClick={() => handleVariantChange(productId, v.id)}
+                                      className={`p-2 border rounded-lg cursor-pointer transition-all hover:bg-muted ${
+                                        isCurrentlySelected ? "border-primary bg-primary/10" : "border-border"
+                                      }`}
+                                    >
+                                      <div className="relative h-12 mb-1">
+                                        <Image
+                                          src={
+                                            (v.imageUrls && v.imageUrls.length > 0 ? v.imageUrls[0] : null) ||
+                                            productInfo.product.imageUrls?.[0] ||
+                                            "/placeholder.svg"
+                                          }
+                                          alt={variantDisplay}
+                                          fill
+                                          className="object-contain"
+                                        />
+                                      </div>
+                                      <p className="text-xs text-center truncate text-foreground">{variantDisplay}</p>
+                                      <p className="text-xs font-medium text-center text-primary mt-0.5">
+                                        {formatCurrency(Number(v.prices?.[0]?.price || 0), currency)}
+                                      </p>
                                     </div>
-                                    <p className="text-xs text-center truncate text-foreground">{variantDisplay}</p>
-                                    <p className="text-xs font-medium text-center text-primary mt-0.5">
-                                      {formatCurrency(Number(v.prices?.[0]?.price || 0), currency)}
-                                    </p>
-                                  </div>
-                                )
-                              })}
+                                  )
+                                })}
                             </div>
                           </div>
                         </PopoverContent>

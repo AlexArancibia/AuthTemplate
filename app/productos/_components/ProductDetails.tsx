@@ -509,7 +509,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                       </Button>
                     ) : (
                       <Button
-                        className="w-full sm:w-[200px] bg-green-600 hover:bg-green-700"
+                        className="w-full md:w-fit bg-green-600 hover:bg-green-700"
                         onClick={handleWhatsAppConsult}
                         disabled={!shopSettings || !shopSettings[0]?.phone}
                       >
