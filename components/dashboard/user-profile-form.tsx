@@ -127,7 +127,7 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
               <FormItem>
                 <FormLabel>Empresa (opcional)</FormLabel>
                 <FormControl>
-                  <Input placeholder="Nombre de tu empresa" {...field} />
+                  <Input placeholder="Nombre de Clefast" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

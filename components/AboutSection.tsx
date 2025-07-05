@@ -7,7 +7,7 @@ import { useState, useEffect } from "react"
 import { useMainStore } from "@/stores/mainStore"
 
 interface AboutSectionProps {
-  contentId?: string // ID opcional para permitir personalización
+  contentId?: string
 }
 
 export function AboutSection({ contentId = "cnt_363018db-f61b" }: AboutSectionProps) {
@@ -20,6 +20,7 @@ export function AboutSection({ contentId = "cnt_363018db-f61b" }: AboutSectionPr
     sections: Array<{
       title: string
       content: string
+      htmlContent: string
     }>
     featuredImage?: string
   }>({
@@ -33,7 +34,6 @@ export function AboutSection({ contentId = "cnt_363018db-f61b" }: AboutSectionPr
     const loadContent = async () => {
       try {
         setIsLoading(true)
-        // Obtener el contenido con ID específico usando la función del store
         const contentData = contents.find((c) => c.id === contentId)
 
         if (!contentData) {
@@ -41,33 +41,29 @@ export function AboutSection({ contentId = "cnt_363018db-f61b" }: AboutSectionPr
           return
         }
 
-        // Extraer los textos del HTML usando un enfoque simple
         const htmlBody = contentData?.body || ""
-
-        // Crear un elemento DOM temporal para analizar el HTML
         const tempDiv = document.createElement("div")
         tempDiv.innerHTML = htmlBody
 
-        // Extraer el título principal (h2)
+        // Extraer elementos manteniendo HTML interno para estilos
         const titleElement = tempDiv.querySelector("h2")
-        const title = titleElement ? titleElement.textContent || "" : "¿QUIÉNES SOMOS?"
+        const title = titleElement ? titleElement.innerHTML : "¿QUIÉNES SOMOS?"
 
-        // Extraer el párrafo de introducción (primer p)
         const introElement = tempDiv.querySelector("p")
-        const introduction = introElement ? introElement.textContent || "" : ""
+        const introduction = introElement ? introElement.innerHTML : ""
 
-        // Extraer las secciones (h3 seguido de p)
-        const sections: Array<{ title: string; content: string }> = []
+        const sections: Array<{ title: string; content: string; htmlContent: string }> = []
         const sectionTitles = tempDiv.querySelectorAll("h3")
 
         sectionTitles.forEach((sectionTitle) => {
-          const titleText = sectionTitle.textContent || ""
+          const titleText = sectionTitle.innerHTML
           const contentElement = sectionTitle.nextElementSibling
-          const contentText = contentElement && contentElement.tagName === "P" ? contentElement.textContent || "" : ""
+          const contentText = contentElement && contentElement.tagName === "P" ? contentElement.innerHTML : ""
 
           sections.push({
             title: titleText,
             content: contentText,
+            htmlContent: contentText
           })
         })
 
@@ -81,7 +77,7 @@ export function AboutSection({ contentId = "cnt_363018db-f61b" }: AboutSectionPr
         setError(null)
       } catch (err) {
         console.error("Error al cargar el contenido:", err)
-        setError("No se pudo cargar el contenido. Por favor, intenta de nuevo más tarde.")
+        setError("No se pudo cargar el contenido")
       } finally {
         setIsLoading(false)
       }
@@ -106,7 +102,6 @@ export function AboutSection({ contentId = "cnt_363018db-f61b" }: AboutSectionPr
     )
   }
 
-  // Configuración de animaciones
   const containerAnimation = {
     hidden: { opacity: 0 },
     visible: {
@@ -140,6 +135,7 @@ export function AboutSection({ contentId = "cnt_363018db-f61b" }: AboutSectionPr
                 width={400}
                 height={500}
                 className="rounded-3xl object-cover w-[300px] md:w-[450px] h-[400px] md:h-[500px]"
+                priority
               />
             </div>
             <div className="absolute top-6 md:top-12 left-1 md:-left-8">
@@ -149,6 +145,7 @@ export function AboutSection({ contentId = "cnt_363018db-f61b" }: AboutSectionPr
                 width={200}
                 height={300}
                 className="rounded-2xl object-cover h-[150px] w-[120px] md:h-[200px] md:w-[160px] border-8 border-white shadow-lg"
+                priority
               />
             </div>
             <div className="absolute -bottom-4 md:-bottom-8 left-[230px] md:left-[300px] lg:left-[340px]">
@@ -158,6 +155,7 @@ export function AboutSection({ contentId = "cnt_363018db-f61b" }: AboutSectionPr
                 width={200}
                 height={300}
                 className="rounded-2xl object-cover h-[150px] w-[120px] md:h-[200px] md:w-[160px] border-8 border-white shadow-lg"
+                priority
               />
             </div>
           </div>
@@ -169,20 +167,36 @@ export function AboutSection({ contentId = "cnt_363018db-f61b" }: AboutSectionPr
             initial="visible"
             animate="visible"
           >
-            <motion.h2 className="font-bold text-2xl md:text-4xl text-secondary" variants={itemAnimation}>
-              {content.title}
-            </motion.h2>
-            <motion.p className="text-sm lg:text-base text-gray-700" variants={itemAnimation}>
-              {content.introduction}
-            </motion.p>
+            {/* Título - Mantenemos estructura pero con estilos del HTML */}
+            <motion.div 
+              className="[&>h2]:mb-0" // Elimina margen inferior del h2 para mantener espacio con space-y-8
+              variants={itemAnimation}
+              dangerouslySetInnerHTML={{ __html: content.title }}
+            />
+            
+            {/* Introducción - Mantenemos estructura pero con estilos del HTML */}
+            <motion.div 
+              className="[&>p]:mb-0" // Elimina margen inferior del p para mantener espacio con space-y-8
+              variants={itemAnimation}
+              dangerouslySetInnerHTML={{ __html: content.introduction }}
+            />
 
+            {/* Secciones */}
             {content.sections.map((section, index) => (
-              <motion.div key={section.title} className="space-y-2" variants={itemAnimation}>
+              <motion.div key={index} className="space-y-2" variants={itemAnimation}>
                 <div className="flex items-center gap-2">
                   <Check className="w-5 h-5 p-1 rounded-full bg-blue-100 text-blue-600 flex-shrink-0" />
-                  <h3 className="text-lg font-semibold text-gray-900">{section.title}</h3>
+                  {/* Título de sección con estilos del HTML */}
+                  <div 
+                    className="[&>h3]:mb-0 [&>h3]:text-lg [&>h3]:font-semibold [&>h3]:text-gray-900"
+                    dangerouslySetInnerHTML={{ __html: section.title }}
+                  />
                 </div>
-                <p className="text-sm lg:text-base pl-7 text-gray-600">{section.content}</p>
+                {/* Contenido de sección con estilos del HTML */}
+                <div 
+                  className="pl-7 [&>p]:mb-0"
+                  dangerouslySetInnerHTML={{ __html: section.htmlContent }}
+                />
               </motion.div>
             ))}
           </motion.div>

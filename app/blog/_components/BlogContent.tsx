@@ -9,7 +9,7 @@ export function BlogContent({ content, className }: BlogContentProps) {
   return (
     <div
       className={cn(
-        "prose prose-gray max-w-none",
+        "prose prose-gray max-w-none px-4",
 
         /* Interlineado general mejorado */
         "text-base leading-relaxed",

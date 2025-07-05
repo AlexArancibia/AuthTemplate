@@ -4,18 +4,16 @@ interface LoginPageProps {
   searchParams: {
     verified?: string;
     error?: string;
-    passwordReset?: string; // Para mensaje de contraseña reseteada
-    // Errores de las páginas de forgot-password y reset-password
+    passwordReset?: string;
     tokenError?: "invalid_token" | "expired_token";
   };
 }
 
-// No es necesario que sea async si accedemos a searchParams directamente
 const LoginPage = ({ searchParams }: LoginPageProps) => {
   const isVerified = searchParams.verified === "true";
   const OAuthAccountNotLinked = searchParams.error === "OAuthAccountNotLinked";
   const passwordResetSuccess = searchParams.passwordReset === "true";
-  const tokenError = searchParams.tokenError; // Puede ser 'invalid_token' o 'expired_token'
+  const tokenError = searchParams.tokenError;
 
   let bottomMessage: string | null = null;
   let messageType: "success" | "error" = "success";
@@ -30,7 +28,6 @@ const LoginPage = ({ searchParams }: LoginPageProps) => {
     bottomMessage = "El enlace para resetear la contraseña ha expirado. Por favor, solicita uno nuevo.";
     messageType = "error";
   }
-
 
   return (
     <FormLogin
