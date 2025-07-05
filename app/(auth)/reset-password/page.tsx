@@ -1,19 +1,20 @@
 import FormResetPassword from "@/components/form-reset-password";
 
 interface ResetPasswordPageProps {
-  searchParams: {
+  searchParams: Promise<{
     token?: string;
     // Errores específicos del reset de contraseña
     error?: "invalid_token" | "expired_token" | "password_too_short" | "server_error";
     // Mensaje de éxito
     success?: string;
-  };
+  }>;
 }
 
-const ResetPasswordPage = ({ searchParams }: ResetPasswordPageProps) => {
-  const token = searchParams.token;
-  const error = searchParams.error;
-  const success = searchParams.success;
+const ResetPasswordPage = async ({ searchParams }: ResetPasswordPageProps) => {
+  const resolvedSearchParams = await searchParams;
+  const token = resolvedSearchParams.token;
+  const error = resolvedSearchParams.error;
+  const success = resolvedSearchParams.success;
 
   let topMessage: string | null = null;
   let messageType: "success" | "error" | "info" = "info";
