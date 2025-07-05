@@ -1,19 +1,20 @@
 import FormLogin from "@/components/form-login";
 
 interface LoginPageProps {
-  searchParams: {
+  searchParams: Promise<{
     verified?: string;
     error?: string;
     passwordReset?: string;
     tokenError?: "invalid_token" | "expired_token";
-  };
+  }>;
 }
 
-const LoginPage = ({ searchParams }: LoginPageProps) => {
-  const isVerified = searchParams.verified === "true";
-  const OAuthAccountNotLinked = searchParams.error === "OAuthAccountNotLinked";
-  const passwordResetSuccess = searchParams.passwordReset === "true";
-  const tokenError = searchParams.tokenError;
+const LoginPage = async ({ searchParams }: LoginPageProps) => {
+  const resolvedSearchParams = await searchParams;
+  const isVerified = resolvedSearchParams.verified === "true";
+  const OAuthAccountNotLinked = resolvedSearchParams.error === "OAuthAccountNotLinked";
+  const passwordResetSuccess = resolvedSearchParams.passwordReset === "true";
+  const tokenError = resolvedSearchParams.tokenError;
 
   let bottomMessage: string | null = null;
   let messageType: "success" | "error" = "success";
