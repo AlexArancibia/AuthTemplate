@@ -30,10 +30,21 @@ export function BlogContent({ content, className }: BlogContentProps) {
         /* Texto enfatizado */
         "prose-strong:text-gray-900 prose-strong:font-semibold",
 
-        /* Listas */
-        "prose-ul:list-disc prose-ul:pl-5 prose-ul:mb-6 prose-ul:leading-normal",
-        "prose-ol:list-decimal prose-ol:pl-5 prose-ol:mb-6 prose-ol:leading-normal",
-        "prose-li:text-gray-600 prose-li:mb-2 prose-li:leading-normal",
+        /* Listas - Corregido con selectores más específicos */
+        "prose-ul:list-disc prose-ul:pl-6 prose-ul:mb-6 prose-ul:space-y-2",
+        "prose-ol:list-decimal prose-ol:pl-6 prose-ol:mb-6 prose-ol:space-y-2",
+        "prose-li:text-gray-600 prose-li:leading-relaxed prose-li:my-1",
+        
+        /* Selectores adicionales para listas usando sintaxis [&_elemento] */
+        "[&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mb-6 [&_ul]:space-y-2 [&_ul]:text-gray-600",
+        "[&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:mb-6 [&_ol]:space-y-2 [&_ol]:text-gray-600",
+        "[&_li]:leading-relaxed [&_li]:my-1",
+        
+        /* Listas anidadas */
+        "[&_ul_ul]:list-disc [&_ul_ul]:pl-4 [&_ul_ul]:mb-2 [&_ul_ul]:mt-2",
+        "[&_ol_ol]:list-decimal [&_ol_ol]:pl-4 [&_ol_ol]:mb-2 [&_ol_ol]:mt-2",
+        "[&_ul_ol]:list-decimal [&_ul_ol]:pl-4 [&_ul_ol]:mb-2 [&_ul_ol]:mt-2",
+        "[&_ol_ul]:list-disc [&_ol_ul]:pl-4 [&_ol_ul]:mb-2 [&_ol_ul]:mt-2",
 
         /* Citas */
         "prose-blockquote:border-l-4 prose-blockquote:border-primary prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-gray-700 prose-blockquote:mb-6 prose-blockquote:leading-relaxed",
@@ -68,4 +79,3 @@ export function BlogContent({ content, className }: BlogContentProps) {
     />
   )
 }
-
