@@ -40,6 +40,7 @@ interface MainStore {
   productVariants: ProductVariant[]
   collections: Collection[]
   orders: Order[]
+  couponCode: string
   coupons: Coupon[]
   shippingMethods: ShippingMethod[]
   paymentProviders: PaymentProvider[]
@@ -64,6 +65,7 @@ interface MainStore {
     orders: number | null
     customers: number | null
     coupons: number | null
+    couponCode:number | null
     shippingMethods: number | null
     paymentProviders: number | null
     contents: number | null
@@ -89,6 +91,8 @@ interface MainStore {
   fetchTeamMembers: (teamSectionId: string) => Promise<TeamMember[]>
   fetchOrders: () => Promise<Order[]>
   fetchCoupons: () => Promise<Coupon[]>
+  setCouponCode: (code: string) => Promise<void>
+  clearCoupon: () =>  Promise<void>
   fetchShippingMethods: () => Promise<ShippingMethod[]>
   fetchPaymentProviders: () => Promise<PaymentProvider[]>
   fetchPaymentTransactions: () => Promise<PaymentTransaction[]>
@@ -138,6 +142,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
   teamSections: [],
   teamMembers: [],
   coupons: [],
+  couponCode: "",
   shippingMethods: [],
   contents: [],
   users: [],
@@ -160,6 +165,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
     cardSections: null,
     teamMembers: null,
     coupons: null,
+    couponCode: null,
     shippingMethods: null,
     paymentProviders: null,
     contents: null,
@@ -461,7 +467,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<Coupon[]>(`/coupons/store/${STORE_ID}`)
+      const response = await apiClient.get<Coupon[]>(`/coupons?storeId=${STORE_ID}`)
       set({
         coupons: response.data,
         loading: false,
@@ -473,6 +479,9 @@ export const useMainStore = create<MainStore>((set, get) => ({
       throw error
     }
   },
+
+  setCouponCode: async (code: string) => set({ couponCode: code }),
+  clearCoupon: async () => set({ couponCode: "" }),
 
   // Método fetchShippingMethods mejorado con caché
   fetchShippingMethods: async () => {
@@ -1022,6 +1031,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
           orders: now,
           customers: now,
           coupons: now,
+          couponCode:now,
           heroSections: now,
           cardSections: now,
           teamMembers: now,

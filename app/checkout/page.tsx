@@ -1,23 +1,19 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { useCartStore } from "@/stores/cartStore"
-import { useEmailStore } from "@/stores/emailStore" // Add email store import
+import { useEmailStore } from "@/stores/emailStore"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
 import { toast } from "sonner"
 import { OrderFinancialStatus, OrderFulfillmentStatus, ShippingStatus } from "@/types/common"
- 
 import { type AddressCreateData, useUserStore } from "@/stores/userStore"
 import { formatUserName } from "@/lib/user-utils"
 import type { Order } from "@/types/order"
-
-// Import modular components
 import { CartReviewStep } from "@/components/checkout/cart-review-step"
 import { CustomerInfoStep } from "@/components/checkout/customer-info-step"
 import { ShippingPaymentStep } from "@/components/checkout/shipping-payment-step"
@@ -28,31 +24,27 @@ import { CreditCard } from "lucide-react"
 import Image from "next/image"
 import { useMainStore } from "@/stores/mainStore"
 import { AddressType } from "@/types/auth"
- 
-// Update the STEPS enum to combine shipping and payment
+
 const STEPS = {
   CART_REVIEW: 0,
   CUSTOMER_INFO: 1,
-  SHIPPING_PAYMENT: 2, // Combined shipping and payment step
+  SHIPPING_PAYMENT: 2,
   CONFIRMATION: 3,
 }
 
 export default function CheckoutPage() {
-  const router = useRouter()
   const { items, clearCart, getTotal } = useCartStore()
-  const { shopSettings, shippingMethods, paymentProviders, createOrder } = useMainStore()
+  const { shopSettings, shippingMethods, paymentProviders, coupons, couponCode, createOrder } = useMainStore()
   const { currentUser, loading: userLoading, fetchUserByEmail, createAddress } = useUserStore()
-  const { sendOrderEmails } = useEmailStore() // Add email store hook
+  const { sendOrderEmails } = useEmailStore()
 
-  // State for user session
   const [session, setSession] = useState<any>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-
   const [showNewShippingAddress, setShowNewShippingAddress] = useState(false)
   const [showNewBillingAddress, setShowNewBillingAddress] = useState(false)
   const [selectedShippingAddressId, setSelectedShippingAddressId] = useState<string | null>(null)
   const [selectedBillingAddressId, setSelectedBillingAddressId] = useState<string | null>(null)
-
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null)
   const [currentStep, setCurrentStep] = useState(STEPS.CART_REVIEW)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -62,24 +54,18 @@ export default function CheckoutPage() {
   const [shippingAddressId, setShippingAddressId] = useState<string | null>(null)
   const [billingAddressId, setBillingAddressId] = useState<string | null>(null)
 
-  // Form state
   const [formData, setFormData] = useState({
-    // Customer info
     firstName: "",
     lastName: "",
     email: "",
     phone: "",
     company: "",
-
-    // Shipping info
     address: "",
     apartment: "",
     city: "",
     state: "",
     zipCode: "",
-    shippingPhone: "", // Campo separado para el teléfono de envío
-
-    // Billing info
+    shippingPhone: "",
     sameBillingAddress: true,
     billingAddress: "",
     billingApartment: "",
@@ -87,21 +73,103 @@ export default function CheckoutPage() {
     billingState: "",
     billingZipCode: "",
     billingPhone: "",
-
-    // Shipping method
     shippingMethod: "",
-
-    // Payment info
     paymentMethod: "",
     cardNumber: "",
     cardName: "",
     expiryDate: "",
     cvv: "",
-
-    // Additional info
     notes: "",
     preferredDeliveryDate: new Date().toISOString(),
   })
+
+
+  useEffect(() => {
+    if (couponCode && couponCode.trim() !== "") {
+      applyCoupon()
+    } else {
+      setAppliedCoupon(null)
+    }
+  }, [couponCode])
+
+
+  const applyCoupon = () => {
+    if (!couponCode || !coupons || coupons.length === 0) {
+      setAppliedCoupon(null)
+      return
+    }
+
+    const foundCoupon = coupons.find((coupon) => coupon.code === couponCode)
+    
+    if (!foundCoupon) {
+      toast.error("El cupón ingresado no es válido")
+      setAppliedCoupon(null)
+      return
+    }
+
+    // Verify coupon is active and within date range
+    const now = new Date()
+    const startDate = new Date(foundCoupon.startDate)
+    const endDate = new Date(foundCoupon.endDate)
+
+    if (!foundCoupon.isActive || now < startDate || now > endDate) {
+      toast.error("El cupón no está disponible o ha expirado")
+      setAppliedCoupon(null)
+      return
+    }
+
+    // Verify minimum purchase if specified
+    const subtotal = getTotal()
+    if (foundCoupon.minPurchase && subtotal < foundCoupon.minPurchase) {
+      toast.error(`El cupón requiere un mínimo de compra de ${foundCoupon.minPurchase}`)
+      setAppliedCoupon(null)
+      return
+    }
+
+    // Verify max uses if specified
+    if (foundCoupon.maxUses && foundCoupon.usedCount >= foundCoupon.maxUses) {
+      toast.error("Este cupón ha alcanzado su límite de usos")
+      setAppliedCoupon(null)
+      return
+    }
+
+    setAppliedCoupon(foundCoupon)
+    toast.success(`Cupón "${foundCoupon.code}" aplicado correctamente`)
+  }
+
+  const calculateDiscounts = () => {
+    if (!appliedCoupon) return 0
+
+    return items.reduce((totalDiscount, item) => {
+      const isProductEligible = appliedCoupon.applicableProducts?.some(
+        (prod: any) => prod.id === item.product.id
+      )
+      
+      const isCategoryEligible = item.product.categories?.some(
+        cat => appliedCoupon.applicableCategories?.some(
+          (          coupCat: { id: string }) => coupCat.id === cat.id
+        )
+      )
+      
+      const isCollectionEligible = item.product.collections?.some(
+        col => appliedCoupon.applicableCollections?.some(
+          (          coupCol: { id: string }) => coupCol.id === col.id
+        )
+      )
+
+      const isEligible = isProductEligible || isCategoryEligible || isCollectionEligible
+
+      if (isEligible) {
+        if (appliedCoupon.type === "PERCENTAGE") {
+          return totalDiscount + (Number(item.variant.prices[0].price) * (Number(appliedCoupon.value) / 100) * item.quantity)
+        } else if (appliedCoupon.type === "FIXED_AMOUNT") {
+          return totalDiscount + Number(appliedCoupon.value) * item.quantity
+        }
+      }
+      return totalDiscount
+    }, 0)
+  }
+
 
   // Initial page loading
   useEffect(() => {
@@ -521,6 +589,34 @@ export default function CheckoutPage() {
     return null
   }
 
+
+  // Agregar cerca de las otras funciones (antes de submitOrder)
+const applyCouponIfExists = () => {
+  if (!couponCode || !coupons || coupons.length === 0) {
+    return null;
+  }
+
+  const foundCoupon = coupons.find((coupon) => coupon.code === couponCode);
+  
+  if (!foundCoupon) {
+    toast.error("El cupón ingresado no es válido");
+    return null;
+  }
+
+  // Verificar si el cupón está activo y vigente
+  const now = new Date();
+  const startDate = new Date(foundCoupon.startDate);
+  const endDate = new Date(foundCoupon.endDate);
+
+  if (!foundCoupon.isActive || now < startDate || now > endDate) {
+    toast.error("El cupón no está disponible o ha expirado");
+    return null;
+  }
+  console.log("GAAAAA", foundCoupon)
+  setAppliedCoupon(foundCoupon);
+  return foundCoupon;
+};
+
   // Submit the order
   const submitOrder = async () => {
     setIsSubmitting(true)
@@ -566,36 +662,32 @@ export default function CheckoutPage() {
 
       // 3. Prepare line items from cart
       console.log("Cart items:", items)
-      const lineItems = items.map((item) => ({
-        variantId: item.variant.id,
-        title: `${item.product.title} - ${item.variant.title}`,
-        price: item.variant.prices[0].price,
-        quantity: item.quantity,
-        totalDiscount: 0,
-      }))
+      const coupon = applyCouponIfExists();
+
+ 
+
+// Preparar line items con descuentos
+const lineItems = prepareLineItems()
+
+// Calcular el total de descuentos
 
       console.log("Prepared line items:", lineItems)
 
       // 4. Calculate totals
-      const subtotalPrice = getTotal()
-      console.log("Subtotal price:", subtotalPrice)
+      const subtotalPrice = getTotal();
+      const totalDiscounts = lineItems.reduce((sum, item) => sum + item.totalDiscount, 0);
+      const subtotalAfterDiscount = subtotalPrice - totalDiscounts;
 
-      // Verificar si los precios incluyen impuestos
-      const taxesIncluded = shopSettings?.[0]?.taxesIncluded || false
-      const taxRate = Number(shopSettings?.[0]?.taxValue || 18) / 100 // Dynamic tax rate from settings
-
-      let totalTax = 0
-      let totalPrice = 0
+      let totalTax = 0;
+      let totalPrice = 0;
 
       if (taxesIncluded) {
-        // Si los precios ya incluyen impuestos, extraer el impuesto del subtotal
-        const taxDivisor = 1 + taxRate
-        totalTax = subtotalPrice - subtotalPrice / taxDivisor
-        totalPrice = subtotalPrice + Number(getShippingCost())
+        const taxDivisor = 1 + taxRate;
+        totalTax = subtotalAfterDiscount - subtotalAfterDiscount / taxDivisor;
+        totalPrice = subtotalAfterDiscount + Number(getShippingCost());
       } else {
-        // Si los precios no incluyen impuestos, agregar el impuesto al subtotal
-        totalTax = subtotalPrice * taxRate
-        totalPrice = subtotalPrice + totalTax + Number(getShippingCost())
+        totalTax = subtotalAfterDiscount * taxRate;
+        totalPrice = subtotalAfterDiscount + totalTax + Number(getShippingCost());
       }
 
       console.log("Tax included in prices:", taxesIncluded)
@@ -621,7 +713,8 @@ export default function CheckoutPage() {
         totalPrice,
         subtotalPrice,
         totalTax,
-        totalDiscounts: 0,
+        totalDiscounts,
+        
         lineItems,
         // Create customerInfo JSON object with properly formatted name
         customerInfo: (() => {
@@ -669,7 +762,7 @@ export default function CheckoutPage() {
                 country: "PE",
                 phone: formData.billingPhone,
               },
-        couponId: null, // Set to null when no coupon
+        couponId: coupon?.id || null,
         paymentProviderId: formData.paymentMethod || null, // Set to null when no payment method
         shippingMethodId: formData.shippingMethod || null, // Set to null when no shipping method
         financialStatus: OrderFinancialStatus.PENDING,
@@ -917,24 +1010,75 @@ export default function CheckoutPage() {
   }
 
   // Calculate totals
-  const subtotal = Number(getTotal())
-  const shipping = Number(getShippingCost())
-  const taxesIncluded = shopSettings?.[0]?.taxesIncluded || false
-  const taxRate = Number(shopSettings?.[0]?.taxValue || 18) / 100 // Dynamic tax rate from settings
+  const totalDiscounts = calculateDiscounts()
+const subtotal = Number(getTotal())
+const shipping = Number(getShippingCost())
+const taxesIncluded = shopSettings?.[0]?.taxesIncluded || false
+const taxRate = Number(shopSettings?.[0]?.taxValue || 18) / 100
 
-  let tax = 0
-  let total = 0
+// Calcular subtotal después de descuentos
+const subtotalAfterDiscount = Math.max(0, subtotal - totalDiscounts)
 
-  if (taxesIncluded) {
-    // Si los precios ya incluyen impuestos, extraer el impuesto del subtotal
-    const taxDivisor = 1 + taxRate
-    tax = subtotal - subtotal / taxDivisor
-    total = subtotal + shipping
-  } else {
-    // Si los precios no incluyen impuestos, agregar el impuesto al subtotal
-    tax = subtotal * taxRate
-    total = subtotal + tax + shipping
+let tax = 0
+let total = 0
+
+if (taxesIncluded) {
+  // Si los impuestos están incluidos en el precio:
+  // 1. Extraer el impuesto del subtotal original (antes de descuentos)
+  const taxDivisor = 1 + taxRate
+  const taxBeforeDiscount = subtotal - subtotal / taxDivisor
+  
+  // 2. Calcular qué porcentaje del impuesto corresponde al subtotal después de descuentos
+  tax = (subtotalAfterDiscount / subtotal) * taxBeforeDiscount
+  
+  // 3. Calcular total (subtotal con descuento + envío)
+  total = subtotalAfterDiscount + shipping
+} else {
+  // Si los impuestos NO están incluidos:
+  // Calcular impuestos sobre el subtotal después de descuentos
+  tax = subtotalAfterDiscount * taxRate
+  total = subtotalAfterDiscount + tax + shipping
+}
+
+  const prepareLineItems = () => {
+    return items.map((item) => {
+      const isProductEligible = appliedCoupon?.applicableProducts?.some(
+        (prod: any) => prod.id === item.product.id
+      )
+      
+      const isCategoryEligible = item.product.categories?.some(
+        cat => appliedCoupon?.applicableCategories?.some(
+          (          coupCat: { id: string }) => coupCat.id === cat.id
+        )
+      )
+      
+      const isCollectionEligible = item.product.collections?.some(
+        col => appliedCoupon?.applicableCollections?.some(
+          (          coupCol: { id: string }) => coupCol.id === col.id
+        )
+      )
+
+      const isEligible = isProductEligible || isCategoryEligible || isCollectionEligible
+      
+      let discount = 0
+      if (isEligible && appliedCoupon) {
+        if (appliedCoupon.type === "PERCENTAGE") {
+          discount = (Number(item.variant.prices[0].price) * (Number(appliedCoupon.value) / 100) * item.quantity)
+        } else if (appliedCoupon.type === "FIXED_AMOUNT") {
+          discount = Number(appliedCoupon.value) * item.quantity
+        }
+      }
+
+      return {
+        variantId: item.variant.id,
+        title: `${item.product.title} - ${item.variant.title}`,
+        price: item.variant.prices[0].price,
+        quantity: item.quantity,
+        totalDiscount: discount,
+      }
+    })
   }
+
 
   // Currency symbol
   const currency = shopSettings?.[0]?.defaultCurrency?.symbol || "S/"
@@ -1155,6 +1299,7 @@ export default function CheckoutPage() {
                   currency={currency}
                   currentStep={currentStep}
                   formData={formData}
+                  totalDiscounts={totalDiscounts}
                   shippingMethods={shippingMethods}
                   paymentProviders={paymentProviders}
                 />
