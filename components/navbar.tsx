@@ -25,6 +25,8 @@ import { toast } from "sonner"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useMainStore } from "@/stores/mainStore"
 import { useCartStore } from "@/stores/cartStore"
+import { useCookieConsent } from "@/hooks/useCookieConsent"
+import CookieConsentDialog from "./CookieConsentDialog"
 
 interface NavbarProps {
   user?: {
@@ -55,11 +57,20 @@ export default function Navbar({ user }: NavbarProps) {
     fetchContents,
     fetchCollections,
     fetchPaymentProviders,
+    fetchCoupons,
     fetchCardSections,
     shopSettings,
     loading,
     error,
   } = useMainStore()
+const { 
+    showDialog, 
+    acceptAllCookies, 
+    declineAllCookies, 
+    acceptSelectedCookies, 
+    openCookieSettings 
+  } = useCookieConsent();
+    const isCookieConsentEnabled: boolean = shopSettings?.[0]?.cookieConsentEnabled ?? false;
   const { items, removeItem, updateQuantity, getTotal, getItemsCount } = useCartStore()
   const [mounted, setMounted] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
@@ -107,6 +118,7 @@ export default function Navbar({ user }: NavbarProps) {
           fetchContents(),
           fetchCollections(),
           fetchCardSections(),
+          fetchCoupons(),
           fetchPaymentProviders(),
         ])
 
@@ -128,6 +140,7 @@ export default function Navbar({ user }: NavbarProps) {
     fetchCollections,
     fetchContents,
     fetchCardSections,
+    fetchCoupons,
     fetchPaymentProviders,
     loading,
   ])
@@ -230,6 +243,8 @@ export default function Navbar({ user }: NavbarProps) {
   }
 
   return (
+    <>
+
     <nav className="bg-background/95 backdrop-blur-md border-b sticky top-0 z-[180]">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-18">
@@ -520,5 +535,14 @@ export default function Navbar({ user }: NavbarProps) {
         </div>
       </div>
     </nav>
+
+    {isCookieConsentEnabled && showDialog && (
+        <CookieConsentDialog
+          onAccept={acceptAllCookies}
+          onDecline={declineAllCookies}
+          onAcceptSelected={acceptSelectedCookies}
+        />
+      )}
+    </>
   )
 }

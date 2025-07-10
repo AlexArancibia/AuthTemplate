@@ -455,6 +455,15 @@ export const orderConfirmationClientTemplate = (order: Order, shopSettings?: Sho
         <div class="order-item-price">${formatCurrency(order.totalTax, order.currency.code, shopSettings)}</div>
       </div>
     ` : ""}
+
+    ${order.totalDiscounts > 0 ? `
+      <div class="order-item">
+        <div class="order-item-name">Descuento:</div>
+        <div class="order-item-price">${formatCurrency(order.totalDiscounts, order.currency.code, shopSettings)}</div>
+      </div>
+    ` : ""}
+
+
     <div class="order-item">
       <div class="order-item-name"><strong>Total:</strong></div>
       <div class="order-item-price"><strong>${formatCurrency(order.totalPrice, order.currency.code, shopSettings)}</strong></div>

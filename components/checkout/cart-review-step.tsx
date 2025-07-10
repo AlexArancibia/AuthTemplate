@@ -151,7 +151,7 @@ export function CartReviewStep({ items, currency, nextStep }: CartReviewStepProp
           {/* Resumen del total */}
           <div className="border-t pt-4">
             <div className="flex justify-between items-center">
-              <span className="text-lg font-semibold">Total:</span>
+              <span className="text-lg font-semibold">Subtotal:</span>
               <span className="text-xl font-bold text-primary">
                 {currency}
                 {Number(cartTotal).toFixed(2)}
