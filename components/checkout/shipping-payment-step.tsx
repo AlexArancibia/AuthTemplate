@@ -1,6 +1,8 @@
 "use client"
 
 import type React from "react"
+import { toast } from "sonner";
+import { useState } from "react"
 import { motion } from "framer-motion"
 import { ArrowLeft, Loader2, Package, Truck, CreditCard } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -14,7 +16,21 @@ import type { JSX } from "react"
 import { PaymentProvider } from "@/types/payments"
 import { ShippingMethod } from "@/types/shippingMethod"
 import Image from "next/image"
+import { loadCulqiScript, openCulqiCheckout, setCulqiCallback } from "@/components/checkout/cuqui-checkout";
 
+export function watchCulqiClose(onClose: () => void) {
+  const observer = new MutationObserver(() => {
+    const iframeExists = !!document.querySelector("iframe[src*='culqi']");
+    if (!iframeExists) {
+      onClose();
+      observer.disconnect();
+    }
+  });
+
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  return observer;
+}
 interface ShippingPaymentStepProps {
   formData: any
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void
@@ -26,6 +42,8 @@ interface ShippingPaymentStepProps {
   shippingMethods: ShippingMethod[]
   paymentProviders: PaymentProvider[]
   getPaymentIcon: (paymentName: string) => JSX.Element
+  total: number
+  resumeItems: string
 }
 
 export function ShippingPaymentStep({
@@ -39,7 +57,53 @@ export function ShippingPaymentStep({
   shippingMethods,
   paymentProviders,
   getPaymentIcon,
+  total,
+  resumeItems,
 }: ShippingPaymentStepProps) {
+  const selectedProvider = paymentProviders.find(
+    (p) => p.id === formData.paymentMethod
+  );
+  const isCulqui = selectedProvider?.name?.toLowerCase() === "culqui";
+  const [isOpeningCulqi, setIsOpeningCulqi] = useState(false);
+
+  const handleCulqiPay = async () => {
+    console.log(resumeItems);
+    try {
+      setIsOpeningCulqi(true);
+      await loadCulqiScript();
+
+      watchCulqiClose(() => {
+        setIsOpeningCulqi(false);
+        toast.warning("Pago cancelado por el usuario");
+      });
+
+      setCulqiCallback(
+        async (token) => {
+          setIsOpeningCulqi(false);
+          if (token) {
+            console.log("Token de Culqi recibido:", token);
+
+            handleSelectChange("culqiToken", token);
+
+            await submitOrder();
+
+            toast.success("Pago realizado y orden procesada con éxito");
+          }
+        },
+        (error) => {
+          setIsOpeningCulqi(false);
+          toast.error("Error en el pago con Culqi");
+        }
+      );
+
+      const amount = Math.round(Number(total) * 100);
+
+      await openCulqiCheckout(amount, "Pago con Culqi");
+    } catch (err) {
+      setIsOpeningCulqi(false);
+      toast.error("No se pudo iniciar el pago con Culqi");    }
+  };
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-8">
       {/* Shipping Method Section */}
@@ -223,17 +287,22 @@ export function ShippingPaymentStep({
           Atrás
         </Button>
         <Button
-          onClick={submitOrder}
+          onClick={isCulqui ? handleCulqiPay : submitOrder}
           disabled={isSubmitting}
           className="px-8 py-2.5 bg-primary hover:bg-primary/90 transition-all shadow-md shadow-primary/10 hover:shadow-primary/20"
         >
-          {isSubmitting ? (
+          {isOpeningCulqi ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Cargando Culqi...
+            </>
+          ) : isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Procesando...
             </>
           ) : (
-            <>Finalizar compra</>
+            <>{isCulqui ? "Pagar" : "Finalizar compra"}</>
           )}
         </Button>
       </div>

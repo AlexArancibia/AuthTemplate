@@ -1079,7 +1079,9 @@ if (taxesIncluded) {
     })
   }
 
-
+    const resumeItems = items
+        .map((item) => `${item.product.title}: ${item.quantity}`)
+        .join("\n");
   // Currency symbol
   const currency = shopSettings?.[0]?.defaultCurrency?.symbol || "S/"
 
@@ -1265,6 +1267,8 @@ if (taxesIncluded) {
                     shippingMethods={shippingMethods}
                     paymentProviders={paymentProviders}
                     getPaymentIcon={getPaymentIcon}
+                    total={total}
+                    resumeItems={resumeItems}
                   />
                 )}
 
