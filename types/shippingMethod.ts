@@ -48,6 +48,10 @@ export interface ShippingMethodPrice {
   price: number;
   createdAt: Date;
   updatedAt: Date;
+
+  cityNames?: string[];
+  stateCodes?: string[];
+  countryCodes?: string[];
 }
 
 // Mantener esta interfaz para la API
