@@ -48,7 +48,6 @@ export function setCulqiCallback(
   window.culqi = () => {
     if (window.Culqi.token) {
       const token = window.Culqi.token.id;
-      console.log("✅ Token recibido:", token);
 
       window.Culqi.close();
 

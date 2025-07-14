@@ -44,6 +44,7 @@ interface ShippingPaymentStepProps {
   getPaymentIcon: (paymentName: string) => JSX.Element
   total: number
   resumeItems: string
+  orderId: string | null
 }
 
 export function ShippingPaymentStep({
@@ -59,6 +60,7 @@ export function ShippingPaymentStep({
   getPaymentIcon,
   total,
   resumeItems,
+  orderId,
 }: ShippingPaymentStepProps) {
   const selectedProvider = paymentProviders.find(
     (p) => p.id === formData.paymentMethod
@@ -67,27 +69,54 @@ export function ShippingPaymentStep({
   const [isOpeningCulqi, setIsOpeningCulqi] = useState(false);
 
   const handleCulqiPay = async () => {
-    console.log(resumeItems);
+    const amount = Math.round(Number(total) * 100);
+
     try {
       setIsOpeningCulqi(true);
       await loadCulqiScript();
 
       watchCulqiClose(() => {
         setIsOpeningCulqi(false);
-        toast.warning("Pago cancelado por el usuario");
       });
 
       setCulqiCallback(
         async (token) => {
           setIsOpeningCulqi(false);
           if (token) {
-            console.log("Token de Culqi recibido:", token);
 
-            handleSelectChange("culqiToken", token);
+            try {
+              const res = await fetch("/api/payments/culqui", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  token,
+                  amount: amount,
+                  currency: "PEN",
+                  description: resumeItems,
+                  email: formData.email,
+                  firstName: formData.firstName,
+                  lastName: formData.lastName,
+                  phone: formData.phone,
+                  address: formData.address,
+                  city: formData.city,
+                  countryCode: "PE",
+                  orderNumber: orderId,
+                }),
+              });
 
-            await submitOrder();
+              const data = await res.json();
 
-            toast.success("Pago realizado y orden procesada con éxito");
+              if (!res.ok) {
+                toast.error(data.error || "Error procesando el pago");
+                return;
+              }
+
+              handleSelectChange("culqiToken", token);
+              await submitOrder();
+            } catch (error) {
+              console.error("Error de conexión con el backend", error);
+              toast.error("Error de conexión con el backend");
+            }
           }
         },
         (error) => {
@@ -96,9 +125,7 @@ export function ShippingPaymentStep({
         }
       );
 
-      const amount = Math.round(Number(total) * 100);
-
-      await openCulqiCheckout(amount, "Pago con Culqi");
+      await openCulqiCheckout(amount, "Pago de productos:\n" + resumeItems);
     } catch (err) {
       setIsOpeningCulqi(false);
       toast.error("No se pudo iniciar el pago con Culqi");    }
