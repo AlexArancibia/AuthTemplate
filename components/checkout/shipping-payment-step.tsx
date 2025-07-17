@@ -40,6 +40,23 @@ export function ShippingPaymentStep({
   paymentProviders,
   getPaymentIcon,
 }: ShippingPaymentStepProps) {
+
+  const filteredShippingMethods = shippingMethods.filter((method) =>
+    method.prices.some((price) =>
+      price.cityNames?.some(
+        (city) => city.toLowerCase() === formData.city.toLowerCase()
+      )
+    )
+  )
+
+  const pickupMethod = shippingMethods.find((method) =>
+    method.name.toLowerCase().includes("recojo")
+  )
+
+  const methodsToShow = pickupMethod
+    ? [...filteredShippingMethods, pickupMethod]
+    : filteredShippingMethods
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-8">
       {/* Shipping Method Section */}
@@ -56,9 +73,9 @@ export function ShippingPaymentStep({
             onValueChange={(value) => handleSelectChange("shippingMethod", value)}
             className="space-y-4"
           >
-            {shippingMethods.map((method) => {
+            {methodsToShow.map((method) => {
               const price = method.prices[0]?.price || 0
-              const isFree = price === 0  
+              const isFree = price === 0
 
               return (
                 <div
@@ -75,7 +92,9 @@ export function ShippingPaymentStep({
                       )}
                       <div>
                         <p className="font-medium">{method.name}</p>
-                        <p className="text-sm text-gray-500">{method.description || method.estimatedDeliveryTime}</p>
+                        <p className="text-sm text-gray-500">
+                          {method.description || method.estimatedDeliveryTime}
+                        </p>
                       </div>
                     </div>
                   </Label>
