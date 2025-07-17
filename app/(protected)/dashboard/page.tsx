@@ -1,17 +1,11 @@
-import { auth } from "@/auth";
-import LogoutButton from "@/components/logout-button";
+import type { Metadata } from "next"
+import { UserDashboard } from "@/components/dashboard/user-dashboard"
 
-export default async function DashboardPage() {
-  const session = await auth();
+export const metadata: Metadata = {
+  title: "Dashboard de Usuario",
+  description: "Gestiona tu información, direcciones y pedidos",
+}
 
-  if (!session) {
-    return <div>Not authenticated</div>;
-  }
-
-  return (
-    <div className="container">
-      <pre>{JSON.stringify(session, null, 2)}</pre>
-      <LogoutButton />
-    </div>
-  );
+export default function DashboardPage() {
+  return <UserDashboard />
 }

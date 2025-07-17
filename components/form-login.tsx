@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useTransition, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import type { z } from "zod"
@@ -19,14 +19,23 @@ import ButtonSocial from "./button-social"
 import { Eye, EyeOff, Loader2, Github, Mail } from "lucide-react"
 
 interface FormLoginProps {
-  isVerified?: boolean
-  OAuthAccountNotLinked?: boolean
+  isVerified?: boolean;
+  OAuthAccountNotLinked?: boolean;
+  bottomMessage?: string | null;
+  messageType?: "success" | "error";
 }
 
-const FormLogin = ({ isVerified, OAuthAccountNotLinked }: FormLoginProps) => {
-  const [isPending, startTransition] = useTransition()
-  const [showPassword, setShowPassword] = useState(false)
+const FormLogin = ({
+  isVerified,
+  OAuthAccountNotLinked,
+  bottomMessage,
+  messageType = "success",
+}: FormLoginProps) => {
+  const [isPending, startTransition] = useTransition();
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectTo = searchParams.get('redirect') || '/dashboard'
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -45,9 +54,9 @@ const FormLogin = ({ isVerified, OAuthAccountNotLinked }: FormLoginProps) => {
         })
       } else {
         toast.success("Inicio de sesión exitoso", {
-          description: "Redirigiendo al panel de control...",
+          description: `Redirigiendo a ${redirectTo}...`,
         })
-        router.push("/dashboard")
+        router.push(redirectTo)
       }
     })
   }
@@ -122,7 +131,7 @@ const FormLogin = ({ isVerified, OAuthAccountNotLinked }: FormLoginProps) => {
                       <div className="flex items-center justify-between">
                         <FormLabel className="text-sm font-medium text-slate-700">Contraseña</FormLabel>
                         <Link
-                          href="/forgot-password"
+                          href={`/forgot-password${redirectTo !== '/dashboard' ? `?redirect=${encodeURIComponent(redirectTo)}` : ''}`}
                           className="text-xs text-slate-500 hover:text-slate-700 transition-colors"
                         >
                           ¿Olvidaste tu contraseña?
@@ -154,6 +163,17 @@ const FormLogin = ({ isVerified, OAuthAccountNotLinked }: FormLoginProps) => {
                     </FormItem>
                   )}
                 />
+
+                {/* Mostrar mensaje de error/éxito de reseteo de contraseña */}
+                {bottomMessage && (
+                  <div className={`p-3 text-sm rounded-md ${
+                    messageType === "error"
+                      ? "text-red-700 bg-red-100 border border-red-300"
+                      : "text-green-700 bg-green-100 border border-green-300"
+                  }`}>
+                    {bottomMessage}
+                  </div>
+                )}
 
                 <Button
                   type="submit"
@@ -219,7 +239,7 @@ const FormLogin = ({ isVerified, OAuthAccountNotLinked }: FormLoginProps) => {
             <p className="text-sm text-slate-500">
               ¿No tienes una cuenta?{" "}
               <Link
-                href="/register"
+                href={`/register${redirectTo !== '/dashboard' ? `?redirect=${encodeURIComponent(redirectTo)}` : ''}`}
                 className="font-medium text-slate-600 hover:text-slate-800 hover:underline transition-colors"
               >
                 Regístrate
