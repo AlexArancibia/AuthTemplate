@@ -15,6 +15,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useState, useEffect } from "react"
 import { useGeographicDataStore } from "@/stores/locationStore"
+import { toast } from "sonner"; 
  
 import type { Address } from "@/stores/userStore"
 import { AddressType } from "@/types/auth"
@@ -58,6 +59,18 @@ export function CustomerInfoStep({
 }: CustomerInfoStepProps) {
 
   const router = useRouter()
+  const [addressError, setAddressError] = useState(false);
+
+  const handleContinue = () => {
+    // Si el campo de dirección está vacío, muestra error visual y toast
+    if (!formData.address || formData.address.trim() === "") {
+      setAddressError(true);
+      toast.error("Falta dirección de envío");
+      return;
+    }
+    setAddressError(false);
+    nextStep();
+  };
 
   const {
     countries,
@@ -310,7 +323,17 @@ export function CustomerInfoStep({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="address">Dirección</Label>
-              <Input id="address" name="address" value={formData.address} onChange={handleInputChange} required />
+              <Input
+                id="address"
+                name="address"
+                value={formData.address}
+                onChange={(e) => {
+                  handleInputChange(e);
+                  if (e.target.value.trim() !== "") setAddressError(false);
+                }}
+                required
+                className={addressError ? "border-red-500 focus-visible:ring-red-500" : ""}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="shippingPhone">Teléfono</Label>
@@ -621,7 +644,7 @@ export function CustomerInfoStep({
           <ArrowLeft className="mr-2 h-4 w-4" />
           Atrás
         </Button>
-        <Button onClick={nextStep} disabled={!isFormValid()}>
+        <Button onClick={handleContinue} disabled={!isFormValid()}>
           Continuar
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>

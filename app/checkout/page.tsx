@@ -765,7 +765,10 @@ const lineItems = prepareLineItems()
         couponId: coupon?.id || null,
         paymentProviderId: formData.paymentMethod || null, // Set to null when no payment method
         shippingMethodId: formData.shippingMethod || null, // Set to null when no shipping method
-        financialStatus: OrderFinancialStatus.PENDING,
+        financialStatus:
+          formData.paymentMethod === "pp_9c77d30e-6d2b"
+            ? OrderFinancialStatus.PAID
+            : OrderFinancialStatus.PENDING,
         fulfillmentStatus: OrderFulfillmentStatus.UNFULFILLED,
         shippingStatus: ShippingStatus.PENDING,
         customerNotes: formData.notes || "",
@@ -1079,7 +1082,9 @@ if (taxesIncluded) {
     })
   }
 
-
+    const resumeItems = items
+        .map((item) => `${item.product.title}: ${item.quantity}`)
+        .join("\n");
   // Currency symbol
   const currency = shopSettings?.[0]?.defaultCurrency?.symbol || "S/"
 
@@ -1265,6 +1270,9 @@ if (taxesIncluded) {
                     shippingMethods={shippingMethods}
                     paymentProviders={paymentProviders}
                     getPaymentIcon={getPaymentIcon}
+                    total={total}
+                    resumeItems={resumeItems}
+                    orderId={orderId}
                   />
                 )}
 
