@@ -77,6 +77,13 @@ const {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [showInitialLoading, setShowInitialLoading] = useState(true)
 
+  const [selectedCurrency, setSelectedCurrency] = useState("USD - $/.");
+
+  const currencies = [
+    { code: "USD - $/.", label: "Dólares (USD)" },
+    { code: "PEN - S/.", label: "Soles (PEN)" },
+  ];
+
   // Simple fetch control
   const hasFetched = useRef(false)
 
@@ -435,6 +442,37 @@ const {
                 </div>
               </SheetContent>
             </Sheet>
+
+            
+            {/* Currency Selector */}
+            {["/productos", "/promociones", "/catalogo"].includes(pathname) && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="h-8 px-3 text-sm border border-border bg-background rounded-md text-secondary hover:text-primary hover:bg-secondary/10 transition"
+                    aria-label="Seleccionar moneda"
+                  >
+                    {selectedCurrency}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="z-[999] bg-popover text-popover-foreground border rounded-md shadow-md p-1 w-40"
+                >
+                  {currencies.map((currency) => (
+                    <DropdownMenuItem
+                      key={currency.code}
+                      onClick={() => setSelectedCurrency(currency.code)}
+                      className={`cursor-pointer px-3 py-1.5 text-sm rounded-md hover:bg-secondary/10 ${
+                        selectedCurrency === currency.code ? "font-semibold text-primary" : ""
+                      }`}
+                    >
+                      {currency.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
 
             {/* User Menu */}
             {user ? (
