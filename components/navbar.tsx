@@ -24,6 +24,7 @@ import { signOut } from "next-auth/react"
 import { toast } from "sonner"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useMainStore } from "@/stores/mainStore"
+import { useCurrencySelected, type CurrencyOption } from "@/stores/currencySelected";
 import { useCartStore } from "@/stores/cartStore"
 import { useCookieConsent } from "@/hooks/useCookieConsent"
 import CookieConsentDialog from "./CookieConsentDialog"
@@ -46,6 +47,13 @@ const navItems = [
   { name: "Blog", href: "/blog" },
   { name: "Contáctenos", href: "/contactenos" },
 ]
+
+const {
+  selectedCurrency,
+  setSelectedCurrency,
+  currencies,
+  setCurrencies
+} = useCurrencySelected();
 
 export default function Navbar({ user }: NavbarProps) {
   const pathname = usePathname()
@@ -77,12 +85,33 @@ const {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [showInitialLoading, setShowInitialLoading] = useState(true)
 
-  const [selectedCurrency, setSelectedCurrency] = useState("USD - $/.");
+  const { selectedCurrency, setSelectedCurrency } = useCurrencySelected();
+  const [currencies, setCurrencies] = useState<CurrencyOption[]>([]);
 
-  const currencies = [
-    { code: "USD - $/.", label: "Dólares (USD)" },
-    { code: "PEN - S/.", label: "Soles (PEN)" },
-  ];
+  useEffect(() => {
+    const settings = shopSettings?.[0];
+    if (!settings?.multiCurrencyEnabled || !settings?.acceptedCurrencies?.length) return;
+
+    const currencyList: CurrencyOption[] = settings.acceptedCurrencies.map((currency) => ({
+      id: currency.id,
+      code: currency.code,
+      name: currency.name,
+      symbol: currency.symbol || "",
+      label: `${currency.code} - ${currency.symbol || ""} (${currency.name})`,
+    }));
+
+    setCurrencies(currencyList);
+
+    const saved = localStorage.getItem("currency");
+    const savedCurrency = currencyList.find((c) => c.code === saved);
+
+    if (savedCurrency) {
+      setSelectedCurrency(savedCurrency.code);
+    } else {
+      const defaultCurrency = settings.defaultCurrency;
+      setSelectedCurrency(defaultCurrency?.code || currencyList[0]?.code);
+    }
+  }, [shopSettings, setSelectedCurrency]);
 
   // Simple fetch control
   const hasFetched = useRef(false)
@@ -445,33 +474,34 @@ const {
 
             
             {/* Currency Selector */}
-            {["/productos", "/promociones", "/catalogo"].includes(pathname) && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    className="h-8 px-3 text-sm border border-border bg-background rounded-md text-secondary hover:text-primary hover:bg-secondary/10 transition"
-                    aria-label="Seleccionar moneda"
-                  >
-                    {selectedCurrency}
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="z-[999] bg-popover text-popover-foreground border rounded-md shadow-md p-1 w-40"
-                >
-                  {currencies.map((currency) => (
-                    <DropdownMenuItem
-                      key={currency.code}
-                      onClick={() => setSelectedCurrency(currency.code)}
-                      className={`cursor-pointer px-3 py-1.5 text-sm rounded-md hover:bg-secondary/10 ${
-                        selectedCurrency === currency.code ? "font-semibold text-primary" : ""
-                      }`}
+            {shopSettings?.[0]?.multiCurrencyEnabled &&
+              ["/productos", "/promociones", "/catalogo"].includes(pathname) && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className="h-8 px-3 text-sm border border-border bg-background rounded-md text-secondary hover:text-primary hover:bg-secondary/10 transition"
+                      aria-label="Seleccionar moneda"
                     >
-                      {currency.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                      {selectedCurrency}
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="z-[999] bg-popover text-popover-foreground border rounded-md shadow-md p-1 w-40"
+                  >
+                    {currencies.map((currency) => (
+                      <DropdownMenuItem
+                        key={currency.code}
+                        onClick={() => setSelectedCurrency(currency.code)}
+                        className={`cursor-pointer px-3 py-1.5 text-sm rounded-md hover:bg-secondary/10 ${
+                          selectedCurrency === currency.code ? "font-semibold text-primary" : ""
+                        }`}
+                      >
+                        {currency.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
             )}
 
             {/* User Menu */}
