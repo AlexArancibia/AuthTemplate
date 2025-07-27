@@ -24,7 +24,7 @@ import { signOut } from "next-auth/react"
 import { toast } from "sonner"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useMainStore } from "@/stores/mainStore"
-import { useCurrencySelected, type CurrencyOption } from "@/stores/currencySelected";
+import { useCurrencyStore } from "@/stores/currency"
 import { useCartStore } from "@/stores/cartStore"
 import { useCookieConsent } from "@/hooks/useCookieConsent"
 import CookieConsentDialog from "./CookieConsentDialog"
@@ -47,13 +47,6 @@ const navItems = [
   { name: "Blog", href: "/blog" },
   { name: "Contáctenos", href: "/contactenos" },
 ]
-
-const {
-  selectedCurrency,
-  setSelectedCurrency,
-  currencies,
-  setCurrencies
-} = useCurrencySelected();
 
 export default function Navbar({ user }: NavbarProps) {
   const pathname = usePathname()
@@ -84,34 +77,40 @@ const {
   const [searchTerm, setSearchTerm] = useState("")
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [showInitialLoading, setShowInitialLoading] = useState(true)
-
-  const { selectedCurrency, setSelectedCurrency } = useCurrencySelected();
-  const [currencies, setCurrencies] = useState<CurrencyOption[]>([]);
+  
+  const {
+    selectedCurrencyId,
+    setSelectedCurrencyId,
+    acceptedCurrencies,
+    setAcceptedCurrencies
+  } = useCurrencyStore()
 
   useEffect(() => {
-    const settings = shopSettings?.[0];
-    if (!settings?.multiCurrencyEnabled || !settings?.acceptedCurrencies?.length) return;
+    const settings = shopSettings?.[0]
+    if (!settings?.multiCurrencyEnabled || !settings?.acceptedCurrencies?.length) return
 
-    const currencyList: CurrencyOption[] = settings.acceptedCurrencies.map((currency) => ({
+    const currencyList = settings.acceptedCurrencies.map((currency) => ({
       id: currency.id,
       code: currency.code,
       name: currency.name,
       symbol: currency.symbol || "",
       label: `${currency.code} - ${currency.symbol || ""} (${currency.name})`,
-    }));
+    }))
 
-    setCurrencies(currencyList);
+    setAcceptedCurrencies(currencyList)
 
-    const saved = localStorage.getItem("currency");
-    const savedCurrency = currencyList.find((c) => c.code === saved);
+    const saved = localStorage.getItem("currency") // ahora será un ID como "curr_123"
+    const savedCurrency = currencyList.find((c) => c.id === saved)
 
     if (savedCurrency) {
-      setSelectedCurrency(savedCurrency.code);
+      setSelectedCurrencyId(savedCurrency.id)
     } else {
-      const defaultCurrency = settings.defaultCurrency;
-      setSelectedCurrency(defaultCurrency?.code || currencyList[0]?.code);
+      const defaultCurrencyId = settings.defaultCurrency?.id || currencyList[0]?.id
+      setSelectedCurrencyId(defaultCurrencyId)
     }
-  }, [shopSettings, setSelectedCurrency]);
+  }, [shopSettings])
+
+  const activeCurrency = acceptedCurrencies.find(c => c.id === selectedCurrencyId)
 
   // Simple fetch control
   const hasFetched = useRef(false)
@@ -221,7 +220,7 @@ const {
 
   // Cart calculations
   const totalItems = getItemsCount()
-  const totalPrice = getTotal()
+  const totalPrice = getTotal(selectedCurrencyId)
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -429,8 +428,8 @@ const {
                             <p className="text-xs font-medium">
                               {item.variant.prices && item.variant.prices.length > 0
                                 ? formatCurrency(
-                                    item.variant.prices[0].price * item.quantity,
-                                    item.variant.prices[0].currency?.code || "USD",
+                                    item.variant.prices.find(p => p.currency?.id === activeCurrency?.id)!.price * item.quantity,
+                                    activeCurrency,
                                   )
                                 : "N/A"}
                             </p>
@@ -452,7 +451,7 @@ const {
                     <div className="mt-auto pt-3 border-t">
                       <p className="font-medium text-base mb-3 flex justify-between">
                         <span>Total:</span>
-                        <span>{formatCurrency(totalPrice, defaultCurrency?.code || "USD")}</span>
+                        <span>{formatCurrency(totalPrice, activeCurrency)}</span>
                       </p>
                       <div className="flex gap-2">
                         <SheetClose asChild>
@@ -475,34 +474,37 @@ const {
             
             {/* Currency Selector */}
             {shopSettings?.[0]?.multiCurrencyEnabled &&
-              ["/productos", "/promociones", "/catalogo"].includes(pathname) && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      className="h-8 px-3 text-sm border border-border bg-background rounded-md text-secondary hover:text-primary hover:bg-secondary/10 transition"
-                      aria-label="Seleccionar moneda"
-                    >
-                      {selectedCurrency}
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="end"
-                    className="z-[999] bg-popover text-popover-foreground border rounded-md shadow-md p-1 w-40"
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="h-8 px-3 text-sm border border-border bg-background rounded-md text-secondary hover:text-primary hover:bg-secondary/10 transition"
+                    aria-label="Seleccionar moneda"
                   >
-                    {currencies.map((currency) => (
-                      <DropdownMenuItem
-                        key={currency.code}
-                        onClick={() => setSelectedCurrency(currency.code)}
-                        className={`cursor-pointer px-3 py-1.5 text-sm rounded-md hover:bg-secondary/10 ${
-                          selectedCurrency === currency.code ? "font-semibold text-primary" : ""
-                        }`}
-                      >
-                        {currency.label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-            )}
+                    {
+                      acceptedCurrencies.find((c) => c.id === selectedCurrencyId)?.code
+                      || "Moneda"
+                    }
+                  </button>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent
+                  align="end"
+                  className="z-[999] bg-popover text-popover-foreground border rounded-md shadow-md p-1 w-40"
+                >
+                  {acceptedCurrencies.map((currency) => (
+                    <DropdownMenuItem
+                      key={currency.id}
+                      onClick={() => setSelectedCurrencyId(currency.id)}
+                      className={`cursor-pointer px-3 py-1.5 text-sm rounded-md hover:bg-secondary/10 ${
+                        selectedCurrencyId === currency.id ? "font-semibold text-primary" : ""
+                      }`}
+                    >
+                      {currency.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            }
 
             {/* User Menu */}
             {user ? (

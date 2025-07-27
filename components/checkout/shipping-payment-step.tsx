@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { useEffect } from "react"
 import { toast } from "sonner";
 import { useState } from "react"
 import { motion } from "framer-motion"
@@ -45,6 +46,7 @@ interface ShippingPaymentStepProps {
   total: number
   resumeItems: string
   orderId: string | null
+  selectedCurrencyId: string
 }
 
 export function ShippingPaymentStep({
@@ -61,10 +63,12 @@ export function ShippingPaymentStep({
   total,
   resumeItems,
   orderId,
+  selectedCurrencyId
 }: ShippingPaymentStepProps) {
-  const selectedProvider = paymentProviders.find(
-    (p) => p.id === formData.paymentMethod
-  );
+  const selectedProvider = paymentProviders
+  .filter((p) => p.currencyId === selectedCurrencyId)
+  .find((p) => p.id === formData.paymentMethod)
+
   const isCulqui = selectedProvider?.name?.toLowerCase() === "culqui";
   const [isOpeningCulqi, setIsOpeningCulqi] = useState(false);
 
@@ -131,13 +135,21 @@ export function ShippingPaymentStep({
       toast.error("No se pudo iniciar el pago con Culqi");    }
   };
 
+  useEffect(() => {
+    console.log("shippingMethods ", shippingMethods)
+  }, [shippingMethods])
 
   const filteredShippingMethods = shippingMethods.filter((method) =>
-    method.prices.some((price) =>
-      price.cityNames?.some(
-        (city) => city.toLowerCase() === formData.city.toLowerCase()
-      )
-    )
+    method.prices.some((price) => {
+      const sameCurrency = price.currencyId === selectedCurrencyId
+      const cityMatch =
+        !price.cityNames?.length || // si no hay restricción por ciudad
+        price.cityNames.some(
+          (city) => city.toLowerCase() === formData.city?.toLowerCase()
+        )
+
+      return sameCurrency && cityMatch
+    })
   )
 
   const pickupMethod = shippingMethods.find((method) =>
@@ -165,8 +177,9 @@ export function ShippingPaymentStep({
             className="space-y-4"
           >
             {methodsToShow.map((method) => {
-              const price = method.prices[0]?.price || 0
-              const isFree = price === 0
+              const selectedPriceObj = method.prices.find(p => p.currencyId === selectedCurrencyId)
+              const price = selectedPriceObj?.price
+              const isFree = Number(price) === 0
 
               return (
                 <div
@@ -189,15 +202,19 @@ export function ShippingPaymentStep({
                       </div>
                     </div>
                   </Label>
-                  {isFree ? (
-                    <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 font-medium">
-                      Gratis
-                    </Badge>
+                  {selectedPriceObj ? (
+                    Number(price) === 0 ? (
+                      <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 font-medium">
+                        Gratis
+                      </Badge>
+                    ) : (
+                      <span className="font-medium">
+                        {selectedPriceObj.currency?.symbol ?? "$"}
+                        {Number(price).toFixed(2)}
+                      </span>
+                    )
                   ) : (
-                    <span className="font-medium">
-                      {paymentProviders[0]?.currency.symbol}
-                      {Number(price).toFixed(2)}
-                    </span>
+                    <span className="text-sm text-red-500 font-medium">No disponible en esta moneda</span>
                   )}
                 </div>
               )
@@ -222,7 +239,9 @@ export function ShippingPaymentStep({
             onValueChange={(value) => handleSelectChange("paymentMethod", value)}
             className="space-y-4"
           >
-            {paymentProviders.map((provider) => (
+            {paymentProviders
+            .filter((provider) => provider.currencyId === selectedCurrencyId)
+            .map((provider) => (
               <div
                 key={provider.id}
                 className="flex items-center space-x-2 border rounded-lg p-4 hover:bg-gray-50 cursor-pointer"

@@ -9,6 +9,7 @@ import { Slider } from "@/components/ui/slider"
 import { Separator } from "@/components/ui/separator"
 import type { Category } from "@/types/category"
 import type { Product } from "@/types/product"
+import type { CurrencyOption } from "@/stores/currency";
 import { useMainStore } from "@/stores/mainStore"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 
@@ -17,6 +18,8 @@ interface ProductFiltersProps {
   initialFilters: Filters
   minPrice: number
   maxPrice: number
+  selectedCurrencyId: string;
+  acceptedCurrencies: CurrencyOption[];
 }
 
 interface Filters {
@@ -31,7 +34,7 @@ interface GroupedPresentation {
   values: string[]
 }
 
-function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPrice }: ProductFiltersProps) {
+function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPrice, selectedCurrencyId, acceptedCurrencies }: ProductFiltersProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -47,10 +50,16 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
   const [priceRange, setPriceRange] = useState<[number, number]>(initialFilters.priceRange)
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm)
 
-  const defaultCurrency = shopSettings[0]?.defaultCurrency
+  const defaultCurrency = useMemo(() => {
+    if (selectedCurrencyId) {
+      return acceptedCurrencies.find((currency) => currency.id === selectedCurrencyId) || null
+    }
+    return shopSettings[0]?.defaultCurrency || null
+  }, [selectedCurrencyId, acceptedCurrencies, shopSettings])
 
   // Debounce search term
   useEffect(() => {
+    console.log("currencies aceptados: ", defaultCurrency)
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm)
     }, 300)

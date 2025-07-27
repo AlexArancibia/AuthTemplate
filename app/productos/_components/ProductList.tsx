@@ -12,6 +12,7 @@ import { ProductFilters } from "./ProductsFilter"
 import { FilterDrawer } from "./FilterDrawer"
 import { ProductCard } from "@/components/ProductCard"
 import { Pagination } from "./Pagination"
+import type { CurrencyOption } from "@/stores/currency";
 
 const PRODUCTS_PER_PAGE = 9
 
@@ -24,6 +25,8 @@ interface ProductListProps {
   initialMaxPrice?: number
   initialVariantFilters?: Record<string, string[]>
   collectionName?: string
+  selectedCurrencyId: string;
+  acceptedCurrencies: CurrencyOption[];
 }
 
 interface Filters {
@@ -42,6 +45,8 @@ function ProductListContent({
   initialMaxPrice,
   initialVariantFilters = {},
   collectionName,
+  selectedCurrencyId,
+  acceptedCurrencies,
 }: ProductListProps) {
   const { products, shopSettings } = useMainStore()
   const router = useRouter()
@@ -49,34 +54,33 @@ function ProductListContent({
   const searchParams = useSearchParams()
 
   const defaultCurrency = shopSettings[0]?.defaultCurrency
+  const activeCurrencyId = selectedCurrencyId || defaultCurrency?.id;
 
   // Calculate min and max prices from products
   const { minPrice: calculatedMinPrice, maxPrice: calculatedMaxPrice } = useMemo(() => {
     if (!products || products.length === 0) {
-      return { minPrice: 0, maxPrice: 1000 } // Valores predeterminados seguros
+      return { minPrice: 0, maxPrice: 1000 };
     }
 
-    let min = Number.POSITIVE_INFINITY
-    let max = Number.NEGATIVE_INFINITY
+    let min = Number.POSITIVE_INFINITY;
+    let max = Number.NEGATIVE_INFINITY;
 
     products.forEach((product: Product) => {
       product.variants.forEach((variant) => {
-        const price = variant.prices.find((p) => p.currencyId === defaultCurrency?.id)?.price || 0
+        const price = variant.prices.find((p) => p.currencyId === activeCurrencyId)?.price || 0;
         if (price > 0) {
-          // Solo considerar precios válidos mayores que cero
-          min = Math.min(min, price)
-          max = Math.max(max, price)
+          min = Math.min(min, price);
+          max = Math.max(max, price);
         }
-      })
-    })
+      });
+    });
 
-    // Si después de procesar todos los productos, aún tenemos valores infinitos, usar valores predeterminados
     if (!isFinite(min) || !isFinite(max) || min > max) {
-      return { minPrice: 0, maxPrice: 1000 }
+      return { minPrice: 0, maxPrice: 1000 };
     }
 
-    return { minPrice: Math.floor(min), maxPrice: Math.ceil(max) }
-  }, [products, defaultCurrency])
+    return { minPrice: Math.floor(min), maxPrice: Math.ceil(max) };
+  }, [products, selectedCurrencyId, defaultCurrency]);
 
   // Use initial values or calculated values
   const [sortBy, setSortBy] = useState(initialSortBy)
@@ -153,26 +157,30 @@ function ProductListContent({
 
   const filteredProducts = useMemo(() => {
     return products.filter((product: Product) => {
-      // Filtrar productos en estado DRAFT
-      if (product.status === "DRAFT") {
-        return false
-      }
+      // Excluir productos sin precios válidos en la moneda activa
+      const hasValidPrice = product.variants.some((variant) =>
+        variant.prices.some((price) => price.currencyId === activeCurrencyId && price.price > 0)
+      )
+      if (!hasValidPrice) return false
 
-      // Filtrar productos sin stock que no permiten backorder
+      // Excluir productos en estado "DRAFT"
+      if (product.status === "DRAFT") return false
+
+      // Excluir productos sin stock si no se permite backorder
       if (!product.allowBackorder) {
-        // Verificar si alguna variante tiene stock disponible
         const hasStock = product.variants.some((variant) => variant.inventoryQuantity > 0)
-        if (!hasStock) {
-          return false
-        }
+        if (!hasStock) return false
       }
 
-      // Filter by search term
-      if (filters.searchTerm && !product.title.toLowerCase().includes(filters.searchTerm.toLowerCase())) {
+      // Filtrar por término de búsqueda
+      if (
+        filters.searchTerm &&
+        !product.title.toLowerCase().includes(filters.searchTerm.toLowerCase())
+      ) {
         return false
       }
 
-      // Filter by category
+      // Filtrar por categorías
       if (
         filters.categories.length > 0 &&
         product.categories &&
@@ -181,83 +189,80 @@ function ProductListContent({
         return false
       }
 
-      // Filter by variants
+      // Filtrar por variantes
       const variantMatches = Object.entries(filters.variants).every(([attribute, values]) => {
         return (
           values.length === 0 ||
           product.variants.some((variant) =>
-            values.includes(variant.attributes![attribute as keyof typeof variant.attributes] as string),
+            values.includes(variant.attributes?.[attribute as keyof typeof variant.attributes] as string)
           )
         )
       })
-      if (!variantMatches) {
-        return false
-      }
+      if (!variantMatches) return false
 
-      // Filter by price
-      const productPrice = product.variants[0].prices.find((price) => price.currencyId === defaultCurrency?.id)?.price
-      if (productPrice && (productPrice < filters.priceRange[0] || productPrice > filters.priceRange[1])) {
+      // Filtrar por rango de precios
+      const productPrice = product.variants[0].prices.find(
+        (price) => price.currencyId === activeCurrencyId
+      )?.price
+      if (
+        productPrice &&
+        (productPrice < filters.priceRange[0] || productPrice > filters.priceRange[1])
+      ) {
         return false
       }
 
       return true
     })
-  }, [products, filters, defaultCurrency])
+  }, [products, filters, activeCurrencyId])
 
   const sortedProducts = useMemo(() => {
-    let sorted = [...filteredProducts]
+    let sorted = [...filteredProducts];
 
     // First, apply collection prioritization if collectionName is provided
     if (collectionName) {
       sorted = sorted.sort((a, b) => {
         const aHasCollection =
-          a.collections?.some((collection) => collection.title?.toLowerCase() === collectionName.toLowerCase()) || false
+          a.collections?.some((collection) => collection.title?.toLowerCase() === collectionName.toLowerCase()) || false;
         const bHasCollection =
-          b.collections?.some((collection) => collection.title?.toLowerCase() === collectionName.toLowerCase()) || false
+          b.collections?.some((collection) => collection.title?.toLowerCase() === collectionName.toLowerCase()) || false;
 
-        // If only one product has the collection, prioritize it
-        if (aHasCollection && !bHasCollection) return -1
-        if (!aHasCollection && bHasCollection) return 1
-
-        // If both or neither have the collection, continue with regular sorting
-        return 0
-      })
+        if (aHasCollection && !bHasCollection) return -1;
+        if (!aHasCollection && bHasCollection) return 1;
+        return 0;
+      });
     }
 
     // Then apply the selected sorting method
     return sorted.sort((a, b) => {
-      // If we have collection prioritization, maintain it for products with same collection status
       if (collectionName) {
         const aHasCollection =
-          a.collections?.some((collection) => collection.title?.toLowerCase() === collectionName.toLowerCase()) || false
+          a.collections?.some((collection) => collection.title?.toLowerCase() === collectionName.toLowerCase()) || false;
         const bHasCollection =
-          b.collections?.some((collection) => collection.title?.toLowerCase() === collectionName.toLowerCase()) || false
+          b.collections?.some((collection) => collection.title?.toLowerCase() === collectionName.toLowerCase()) || false;
 
-        // Only apply secondary sorting if both products have the same collection status
         if (aHasCollection !== bHasCollection) {
-          return aHasCollection ? -1 : 1
+          return aHasCollection ? -1 : 1;
         }
       }
 
-      // Apply the selected sorting method
       switch (sortBy) {
         case "price-asc":
           return (
-            (a.variants[0].prices.find((price) => price.currencyId === defaultCurrency?.id)?.price || 0) -
-            (b.variants[0].prices.find((price) => price.currencyId === defaultCurrency?.id)?.price || 0)
-          )
+            (a.variants[0].prices.find((price) => price.currencyId === activeCurrencyId)?.price || 0) -
+            (b.variants[0].prices.find((price) => price.currencyId === activeCurrencyId)?.price || 0)
+          );
         case "price-desc":
           return (
-            (b.variants[0].prices.find((price) => price.currencyId === defaultCurrency?.id)?.price || 0) -
-            (a.variants[0].prices.find((price) => price.currencyId === defaultCurrency?.id)?.price || 0)
-          )
+            (b.variants[0].prices.find((price) => price.currencyId === activeCurrencyId)?.price || 0) -
+            (a.variants[0].prices.find((price) => price.currencyId === activeCurrencyId)?.price || 0)
+          );
         case "name":
-          return a.title.localeCompare(b.title)
+          return a.title.localeCompare(b.title);
         default:
-          return 0
+          return 0;
       }
-    })
-  }, [filteredProducts, sortBy, defaultCurrency, collectionName])
+    });
+  }, [filteredProducts, sortBy, selectedCurrencyId, defaultCurrency, collectionName]);
 
   const totalPages = Math.ceil(sortedProducts.length / PRODUCTS_PER_PAGE)
 
@@ -290,6 +295,8 @@ function ProductListContent({
           initialFilters={filters}
           minPrice={calculatedMinPrice}
           maxPrice={calculatedMaxPrice}
+          selectedCurrencyId={selectedCurrencyId}
+          acceptedCurrencies={acceptedCurrencies}
         />
       </aside>
 
@@ -323,7 +330,11 @@ function ProductListContent({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {paginatedProducts.map((product) => (
             <motion.div key={product.id} layout>
-              <ProductCard product={product} />
+              <ProductCard
+                product={product}
+                selectedCurrencyId={selectedCurrencyId}
+                acceptedCurrencies={acceptedCurrencies}
+              />
             </motion.div>
           ))}
         </div>

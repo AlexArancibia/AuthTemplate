@@ -15,7 +15,7 @@ interface CartStore {
   removeItem: (variantId: string) => void
   updateQuantity: (variantId: string, quantity: number) => void
   clearCart: () => void
-  getTotal: () => number
+  getTotal: (currencyId?: string) => number
   getItemsCount: () => number
 }
 
@@ -59,10 +59,10 @@ export const useCartStore = create<CartStore>()(
         set({ items: [] })
       },
 
-      getTotal: () => {
+      getTotal: (currencyId?: string) => {
         const total = get().items.reduce((total, item) => {
-          // Check if prices array exists and has items
-          const price = item.variant.prices && item.variant.prices.length > 0 ? item.variant.prices[0].price : 0
+          const priceObj = item.variant.prices.find(p => p.currencyId === currencyId)
+          const price = priceObj?.price ?? 0
           return total + price * item.quantity
         }, 0)
         console.log("[CART] Calculated total:", total)

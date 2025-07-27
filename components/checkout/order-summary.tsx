@@ -3,6 +3,7 @@
 import { Separator } from "@/components/ui/separator"
 import { CartItem } from "@/stores/cartStore"
 import { useMainStore } from "@/stores/mainStore"
+import { CurrencyOption } from "@/stores/currency"
 import { useState } from "react"
 
 interface OrderSummaryProps {
@@ -17,33 +18,17 @@ interface OrderSummaryProps {
   totalDiscounts: number
   shippingMethods: any[]
   paymentProviders: any[]
+  activeCurrency?: CurrencyOption
 }
 
 // Helper function to safely get price from variant
-const getSafePrice = (variant: any): number => {
+const getSafePrice = (variant: any, currencyId?: string): number => {
   try {
-    if (!variant) {
-      console.warn("Variant is undefined or null")
-      return 0
-    }
+    if (!variant?.prices || !Array.isArray(variant.prices)) return 0
 
-    if (!variant.prices || !Array.isArray(variant.prices)) {
-      console.warn("Variant prices is undefined or not an array:", variant)
-      return 0
-    }
-
-    if (variant.prices.length === 0) {
-      console.warn("Variant prices array is empty:", variant)
-      return 0
-    }
-
-    const price = variant.prices[0]?.price
-    if (typeof price !== "number" || isNaN(price)) {
-      console.warn("Invalid price value:", price, "for variant:", variant)
-      return 0
-    }
-
-    return price
+    const priceObj = variant.prices.find((p: any) => p.currencyId === currencyId)
+    const price = priceObj?.price ?? 0
+    return typeof price === "number" ? price : Number.parseFloat(price)
   } catch (error) {
     console.error("Error getting price from variant:", error, variant)
     return 0
@@ -51,21 +36,10 @@ const getSafePrice = (variant: any): number => {
 }
 
 // Helper function to safely get item total
-const getSafeItemTotal = (item: any): number => {
+const getSafeItemTotal = (item: any, currencyId?: string): number => {
   try {
-    if (!item) {
-      console.warn("Item is undefined or null")
-      return 0
-    }
-
-    const price = getSafePrice(item.variant)
+    const price = getSafePrice(item.variant, currencyId)
     const quantity = item.quantity || 1
-
-    if (typeof quantity !== "number" || isNaN(quantity) || quantity < 0) {
-      console.warn("Invalid quantity:", quantity, "for item:", item)
-      return 0
-    }
-
     return price * quantity
   } catch (error) {
     console.error("Error calculating item total:", error, item)
@@ -85,6 +59,7 @@ export function OrderSummary({
   totalDiscounts,
   shippingMethods,
   paymentProviders,
+  activeCurrency
 }: OrderSummaryProps) {
   const { couponCode, setCouponCode } = useMainStore()
   const [inputValue, setInputValue] = useState("")
@@ -111,7 +86,7 @@ export function OrderSummary({
       <div className="space-y-4 mb-6">
         {validItems.length > 0 ? (
           validItems.map((item: CartItem) => {
-            const itemTotal = getSafeItemTotal(item)
+            const itemTotal = getSafeItemTotal(item, activeCurrency?.id)
 
             return (
               <div key={item.variant?.id || Math.random()} className="flex justify-between text-sm">
@@ -119,8 +94,8 @@ export function OrderSummary({
                   {item.product?.title || "Producto"} ({item.quantity || 1})
                 </span>
                 <span className="font-medium pl-1">
-                  {currency}
-                  {(Number(item.variant.prices[0].price) * item.quantity).toFixed(2)}
+                  {activeCurrency?.symbol ?? currency}
+                  {itemTotal.toFixed(2)}
                 </span>
               </div>
             )
@@ -169,27 +144,27 @@ export function OrderSummary({
         <div className="flex justify-between">
           <span>Subtotal</span>
           <span>
-            {currency}
+            {activeCurrency?.symbol ?? currency}
             {(typeof subtotal === "number" && !isNaN(subtotal) ? subtotal : 0).toFixed(2)}
           </span>
         </div>
         {couponCode && totalDiscounts > 0 && (
           <div className="flex justify-between text-sm text-green-600">
             <span>Descuento ({couponCode})</span>
-            <span>-{currency}{totalDiscounts.toFixed(2)}</span>
+            <span>-{activeCurrency?.symbol ?? currency}{totalDiscounts.toFixed(2)}</span>
           </div>
         )}
         <div className="flex justify-between">
           <span>IGV (18%)</span>
           <span>
-            {currency}
+            {activeCurrency?.symbol ?? currency}
             {(typeof tax === "number" && !isNaN(tax) ? tax : 0).toFixed(2)}
           </span>
         </div>
         <div className="flex justify-between">
           <span>Envío</span>
           <span>
-            {currency}
+            {activeCurrency?.symbol ?? currency}
             {(typeof shipping === "number" && !isNaN(shipping) ? shipping : 0).toFixed(2)}
           </span>
         </div>
@@ -200,7 +175,7 @@ export function OrderSummary({
       <div className="flex justify-between font-bold text-lg">
         <span>Total</span>
         <span>
-          {currency}
+          {activeCurrency?.symbol ?? currency}
           {(typeof total === "number" && !isNaN(total) ? total : 0).toFixed(2)}
         </span>
       </div>

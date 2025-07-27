@@ -3,12 +3,14 @@
 import { useState, useEffect, Suspense } from "react"
 import { motion } from "framer-motion"
 import { useSearchParams } from "next/navigation"
+import { useCurrencyStore } from "@/stores/currency"
 import ProductList from "./_components/ProductList"
 import ProductListSkeleton from "./_components/ProductListSkeleton"
 
 function ProductsContent() {
   const searchParams = useSearchParams()
   const [isClient, setIsClient] = useState(false)
+  const { selectedCurrencyId, acceptedCurrencies } = useCurrencyStore()
 
   useEffect(() => {
     setIsClient(true)
@@ -104,6 +106,8 @@ function ProductsContent() {
               initialMaxPrice={maxPrice}
               initialVariantFilters={variantFilters}
               collectionName="Destacados"
+              selectedCurrencyId={selectedCurrencyId}
+              acceptedCurrencies={acceptedCurrencies}
             />
           </motion.div>
         </div>

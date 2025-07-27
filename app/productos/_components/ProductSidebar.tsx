@@ -9,12 +9,16 @@ import { useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { WashingTestButton } from "./WashingTestButton"
 import { DeliveryButton } from "./DeliveryButton"
+import { getPriceAndSymbol } from "@/utils/getPriceAndSymbol"
+import type { CurrencyOption } from "@/stores/currency"
 
 interface ProductSidebarProps {
   product: Product
+  selectedCurrencyId: String
+  acceptedCurrencies: CurrencyOption[];
 }
 
-export function ProductSidebar({ product }: ProductSidebarProps) {
+export function ProductSidebar({ product, selectedCurrencyId, acceptedCurrencies }: ProductSidebarProps) {
   const { products, shippingMethods, paymentProviders, shopSettings } = useMainStore()
 
   const latestProducts = useMemo(() => {
@@ -27,6 +31,8 @@ export function ProductSidebar({ product }: ProductSidebarProps) {
   }, [products, product])
 
   const defaultCurrency = shopSettings[0]?.defaultCurrency
+  const currencyOption =
+    acceptedCurrencies.find((c) => c.id === selectedCurrencyId) || defaultCurrency
 
   const handleWhatsAppClick = () => {
     const phoneNumber = shopSettings[0].phone?.replace(/\D/g, "") // Remove non-digit characters
@@ -49,16 +55,24 @@ export function ProductSidebar({ product }: ProductSidebarProps) {
           Métodos de envío
         </h3>
         <ul className="space-y-2">
-          {shippingMethods.map((method) => (
-            <li key={method.id} className="flex justify-between text-sm text-gray-600">
-              <span>{method.name}</span>
-              <span className="font-medium">
-                {method.prices[0].price === 0
-                  ? "Gratis"
-                  : `${defaultCurrency?.symbol}${Number(method.prices[0].price).toFixed(2)}`}
-              </span>
-            </li>
-          ))}
+          {shippingMethods.map((method) => {
+            const matchingPrice = method.prices.find(
+              (price) => price.currencyId === currencyOption?.id
+            )
+
+            if (!matchingPrice) return null // ⛔ No hay precio en esta moneda → no mostrar
+
+            return (
+              <li key={method.id} className="flex justify-between text-sm text-gray-600">
+                <span>{method.name}</span>
+                <span className="font-medium">
+                  {matchingPrice.price === 0
+                    ? "Gratis"
+                    : `${currencyOption?.symbol}${Number(matchingPrice.price).toFixed(2)}`}
+                </span>
+              </li>
+            )
+          })}
         </ul>
       </div>
 
@@ -102,33 +116,41 @@ export function ProductSidebar({ product }: ProductSidebarProps) {
         </h3>
         <div className="space-y-4">
           {latestProducts.length > 0 ? (
-            latestProducts.map((latestProduct) => (
-              <Link
-                key={latestProduct.id}
-                href={`/productos/${latestProduct.slug}`}
-                className="flex items-center gap-3 group"
-              >
-                <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
-                  <Image
-                    src={latestProduct.imageUrls?.[0] || "/placeholder.svg?height=64&width=64&query=product"}
-                    alt={latestProduct.title}
-                    fill
-                    className="object-contain p-1"
-                  />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium group-hover:text-primary transition-colors line-clamp-2">
-                    {latestProduct.title}
-                  </p>
-                  {latestProduct.variants?.[0]?.prices?.[0] && (
-                    <p className="text-sm text-primary font-medium">
-                      {defaultCurrency?.symbol}
-                      {Number(latestProduct.variants[0].prices[0].price).toFixed(2)}
+            latestProducts.map((latestProduct) => {
+              const matchingPrice = latestProduct.variants?.[0]?.prices?.find(
+                (p) => p.currencyId === currencyOption?.id
+              )
+              const finalPrice = matchingPrice ? Number(matchingPrice.price) : 0
+
+              return (
+                <Link
+                  key={latestProduct.id}
+                  href={`/productos/${latestProduct.slug}`}
+                  className="flex items-center gap-3 group"
+                >
+                  <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
+                    <Image
+                      src={
+                        latestProduct.imageUrls?.[0] ||
+                        "/placeholder.svg?height=64&width=64&query=product"
+                      }
+                      alt={latestProduct.title}
+                      fill
+                      className="object-contain p-1"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium group-hover:text-primary transition-colors line-clamp-2">
+                      {latestProduct.title}
                     </p>
-                  )}
-                </div>
-              </Link>
-            ))
+                    <p className="text-sm text-primary font-medium">
+                      {currencyOption?.symbol}
+                      {finalPrice.toFixed(2)}
+                    </p>
+                  </div>
+                </Link>
+              )
+            })
           ) : (
             <p className="text-sm text-gray-500 text-center py-4">No hay productos disponibles</p>
           )}

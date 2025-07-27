@@ -16,6 +16,7 @@ import { ProductSidebar } from "./ProductSidebar"
 import { motion, AnimatePresence } from "framer-motion"
 import useEmblaCarousel from "embla-carousel-react"
 
+import { useCurrencyStore, CurrencyOption } from "@/stores/currency"
 import { ProductCard } from "@/components/ProductCard"
 import { toast } from "sonner"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -28,6 +29,7 @@ interface ProductDetailsProps {
 
 export default function ProductDetails({ slug }: ProductDetailsProps) {
   const { products, shopSettings } = useMainStore()
+  const { selectedCurrencyId, acceptedCurrencies } = useCurrencyStore() // Obtener valores del store
   const { addItem } = useCartStore()
   const [product, setProduct] = useState<Product | null>(null)
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
@@ -183,7 +185,21 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
 
   // Updated to handle the new VariantPrice structure
   const mainPrice = selectedVariant.prices && selectedVariant.prices.length > 0 ? selectedVariant.prices[0] : null
-  const price = mainPrice?.price || 0
+  const getPriceAndSymbol = (
+    variant: ProductVariant,
+    currencyId: string,
+    acceptedCurrencies: CurrencyOption[]
+  ): { price: number; symbol: string } => { 
+    if (!variant.prices || variant.prices.length === 0) return { price: 0, symbol: "" }
+
+    const priceObj = variant.prices.find((p) => p.currencyId === currencyId)
+    const price = priceObj?.price ? Number(priceObj.price) : 0
+    const currency = acceptedCurrencies.find((c) => c.id === currencyId)
+    const symbol = currency?.symbol || ""
+
+    return { price, symbol }
+  }
+  const { price, symbol } = getPriceAndSymbol(selectedVariant, selectedCurrencyId, acceptedCurrencies)
 
   const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
     const { left, top, width, height } = event.currentTarget.getBoundingClientRect()
@@ -485,13 +501,11 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                   {hasValidPrice(selectedVariant) && (
                     <div className="flex items-center gap-2">
                       <span className="text-2xl font-bold text-primary">
-                        {mainPrice?.currency?.symbol}
-                        {Number(price * quantity).toFixed(2)}
+                        {symbol}{(price * quantity).toFixed(2)}
                       </span>
                       {quantity > 1 && (
                         <span className="text-sm text-muted-foreground">
-                          ({mainPrice?.currency?.symbol}
-                          {Number(price).toFixed(2)} c/u)
+                          ({symbol}{price.toFixed(2)} c/u)
                         </span>
                       )}
                     </div>
@@ -570,7 +584,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.6, duration: 0.5 }}
             >
-              <FrequentlyBoughtTogetherComponent product={product} />
+              
             </motion.div>
 
             {/* Product Description Tabs - New Section */}
@@ -602,7 +616,11 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                           key={relatedProduct.id}
                           className="flex-[0_0_100%] min-w-0 sm:flex-[0_0_50%] md:flex-[0_0_33.33%] px-2"
                         >
-                          <ProductCard product={relatedProduct} />
+                          <ProductCard 
+                            product={relatedProduct}
+                            selectedCurrencyId={selectedCurrencyId}
+                            acceptedCurrencies={acceptedCurrencies}  
+                          />
                         </div>
                       ))}
                     </div>
@@ -636,7 +654,11 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
             animate={{ x: 0, opacity: 1 }}
             transition={{ delay: 0.8, duration: 0.5 }}
           >
-            <ProductSidebar product={product} />
+            <ProductSidebar
+              product={product}
+              selectedCurrencyId={selectedCurrencyId}
+              acceptedCurrencies={acceptedCurrencies}  
+            />
           </motion.div>
         </div>
       </div>

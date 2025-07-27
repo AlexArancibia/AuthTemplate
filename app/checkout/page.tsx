@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { useCartStore } from "@/stores/cartStore"
 import { useEmailStore } from "@/stores/emailStore"
+import { useCurrencyStore } from "@/stores/currency"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
@@ -53,6 +54,13 @@ export default function CheckoutPage() {
   const [orderId, setOrderId] = useState<string | null>(null)
   const [shippingAddressId, setShippingAddressId] = useState<string | null>(null)
   const [billingAddressId, setBillingAddressId] = useState<string | null>(null)
+
+  const { selectedCurrencyId, acceptedCurrencies } = useCurrencyStore()
+  const activeCurrency = acceptedCurrencies.find(c => c.id === selectedCurrencyId)
+
+  useEffect(() => {
+    console.log("activeCurrency ", activeCurrency)
+  }, [activeCurrency])
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -119,7 +127,7 @@ export default function CheckoutPage() {
     }
 
     // Verify minimum purchase if specified
-    const subtotal = getTotal()
+    const subtotal = getTotal(activeCurrency?.id)
     if (foundCoupon.minPurchase && subtotal < foundCoupon.minPurchase) {
       toast.error(`El cupón requiere un mínimo de compra de ${foundCoupon.minPurchase}`)
       setAppliedCoupon(null)
@@ -161,7 +169,7 @@ export default function CheckoutPage() {
 
       if (isEligible) {
         if (appliedCoupon.type === "PERCENTAGE") {
-          return totalDiscount + (Number(item.variant.prices[0].price) * (Number(appliedCoupon.value) / 100) * item.quantity)
+          return totalDiscount + (Number(item.variant.prices.find(p => p.currencyId === activeCurrency?.id)?.price || 0) * (Number(appliedCoupon.value) / 100) * item.quantity)
         } else if (appliedCoupon.type === "FIXED_AMOUNT") {
           return totalDiscount + Number(appliedCoupon.value) * item.quantity
         }
@@ -591,31 +599,31 @@ export default function CheckoutPage() {
 
 
   // Agregar cerca de las otras funciones (antes de submitOrder)
-const applyCouponIfExists = () => {
-  if (!couponCode || !coupons || coupons.length === 0) {
-    return null;
-  }
+  const applyCouponIfExists = () => {
+    if (!couponCode || !coupons || coupons.length === 0) {
+      return null;
+    }
 
-  const foundCoupon = coupons.find((coupon) => coupon.code === couponCode);
-  
-  if (!foundCoupon) {
-    toast.error("El cupón ingresado no es válido");
-    return null;
-  }
+    const foundCoupon = coupons.find((coupon) => coupon.code === couponCode);
+    
+    if (!foundCoupon) {
+      toast.error("El cupón ingresado no es válido");
+      return null;
+    }
 
-  // Verificar si el cupón está activo y vigente
-  const now = new Date();
-  const startDate = new Date(foundCoupon.startDate);
-  const endDate = new Date(foundCoupon.endDate);
+    // Verificar si el cupón está activo y vigente
+    const now = new Date();
+    const startDate = new Date(foundCoupon.startDate);
+    const endDate = new Date(foundCoupon.endDate);
 
-  if (!foundCoupon.isActive || now < startDate || now > endDate) {
-    toast.error("El cupón no está disponible o ha expirado");
-    return null;
-  }
-  console.log("GAAAAA", foundCoupon)
-  setAppliedCoupon(foundCoupon);
-  return foundCoupon;
-};
+    if (!foundCoupon.isActive || now < startDate || now > endDate) {
+      toast.error("El cupón no está disponible o ha expirado");
+      return null;
+    }
+    console.log("GAAAAA", foundCoupon)
+    setAppliedCoupon(foundCoupon);
+    return foundCoupon;
+  };
 
   // Submit the order
   const submitOrder = async () => {
@@ -666,15 +674,15 @@ const applyCouponIfExists = () => {
 
  
 
-// Preparar line items con descuentos
-const lineItems = prepareLineItems()
+      // Preparar line items con descuentos
+      const lineItems = prepareLineItems()
 
-// Calcular el total de descuentos
+      // Calcular el total de descuentos
 
       console.log("Prepared line items:", lineItems)
 
       // 4. Calculate totals
-      const subtotalPrice = getTotal();
+      const subtotalPrice = getTotal(activeCurrency?.id);
       const totalDiscounts = lineItems.reduce((sum, item) => sum + item.totalDiscount, 0);
       const subtotalAfterDiscount = subtotalPrice - totalDiscounts;
 
@@ -698,7 +706,7 @@ const lineItems = prepareLineItems()
       console.log("Total price:", totalPrice)
 
       // Get currency information
-      const currencyId = shopSettings?.[0]?.defaultCurrency?.id || "curr_0536edd0-2193"
+      const currencyId = activeCurrency?.id || shopSettings?.[0]?.defaultCurrency?.id || "curr_0536edd0-2193"
       console.log("Using currency ID:", currencyId)
       console.log("Currency symbol:", shopSettings?.[0]?.defaultCurrency?.symbol)
 
@@ -817,16 +825,16 @@ const lineItems = prepareLineItems()
               orderNumber: order.orderNumber || orderNumber,
               currencyId: currencyId,
               // Use the complete Currency object from shopSettings
-              currency: shopSettings?.[0]?.defaultCurrency || {
+              currency: {
                 id: currencyId,
-                code: "PEN",
-                name: "Nuevo Sol Peruano",
-                symbol: "S/",
-                decimalPlaces: 2,
-                symbolPosition: "before",
-                isActive: true,
-                createdAt: new Date(),
-                updatedAt: new Date(),
+                code: activeCurrency?.code || shopSettings?.[0]?.defaultCurrency?.code || "PEN",
+                name: activeCurrency?.name || shopSettings?.[0]?.defaultCurrency?.name || "Sol Peruano",
+                symbol: activeCurrency?.symbol || shopSettings?.[0]?.defaultCurrency?.symbol || "S/",
+                decimalPlaces: shopSettings?.[0]?.defaultCurrency?.decimalPlaces ?? 2,
+                symbolPosition: shopSettings?.[0]?.defaultCurrency?.symbolPosition || "before",
+                isActive: shopSettings?.[0]?.defaultCurrency?.isActive ?? true,
+                createdAt: shopSettings?.[0]?.defaultCurrency?.createdAt || new Date(),
+                updatedAt: shopSettings?.[0]?.defaultCurrency?.updatedAt || new Date(),
               },
               // customerInfo as Record<string, any> to match schema
               customerInfo: {
@@ -1014,7 +1022,7 @@ const lineItems = prepareLineItems()
 
   // Calculate totals
   const totalDiscounts = calculateDiscounts()
-const subtotal = Number(getTotal())
+const subtotal = Number(getTotal(activeCurrency?.id))
 const shipping = Number(getShippingCost())
 const taxesIncluded = shopSettings?.[0]?.taxesIncluded || false
 const taxRate = Number(shopSettings?.[0]?.taxValue || 18) / 100
@@ -1066,7 +1074,7 @@ if (taxesIncluded) {
       let discount = 0
       if (isEligible && appliedCoupon) {
         if (appliedCoupon.type === "PERCENTAGE") {
-          discount = (Number(item.variant.prices[0].price) * (Number(appliedCoupon.value) / 100) * item.quantity)
+          discount = (Number(item.variant.prices.find(p => p.currencyId === activeCurrency?.id)?.price || 0) * (Number(appliedCoupon.value) / 100) * item.quantity)
         } else if (appliedCoupon.type === "FIXED_AMOUNT") {
           discount = Number(appliedCoupon.value) * item.quantity
         }
@@ -1075,7 +1083,7 @@ if (taxesIncluded) {
       return {
         variantId: item.variant.id,
         title: `${item.product.title} - ${item.variant.title}`,
-        price: item.variant.prices[0].price,
+        price: item.variant.prices.find(p => p.currencyId === activeCurrency?.id)?.price || 0,
         quantity: item.quantity,
         totalDiscount: discount,
       }
@@ -1086,7 +1094,7 @@ if (taxesIncluded) {
         .map((item) => `${item.product.title}: ${item.quantity}`)
         .join("\n");
   // Currency symbol
-  const currency = shopSettings?.[0]?.defaultCurrency?.symbol || "S/"
+  const currency = activeCurrency?.symbol || shopSettings?.[0]?.defaultCurrency?.symbol || "S/"
 
   // Render skeleton loading state
   if (pageLoading || userLoading) {
@@ -1232,7 +1240,12 @@ if (taxesIncluded) {
               >
                 {/* Step 1: Cart Review */}
                 {currentStep === STEPS.CART_REVIEW && (
-                  <CartReviewStep items={items} currency={currency} nextStep={nextStep} />
+                  <CartReviewStep
+                    items={items}
+                    currency={currency}
+                    nextStep={nextStep}
+                    activeCurrency={activeCurrency}
+                  />
                 )}
 
                 {/* Step 2: Customer Information */}
@@ -1273,6 +1286,7 @@ if (taxesIncluded) {
                     total={total}
                     resumeItems={resumeItems}
                     orderId={orderId}
+                    selectedCurrencyId={selectedCurrencyId}
                   />
                 )}
 
@@ -1310,6 +1324,7 @@ if (taxesIncluded) {
                   totalDiscounts={totalDiscounts}
                   shippingMethods={shippingMethods}
                   paymentProviders={paymentProviders}
+                  activeCurrency={activeCurrency}
                 />
               </div>
             )}

@@ -1,20 +1,24 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import type { CurrencyOption } from "@/stores/currency"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
-export function formatCurrency(amount: number | null | undefined, currencyCode = "USD") {
-  // Handle null or undefined amounts
-  if (amount === null || amount === undefined) {
+export function formatCurrency(
+  amount: number | null | undefined,
+  currency?: CurrencyOption
+): string {
+  if (amount === null || amount === undefined || !currency) {
     return "-"
   }
 
-  return new Intl.NumberFormat("es-PE", {
-    style: "currency",
-    currency: currencyCode,
+  const formattedAmount = new Intl.NumberFormat("es-PE", {
+    style: "decimal",
     minimumFractionDigits: 2,
   }).format(amount)
+
+  return `${currency.symbol}${formattedAmount}`
 }
 
 export function formatDate(date: Date): string {

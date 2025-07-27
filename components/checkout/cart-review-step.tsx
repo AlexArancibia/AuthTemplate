@@ -9,6 +9,7 @@ import { useCartStore } from "@/stores/cartStore"
 import { Minus, Plus, Trash2 } from "lucide-react"
 import type { Product } from "@/types/product"
 import type { ProductVariant } from "@/types/productVariant"
+import { CurrencyOption } from "@/stores/currency"
 
 type CartItem = {
   product: Product
@@ -20,31 +21,34 @@ interface CartReviewStepProps {
   items: CartItem[]
   currency: string
   nextStep: () => void
+  activeCurrency?: CurrencyOption
 }
 
-export function CartReviewStep({ items, currency, nextStep }: CartReviewStepProps) {
+export function CartReviewStep({ items, currency, nextStep, activeCurrency }: CartReviewStepProps) {
   const { updateQuantity, removeItem } = useCartStore()
 
   // Función helper para obtener el precio de manera segura
-  const getItemPrice = (variant: ProductVariant): number => {
+  const getItemPrice = (variant: ProductVariant, currencyId?: string): number => {
     if (!variant.prices || !Array.isArray(variant.prices) || variant.prices.length === 0) {
       return 0
     }
-    const price = variant.prices[0]?.price
-    // Asegurar que el precio sea un número válido
+
+    const priceObj = variant.prices.find(p => p.currencyId === currencyId)
+
+    const price = priceObj?.price ?? 0
     const numericPrice = typeof price === "string" ? Number.parseFloat(price) : price
     return isNaN(numericPrice) || numericPrice == null ? 0 : Number(numericPrice)
   }
 
   // Función helper para calcular el total del item
-  const getItemTotal = (variant: ProductVariant, quantity: number): number => {
-    const price = getItemPrice(variant)
+  const getItemTotal = (variant: ProductVariant, quantity: number, currencyId?: string): number => {
+    const price = getItemPrice(variant, currencyId)
     return price * quantity
   }
 
   // Calcular el total del carrito
   const cartTotal = items.reduce((total, item) => {
-    return total + getItemTotal(item.variant, item.quantity)
+    return total + getItemTotal(item.variant, item.quantity, activeCurrency?.id)
   }, 0)
 
   return (
@@ -61,8 +65,8 @@ export function CartReviewStep({ items, currency, nextStep }: CartReviewStepProp
       ) : (
         <>
           {items.map((item) => {
-            const itemPrice = getItemPrice(item.variant)
-            const itemTotal = getItemTotal(item.variant, item.quantity)
+            const itemPrice = getItemPrice(item.variant, activeCurrency?.id)
+            const itemTotal = getItemTotal(item.variant, item.quantity, activeCurrency?.id)
 
             return (
               <motion.div

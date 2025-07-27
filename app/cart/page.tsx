@@ -2,6 +2,7 @@
 
 import { useCartStore } from "@/stores/cartStore"
 import { useMainStore } from "@/stores/mainStore"
+import { useCurrencyStore } from "@/stores/currency"
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -16,6 +17,8 @@ export default function CartPage() {
   const [isLoading, setIsLoading] = useState(true)
 
   const currency = shopSettings[0]?.defaultCurrency
+  const { selectedCurrencyId, acceptedCurrencies } = useCurrencyStore()
+  const activeCurrency = acceptedCurrencies.find(c => c.id === selectedCurrencyId)
 
   // Simulate loading state for data fetching
   useEffect(() => {
@@ -116,51 +119,58 @@ export default function CartPage() {
       <h1 className="text-2xl font-bold mb-4">Tu carrito</h1>
       <div className="flex flex-col lg:flex-row gap-8">
         <div className="lg:w-2/3">
-          {items.map((item) => (
-            <div key={item.variant.id} className="flex items-center gap-4 py-4 border-b">
-              <Image
-                src={item.product.imageUrls[0] || "/placeholder.svg"}
-                alt={item.product.title}
-                width={80}
-                height={80}
-                className="object-cover rounded"
-              />
-              <div className="flex-1">
-                <h3 className="font-medium">{item.product.title}</h3>
-                <p className="text-sm text-gray-500">
-                  {Object.entries(item.variant.attributes!)
-                    .map(([key, value]) => `${key}: ${value}`)
-                    .join(", ")}
-                </p>
+          {items.map((item) => {
+            const priceObj = item.variant.prices.find(p => p.currencyId === selectedCurrencyId)
+            const price = priceObj?.price ?? 0
+            const finalPrice = price * item.quantity
+
+            return (
+              <div key={item.variant.id} className="flex items-center gap-4 py-4 border-b">
+                <Image
+                  src={item.product.imageUrls[0] || "/placeholder.svg"}
+                  alt={item.product.title}
+                  width={80}
+                  height={80}
+                  className="object-cover rounded"
+                />
+                <div className="flex-1">
+                  <h3 className="font-medium">{item.product.title}</h3>
+                  <p className="text-sm text-gray-500">
+                    {Object.entries(item.variant.attributes!)
+                      .map(([key, value]) => `${key}: ${value}`)
+                      .join(", ")}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() => updateQuantity(item.variant.id, Math.max(1, item.quantity - 1))}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="w-8 text-center">{item.quantity}</span>
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() => updateQuantity(item.variant.id, item.quantity + 1)}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="text-right">
+                  <p className="font-medium">
+                    {activeCurrency?.symbol}
+                    {finalPrice.toFixed(2)}
+                  </p>
+                  <Button size="icon" variant="ghost" onClick={() => removeItem(item.variant.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  size="icon"
-                  variant="outline"
-                  onClick={() => updateQuantity(item.variant.id, Math.max(1, item.quantity - 1))}
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-                <span className="w-8 text-center">{item.quantity}</span>
-                <Button
-                  size="icon"
-                  variant="outline"
-                  onClick={() => updateQuantity(item.variant.id, item.quantity + 1)}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="text-right">
-                <p className="font-medium">
-                  {currency?.symbol}
-                  {(item.variant.prices[0].price * item.quantity).toFixed(2)}
-                </p>
-                <Button size="icon" variant="ghost" onClick={() => removeItem(item.variant.id)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          ))}
+            )
+          })}
+
           <div className="mt-4 flex justify-between items-center">
             <Button variant="outline" onClick={clearCart}>
               Vaciar carrito
@@ -179,8 +189,8 @@ export default function CartPage() {
             <div className="flex justify-between ">
               <span>Subtotal</span>
               <span>
-                {currency?.symbol}
-                {getTotal().toFixed(2)}
+                {activeCurrency?.symbol}
+                {getTotal(selectedCurrencyId).toFixed(2)}
               </span>
             </div>
             <div className="flex justify-between">
@@ -192,8 +202,8 @@ export default function CartPage() {
             <div className="flex justify-between font-semibold">
               <span>Total</span>
               <span>
-                {currency?.symbol}
-                {getTotal().toFixed(2)}
+                {activeCurrency?.symbol}
+                {getTotal(selectedCurrencyId).toFixed(2)}
               </span>
             </div>
           </div>

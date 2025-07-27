@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useMemo, useEffect } from "react"
 
 import Image from "next/image"
 import Link from "next/link"
@@ -8,10 +8,13 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Clock, Eye } from "lucide-react"
 import type { Product } from "@/types/product"
+import type { CurrencyOption } from "@/stores/currency";
 import { useMainStore } from "@/stores/mainStore"
 
 interface ProductCardProps {
   product: Product
+  selectedCurrencyId: String
+  acceptedCurrencies: CurrencyOption[];
 }
 
 // Hook personalizado para el contador de lanzamiento
@@ -66,7 +69,7 @@ function useReleaseCountdown(releaseDate: Date | string | null | undefined) {
   return { timeLeft, isReleased }
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, selectedCurrencyId, acceptedCurrencies }: ProductCardProps) {
   const { shopSettings } = useMainStore()
   const [isPulsing, setIsPulsing] = useState(false)
 
@@ -81,16 +84,21 @@ export function ProductCard({ product }: ProductCardProps) {
   }, [])
 
   // Verificar que shopSettings existe y tiene elementos
-  const defaultCurrency = shopSettings && shopSettings.length > 0 ? shopSettings[0]?.defaultCurrency : null
+  const activeCurrency = useMemo(() => {
+    if (selectedCurrencyId) {
+      return acceptedCurrencies.find((currency) => currency.id === selectedCurrencyId) || null
+    }
+    return shopSettings && shopSettings.length > 0 ? shopSettings[0]?.defaultCurrency : null
+  }, [selectedCurrencyId, acceptedCurrencies, shopSettings])
 
   // Obtener todos los precios de las variantes que coinciden con la moneda predeterminada
   const prices = product.variants
     .flatMap((variant) => {
-      // Buscar el precio que coincide con la moneda predeterminada
-      const matchingPrice = variant.prices.find((p) => p.currencyId === defaultCurrency?.id)
+      // Buscar el precio que coincide con la moneda activa
+      const matchingPrice = variant.prices.find((p) => p.currencyId === activeCurrency?.id)
       return matchingPrice ? matchingPrice.price : null
     })
-    .filter((price): price is number => price !== null && price > 0) // Filtrar valores nulos Y cero
+    .filter((price): price is number => price !== null && price > 0) // Filtrar valores nulos y cero
 
   // Si no hay precios válidos, usar un array con 0 para evitar errores
   const validPrices = prices.length > 0 ? prices : [0]
@@ -98,7 +106,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const lowestPrice = Math.min(...validPrices)
   const highestPrice = Math.max(...validPrices)
 
-  const formatPrice = (price: number) => `${defaultCurrency?.symbol || "$"} ${Number(price).toFixed(2)}`
+  const formatPrice = (price: number) => `${activeCurrency?.symbol || "$"} ${Number(price).toFixed(2)}`
 
   const priceDisplay =
     prices.length > 0
