@@ -164,7 +164,7 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
         Object.entries(variant.attributes!).forEach(([key, value]) => {
           if (key === "Presentaciones" && typeof value === "string") {
             // Convertir "Lt" a "L" para normalización
-            const normalizedValue = value.replace(/Lt/i, 'L')
+            const normalizedValue = value.replace(/Lt/i, 'L').replace(/mLt/i, 'ML')
             presentations.add(normalizedValue)
           }
         })
@@ -172,7 +172,8 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
     })
 
     // Filtrar y agrupar por unidad
-    const groups: Record<string, string[]> = {}
+    const mlLtPresentations: string[] = []
+    const otherGroups: Record<string, string[]> = {}
     const validPattern = /^(\d+(?:\.\d+)?)\s+(KG|L|G|ML|LB|OZ)$/i
 
     Array.from(presentations).forEach((presentation) => {
@@ -180,46 +181,51 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
       if (match) {
         const [, number, unit] = match
         let normalizedUnit = unit.toUpperCase()
-        
-        // Convertir litros a mililitros internamente pero mantener visualización
-        if (normalizedUnit === 'L') {
-          normalizedUnit = 'ML'
+        if (normalizedUnit === 'L' || normalizedUnit === 'ML') {
+          mlLtPresentations.push(presentation)
+        } else {
+          if (!otherGroups[normalizedUnit]) {
+            otherGroups[normalizedUnit] = []
+          }
+          otherGroups[normalizedUnit].push(presentation)
         }
-
-        if (!groups[normalizedUnit]) {
-          groups[normalizedUnit] = []
-        }
-        
-        // Mantener la presentación original para visualización
-        groups[normalizedUnit].push(presentation.replace(/L$/i, 'Lt'))
       }
     })
 
-    // Ordenar cada grupo numéricamente (convertir a mililitros para comparación si es litros)
-    Object.keys(groups).forEach((unit) => {
-      groups[unit].sort((a, b) => {
-        const getMlValue = (str: string) => {
-          const match = str.match(/^(\d+(?:\.\d+)?)\s+(Lt?|ML)$/i)
-          if (!match) return 0
-          
-          const num = parseFloat(match[1])
-          const u = match[2].toUpperCase()
-          
-          if (u === 'L' || u === 'LT') return num * 1000
-          return num
+    // Ordenar ML/Lt globalmente por mililitros
+    mlLtPresentations.sort((a, b) => {
+      const getMlValue = (str: string) => {
+        const match = str.match(/^(\d+(?:\.\d+)?)\s*(L|LT|ML|MLT)$/i)
+        if (!match) return 0
+        const num = parseFloat(match[1])
+        const u = match[2].toUpperCase()
+        if (u === 'L' || u === 'LT') return num * 1000
+        return num
+      }
+      return getMlValue(a) - getMlValue(b)
+    })
+
+    // Ordenar otros grupos internamente
+    Object.keys(otherGroups).forEach((unit) => {
+      otherGroups[unit].sort((a, b) => {
+        const getValue = (str: string) => {
+          const match = str.match(/^(\d+(?:\.\d+)?)\s+/)
+          return match ? parseFloat(match[1]) : 0
         }
-        
-        return getMlValue(a) - getMlValue(b)
+        return getValue(a) - getValue(b)
       })
     })
 
-    // Convertir a array de grupos ordenados por unidad
-    const sortedGroups: GroupedPresentation[] = Object.entries(groups)
+    // Construir el array final de grupos
+    const sortedGroups: GroupedPresentation[] = []
+    if (mlLtPresentations.length > 0) {
+      sortedGroups.push({ unit: 'ML/Lt', values: mlLtPresentations.map(v => v.replace(/L$/i, 'Lt')) })
+    }
+    Object.entries(otherGroups)
       .sort(([unitA], [unitB]) => unitA.localeCompare(unitB))
-      .map(([unit, values]) => ({ 
-        unit: unit === 'ML' ? 'ML/Lt' : unit, // Mostrar ambas unidades juntas
-        values 
-      }))
+      .forEach(([unit, values]) => {
+        sortedGroups.push({ unit, values })
+      })
 
     return sortedGroups
   }, [products])

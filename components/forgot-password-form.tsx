@@ -86,11 +86,17 @@ export default function ForgotPasswordForm() {
               ¿Olvidaste tu contraseña?
             </CardTitle>
             <CardDescription className="text-center text-slate-500">
-              Ingresa tu correo y te enviaremos un enlace para restablecerla.
+            Ingresa tu correo y te enviaremos un enlace para restablecer tu contraseña.
             </CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-6">
+            {/* Success message */}
+            {success && (
+              <div className="p-3 text-sm text-green-700 bg-green-100 border border-green-300 rounded-md text-center">
+                Si tu correo está registrado, recibirás un enlace para reestablecer tu contraseña
+              </div>
+            )}
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
@@ -119,11 +125,7 @@ export default function ForgotPasswordForm() {
                   </div>
                 )}
 
-                {success && (
-                  <div className="p-3 text-sm text-green-700 bg-green-100 border border-green-300 rounded-md">
-                    {success}
-                  </div>
-                )}
+
 
                 <Button
                   type="submit"
@@ -136,7 +138,7 @@ export default function ForgotPasswordForm() {
                       Enviando enlace...
                     </>
                   ) : (
-                    "Enviar enlace de reseteo"
+                    "Reestablecer contraseña"
                   )}
                 </Button>
               </form>

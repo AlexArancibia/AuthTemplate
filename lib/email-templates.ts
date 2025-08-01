@@ -5,18 +5,22 @@ import type { ShopSettings } from "@/types/store"
 
 // Función para obtener colores de la tienda
 const getStoreColors = (shopSettings?: ShopSettings) => {
-  const primaryColor = shopSettings?.primaryColor || "#1e40af"
-  const secondaryColor = shopSettings?.secondaryColor || "#64748b"
-
+  // Verde principal del logo
+  const primaryColor = '#23B14D';
+  // Fondo oscuro
+  const backgroundColor = '#151C27';
+  // Blanco
+  const white = '#FFFFFF';
   return {
     primary: primaryColor,
-    secondary: secondaryColor,
-  }
+    background: backgroundColor,
+    white,
+  };
 }
 
 // Plantilla base mejorada para todos los correos
 const baseTemplate = (content: string, title: string, shopSettings?: ShopSettings) => {
-  const colors = getStoreColors(shopSettings)
+  const colors = getStoreColors(shopSettings);
 
   return `
 <!DOCTYPE html>
@@ -29,93 +33,70 @@ const baseTemplate = (content: string, title: string, shopSettings?: ShopSetting
     body {
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         line-height: 1.6;
-        color: #1e293b;
+        color: ${colors.white};
         margin: 0;
         padding: 20px;
-        background-color: #f1f5f9;
+        background-color: ${colors.background};
     }
-
     .email-wrapper {
         max-width: 600px;
         margin: 0 auto;
-        background-color: #ffffff;
+        background-color: ${colors.white};
         border-radius: 16px;
         overflow: hidden;
-        box-shadow: 0 10px 30px rgba(30, 64, 175, 0.1);
-        border: 1px solid #e2e8f0;
+        box-shadow: 0 10px 30px rgba(35, 177, 77, 0.08);
+        border: 1px solid ${colors.primary};
     }
-
     .header {
         background-color: ${colors.primary};
-        background-image: linear-gradient(135deg, ${colors.primary} 0%, #3b82f6 100%);
-        color: white;
+        color: ${colors.white};
         text-align: center;
         padding: 35px 30px;
     }
-
     .store-name {
         font-size: 32px;
         font-weight: 700;
         margin: 0;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        text-shadow: 0 2px 4px rgba(21,28,39,0.2);
     }
-
     .store-description {
         font-size: 15px;
         margin-top: 8px;
         opacity: 0.9;
     }
-
     .container {
         padding: 35px 30px;
     }
-
     .title {
-        color: #1e293b;
+        color: ${colors.primary};
         font-size: 26px;
         font-weight: 700;
         margin: 0 0 24px 0;
         text-align: center;
     }
-
     .content {
         margin-bottom: 30px;
+        color: #151C27;
     }
-
     .card {
-        background-color: #ffffff;
-        background-image: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
-        border: 1px solid #e2e8f0;
+        background-color: ${colors.white};
+        border: 1px solid ${colors.primary};
         border-radius: 12px;
         padding: 24px;
         margin: 20px 0;
         border-left: 4px solid ${colors.primary};
-        box-shadow: 0 2px 10px rgba(30, 64, 175, 0.05);
+        box-shadow: 0 2px 10px rgba(35, 177, 77, 0.05);
     }
-
-    .card h3 {
-        margin-top: 0;
+    .card h3, .card h4 {
         color: ${colors.primary};
         font-weight: 700;
-        font-size: 20px;
-        margin-bottom: 16px;
     }
-
-    .card h4 {
-        margin-top: 0;
-        color: ${colors.primary};
-        font-weight: 600;
-        font-size: 16px;
-        margin-bottom: 12px;
-    }
-
     .order-item {
         display: table;
         width: 100%;
         padding: 12px 0;
-        border-bottom: 1px solid #e2e8f0;
+        border-bottom: 1px solid ${colors.primary}22;
     }
-
     .order-item:last-child {
         border-bottom: none;
         font-weight: 700;
@@ -124,32 +105,28 @@ const baseTemplate = (content: string, title: string, shopSettings?: ShopSetting
         margin-top: 12px;
         padding-top: 16px;
         border-top: 2px solid ${colors.primary};
-        background-color: rgba(30, 64, 175, 0.02);
+        background-color: ${colors.primary}08;
         padding-left: 12px;
         padding-right: 12px;
         border-radius: 8px;
     }
-
     .order-item-name {
         display: table-cell;
         vertical-align: middle;
         font-weight: 500;
         width: 60%;
     }
-
     .order-item-price {
         display: table-cell;
         vertical-align: middle;
         text-align: right;
         font-weight: 600;
-        color: #1e293b;
+        color: #151C27;
         width: 40%;
     }
-
     .button {
         background-color: ${colors.primary};
-        background-image: linear-gradient(135deg, ${colors.primary} 0%, #3b82f6 100%);
-        color: white !important;
+        color: ${colors.white} !important;
         padding: 16px 32px;
         border-radius: 8px;
         text-decoration: none;
@@ -159,88 +136,71 @@ const baseTemplate = (content: string, title: string, shopSettings?: ShopSetting
         text-align: center;
         margin: 12px 6px;
         border: none;
-        box-shadow: 0 4px 12px rgba(30, 64, 175, 0.2);
+        box-shadow: 0 4px 12px rgba(35, 177, 77, 0.15);
+        transition: background 0.2s;
     }
-
+    .button:hover {
+        background-color: #18913a;
+    }
     .button-small {
         padding: 10px 20px;
         font-size: 14px;
         border-radius: 6px;
     }
-
     .info-section {
-        background-color: #f8fafc;
-        background-image: linear-gradient(145deg, #f8fafc 0%, #f1f5f9 100%);
+        background-color: ${colors.primary}08;
         border-radius: 8px;
         padding: 18px;
         margin: 16px 0;
         border-left: 4px solid ${colors.primary};
-        border: 1px solid #e2e8f0;
+        border: 1px solid ${colors.primary}22;
     }
-
     .info-section h4 {
         margin: 0 0 10px 0;
         color: ${colors.primary};
         font-size: 15px;
         font-weight: 700;
     }
-
     .info-section p {
         margin: 6px 0;
         font-size: 14px;
-        color: #1e293b;
+        color: #151C27;
         line-height: 1.5;
     }
-
     .highlight-card {
-        background-color: #fef3c7;
-        background-image: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-        border: 1px solid #f59e0b;
+        background-color: ${colors.primary}10;
+        border: 1px solid ${colors.primary};
         border-radius: 10px;
         padding: 20px;
         margin: 20px 0;
         text-align: center;
     }
-
-    .highlight-card h3 {
-        color: #92400e;
-        margin: 0 0 8px 0;
-        font-size: 18px;
+    .highlight-card h3, .highlight-card p {
+        color: ${colors.primary};
+        margin: 0;
+        font-size: 16px;
         font-weight: 700;
     }
-
-    .highlight-card p {
-        color: #92400e;
-        margin: 0;
-        font-size: 15px;
-        font-weight: 500;
-    }
-
     .footer {
-        background-color: #f1f5f9;
-        background-image: linear-gradient(145deg, #f1f5f9 0%, #e2e8f0 100%);
+        background-color: ${colors.background};
         padding: 30px;
         text-align: center;
-        color: #64748b;
+        color: ${colors.white}CC;
         font-size: 14px;
-        border-top: 1px solid #e2e8f0;
+        border-top: 1px solid ${colors.primary};
     }
-
     .footer strong {
-        color: #1e293b;
+        color: ${colors.primary};
         font-weight: 600;
     }
-
     .footer a {
         color: ${colors.primary};
         text-decoration: none;
         font-weight: 500;
     }
-
     .social-links {
         margin: 18px 0;
     }
-
     .social-links a {
         display: inline-block;
         margin: 0 8px;
@@ -250,89 +210,46 @@ const baseTemplate = (content: string, title: string, shopSettings?: ShopSetting
         font-size: 14px;
         padding: 6px 12px;
         border-radius: 6px;
-        background-color: rgba(30, 64, 175, 0.1);
+        background-color: ${colors.primary}10;
     }
-
-    /* Responsive para clientes que lo soporten */
     @media only screen and (max-width: 600px) {
         body {
             padding: 10px;
         }
-        
         .email-wrapper {
             border-radius: 12px;
         }
-        
         .container {
             padding: 25px 20px;
         }
-        
         .header {
             padding: 30px 20px;
         }
-        
         .store-name {
             font-size: 28px;
         }
-        
         .title {
             font-size: 22px;
         }
-        
         .card {
             padding: 20px;
         }
-        
         .order-item-name,
         .order-item-price {
             display: block;
             width: 100%;
             text-align: left;
         }
-        
         .order-item-price {
             margin-top: 4px;
             font-size: 14px;
         }
-        
         .button {
             display: block;
             margin: 12px 0;
-            text-align: center;
         }
     }
-
-    /* Fallbacks para clientes que no soportan gradientes */
-    .no-gradient .header {
-        background-color: ${colors.primary};
-        background-image: none;
-    }
-
-    .no-gradient .card {
-        background-color: #ffffff;
-        background-image: none;
-    }
-
-    .no-gradient .button {
-        background-color: ${colors.primary};
-        background-image: none;
-    }
-
-    .no-gradient .info-section {
-        background-color: #f8fafc;
-        background-image: none;
-    }
-
-    .no-gradient .highlight-card {
-        background-color: #fef3c7;
-        background-image: none;
-    }
-
-    .no-gradient .footer {
-        background-color: #f1f5f9;
-        background-image: none;
-    }
-</style>
+    </style>
 </head>
 <body>
     <div class="email-wrapper">
@@ -781,6 +698,10 @@ export const contactAutoReplyTemplate = (
 
 
 export const emailVerificationTemplate = (verificationToken: string, verifyUrl: string): string => {
+  // Colores de la marca
+  const primary = '#23B14D';
+  const background = '#151C27';
+  const white = '#FFFFFF';
   return `
     <!DOCTYPE html>
     <html>
@@ -792,59 +713,63 @@ export const emailVerificationTemplate = (verificationToken: string, verifyUrl: 
           body {
             font-family: Arial, sans-serif;
             line-height: 1.6;
-            color: #333;
+            color: ${white};
             max-width: 600px;
             margin: 0 auto;
             padding: 20px;
+            background: ${background};
           }
           .container {
-            background-color: #f9f9f9;
+            background-color: ${white};
             padding: 30px;
             border-radius: 10px;
-            border: 1px solid #ddd;
+            border: 1px solid ${primary};
           }
           .header {
             text-align: center;
             margin-bottom: 30px;
           }
           .header h1 {
-            color: #2c3e50;
+            color: ${primary};
             margin: 0;
           }
           .content {
-            background-color: white;
+            background-color: ${white};
             padding: 25px;
             border-radius: 8px;
             margin-bottom: 20px;
+            color: #151C27;
           }
           .button {
             display: inline-block;
-            background-color: #3498db;
-            color: white;
+            background-color: ${primary};
+            color: ${white};
             padding: 12px 30px;
             text-decoration: none;
             border-radius: 5px;
             font-weight: bold;
             margin: 20px 0;
+            transition: background 0.2s;
           }
           .button:hover {
-            background-color: #2980b9;
+            background-color: #18913a;
           }
           .footer {
             text-align: center;
             font-size: 12px;
-            color: #666;
+            color: ${primary};
             margin-top: 20px;
           }
           .token {
-            background-color: #f8f9fa;
+            background-color: ${primary}10;
             padding: 10px;
             border-radius: 4px;
             font-family: monospace;
             font-size: 14px;
-            border: 1px solid #e9ecef;
+            border: 1px solid ${primary};
             margin: 10px 0;
             word-break: break-all;
+            color: #151C27;
           }
         </style>
       </head>
@@ -887,8 +812,11 @@ export const emailVerificationTemplate = (verificationToken: string, verifyUrl: 
 
 
 export const passwordResetTemplate = (resetLink: string): string => {
+  // Colores de la marca
+  const primary = '#23B14D';
+  const background = '#151C27';
+  const white = '#FFFFFF';
   return `
-    <!DOCTYPE html>
     <html>
       <head>
         <meta charset="utf-8">
@@ -898,59 +826,63 @@ export const passwordResetTemplate = (resetLink: string): string => {
           body {
             font-family: Arial, sans-serif;
             line-height: 1.6;
-            color: #333;
+            color: ${white};
             max-width: 600px;
             margin: 0 auto;
             padding: 20px;
+            background: ${background};
           }
           .container {
-            background-color: #f9f9f9;
+            background-color: ${white};
             padding: 30px;
             border-radius: 10px;
-            border: 1px solid #ddd;
+            border: 1px solid ${primary};
           }
           .header {
             text-align: center;
             margin-bottom: 30px;
           }
           .header h1 {
-            color: #2c3e50;
+            color: ${primary};
             margin: 0;
           }
           .content {
-            background-color: white;
+            background-color: ${white};
             padding: 25px;
             border-radius: 8px;
             margin-bottom: 20px;
+            color: #151C27;
           }
           .button {
             display: inline-block;
-            background-color: #e74c3c; /* Color diferente para reseteo */
-            color: white;
+            background-color: ${primary};
+            color: ${white};
             padding: 12px 30px;
             text-decoration: none;
             border-radius: 5px;
             font-weight: bold;
             margin: 20px 0;
+            transition: background 0.2s;
           }
           .button:hover {
-            background-color: #c0392b;
+            background-color: #18913a;
           }
           .footer {
             text-align: center;
             font-size: 12px;
-            color: #666;
+            color: ${primary};
             margin-top: 20px;
           }
           .link-text {
-            background-color: #f8f9fa;
+            background-color: ${primary}10;
             padding: 10px;
             border-radius: 4px;
             font-family: monospace;
             font-size: 14px;
-            border: 1px solid #e9ecef;
+            border: 1px solid ${primary};
             margin: 10px 0;
             word-break: break-all;
+            color: #151C27;
           }
         </style>
       </head>
@@ -959,19 +891,15 @@ export const passwordResetTemplate = (resetLink: string): string => {
           <div class="header">
             <h1>Reseteo de Contraseña</h1>
           </div>
-
           <div class="content">
-            <h2>¿Olvidaste tu contraseña?</h2>
+            <h2 style="color:${primary}">¿Olvidaste tu contraseña?</h2>
             <p>Hemos recibido una solicitud para resetear la contraseña de tu cuenta.</p>
             <p>Haz clic en el siguiente botón para establecer una nueva contraseña:</p>
-
             <div style="text-align: center;">
               <a href="${resetLink}" class="button">Resetear Contraseña</a>
             </div>
-
             <p>Si el botón no funciona, puedes copiar y pegar el siguiente enlace en tu navegador:</p>
             <div class="link-text">${resetLink}</div>
-
             <p><strong>Importante:</strong></p>
             <ul>
               <li>Este enlace expirará en 1 hora.</li>
@@ -979,7 +907,6 @@ export const passwordResetTemplate = (resetLink: string): string => {
               <li>Por tu seguridad, no compartas este enlace con nadie.</li>
             </ul>
           </div>
-
           <div class="footer">
             <p>Este es un email automático, por favor no respondas a este mensaje.</p>
             <p>&copy; ${new Date().getFullYear()} ${process.env.SMTP_FROM_NAME || "Tu Tienda"}. Todos los derechos reservados.</p>
