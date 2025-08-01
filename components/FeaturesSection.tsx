@@ -8,7 +8,7 @@ import { useMainStore } from "@/stores/mainStore"
 
 interface FeaturesSectionProps {
   id?: string
-  metadata?: Partial<CardSectionMetadata>
+  metadata?: string
 }
 
 // Default icons and colors in the order shown in the image
@@ -24,12 +24,12 @@ const defaultFeatures = [
     iconBg: "bg-blue-50",
   },
   {
-    icon: Shield,
+    icon: Truck,
     iconColor: "text-rose-500",
     iconBg: "bg-rose-50",
   },
   {
-    icon: Truck,
+    icon: Shield,
     iconColor: "text-amber-500",
     iconBg: "bg-amber-50",
   },
@@ -125,26 +125,16 @@ function CardSectionRenderer({ cardSection }: { cardSection: CardSection }) {
 // Metadata matching function
 function matchesMetadata(
   sectionMetadata: CardSectionMetadata | null | undefined,
-  searchMetadata: Partial<CardSectionMetadata>,
+  searchTag: string,
 ): boolean {
-  if (!sectionMetadata || !searchMetadata) return false
+  if (!sectionMetadata || !searchTag) return false
 
-  if (searchMetadata.tags && searchMetadata.tags.length > 0) {
-    if (!sectionMetadata.tags || sectionMetadata.tags.length === 0) return false
-    const hasMatchingTag = searchMetadata.tags.some((tag) => sectionMetadata.tags?.includes(tag))
-    if (!hasMatchingTag) return false
+  // Check if the search tag exists in the section's tags
+  if (sectionMetadata.tags && sectionMetadata.tags.length > 0) {
+    return sectionMetadata.tags.includes(searchTag)
   }
 
-  if (searchMetadata.seoTitle) {
-    if (!sectionMetadata.seoTitle || sectionMetadata.seoTitle !== searchMetadata.seoTitle) return false
-  }
-
-  if (searchMetadata.seoDescription) {
-    if (!sectionMetadata.seoDescription || sectionMetadata.seoDescription !== searchMetadata.seoDescription)
-      return false
-  }
-
-  return true
+  return false
 }
 
 export default function FeaturesSection({ id, metadata }: FeaturesSectionProps = {}) {

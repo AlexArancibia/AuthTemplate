@@ -23,7 +23,7 @@ export default function HomePage() {
     <HeroSection />
     <AboutSection  />
     <Suspense fallback={<div className="h-96 bg-muted animate-pulse" />}>
-        <FeaturesSection id="cs_5c596d6f-a27c" />
+        <FeaturesSection metadata="valores" id="cs_c672a824-e63e" />
       </Suspense>
       <ProductCarousel collectionName="Destacados" />
       <DeliveryHeroSection />
