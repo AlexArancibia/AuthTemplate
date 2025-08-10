@@ -84,7 +84,7 @@ function matchesMetadata(
   return true
 }
 
-export function ContactForm({ id = "cs_4cc2f669-73d1", metadata }: ContactFormProps = {}) {
+export function ContactForm({ id = "cs_eebba224-680f", metadata }: ContactFormProps = {}) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { shopSettings, cardSections, loading, error } = useMainStore()
   const { sendContactForm } = useEmailStore()
@@ -265,12 +265,21 @@ export function ContactForm({ id = "cs_4cc2f669-73d1", metadata }: ContactFormPr
   })
 
   return (
-    <section className="py-8 md:py-16 bg-gradient-to-br from-gray-50 to-white">
-      <div className="container mx-auto px-4">
+    <section
+      className="relative py-8 md:py-16 bg-cover bg-center bg-no-repeat"
+      style={{
+        backgroundImage: contactInfoCard?.imageUrl
+          ? `url('${contactInfoCard.imageUrl}')`
+          : `url('/placeholder.svg')`,
+        backgroundSize: "110%",
+      }}
+    >
+      <div className="absolute inset-0 bg-black/70 z-0 pointer-events-none"></div>
+      <div className="relative z-10 container mx-auto px-4">
         <div className="text-center pb-8 md:pb-12">
           <motion.h2
             variants={itemVariants}
-            className="text-2xl md:text-4xl font-bold text-gray-900 mb-4"
+            className="font-druk text-2xl md:text-3xl font-bold text-white mb-4"
             initial="hidden"
             animate="visible"
             transition={{ duration: 0.3 }}
@@ -279,7 +288,7 @@ export function ContactForm({ id = "cs_4cc2f669-73d1", metadata }: ContactFormPr
           </motion.h2>
           <motion.p
             variants={itemVariants}
-            className="text-sm md:text-base lg:text-lg text-gray-600 max-w-2xl mx-auto"
+            className="font-lato-light text-sm md:text-base lg:text-lg text-white max-w-2xl mx-auto"
             initial="hidden"
             animate="visible"
             transition={{ duration: 0.3, delay: 0.1 }}
@@ -289,12 +298,12 @@ export function ContactForm({ id = "cs_4cc2f669-73d1", metadata }: ContactFormPr
           </motion.p>
         </div>
 
-        <div className="max-w-6xl mx-auto">
+        <div className="font-lato-light max-w-6xl mx-auto">
           <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"
-            className="max-w-[1200px] mx-auto bg-white rounded-lg shadow-lg overflow-hidden"
+            className="max-w-[1200px] mx-auto bg-white/20 backdrop-blur-lg rounded-lg shadow-lg overflow-hidden"
           >
             <div className="grid grid-cols-1 md:grid-cols-2">
               {/* Información de contacto con imagen de fondo */}
@@ -303,7 +312,7 @@ export function ContactForm({ id = "cs_4cc2f669-73d1", metadata }: ContactFormPr
                 className="relative text-primary-foreground p-6 md:p-8 min-h-[400px] md:min-h-[500px] lg:min-h-[450px]"
               >
                 {/* Imagen de fondo */}
-                {contactInfoCard?.imageUrl && (
+                {/* {contactInfoCard?.imageUrl && (
                   <Image
                     src={contactInfoCard.imageUrl || "/placeholder.svg"}
                     alt={contactInfoCard.title}
@@ -311,7 +320,7 @@ export function ContactForm({ id = "cs_4cc2f669-73d1", metadata }: ContactFormPr
                     className="object-cover"
                     sizes="(max-width: 768px) 100vw, 50vw"
                   />
-                )}
+                )} */}
 
                 {/* Overlay oscuro más intenso */}
                 <div className="absolute inset-0 bg-black/60"></div>
@@ -364,6 +373,16 @@ export function ContactForm({ id = "cs_4cc2f669-73d1", metadata }: ContactFormPr
                       <div>
                         <p className="text-xs md:text-sm font-medium mb-1 text-white">Horarios</p>
                         <p className="text-white/90 text-xs md:text-sm">{contactInfo.businessHours}</p>
+                      </div>
+                    </motion.div>
+
+                    <motion.div variants={itemVariants} className="flex items-start">
+                      <MapPin className="w-5 h-5 md:w-6 md:h-6 mr-3 flex-shrink-0 text-white" />
+                      <div>
+                        <p className="text-xs md:text-sm font-medium mb-1 text-white">Ubicación</p>
+                        <p className="text-white/90 text-xs md:text-sm">
+                          Nuestra tienda está en el centro de la ciudad, con estacionamiento disponible. Visítanos y recibe atención personalizada.
+                        </p>
                       </div>
                     </motion.div>
                   </motion.div>

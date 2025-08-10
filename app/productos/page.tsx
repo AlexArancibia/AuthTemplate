@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation"
 import { useCurrencyStore } from "@/stores/currency"
 import ProductList from "./_components/ProductList"
 import ProductListSkeleton from "./_components/ProductListSkeleton"
+import Link from "next/link"
 
 function ProductsContent() {
   const searchParams = useSearchParams()
@@ -58,31 +59,43 @@ function ProductsContent() {
   return (
     <main className="min-h-screen bg-white">
       {/* Sección de encabezado con efecto de fade-in */}
-      <motion.div
-        className="container-section py-16 md:py-16 bg-[url('/fondoproduct.jpg')] bg-cover"
+      <motion.section
+        className="relative py-24 sm:py-32 px-4 text-center bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage: `url('/productsBanner.jpg')`,
+          backgroundSize: '105%',
+          backgroundPosition: 'center 19%',
+        }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.6 }}
       >
-        <div className="content-section text-center">
-          <motion.h2
-            className="text-white mb-2"
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.8 }}
-          >
-            Nuestros Productos
-          </motion.h2>
-          <motion.p
-            className="text-white/90 text-lg"
-            initial={{ y: -10, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
-            Descubre nuestra línea completa de productos de limpieza industrial
-          </motion.p>
+        <div className="absolute inset-0 z-0 bg-blue-600/20"></div>
+        <div className="absolute inset-0 z-0 bg-gradient-to-t from-black/100 via-black/40 to-black/30"></div>
+
+        <div className="relative z-10 w-full max-w-[1600px] mx-auto flex flex-col items-center gap-6">
+          <h1 className="font-druk text-4xl sm:text-5xl font-bold text-white text-center mb-6">
+            Descubre Nuestras
+            <br className="hidden sm:inline" />
+            Ofertas
+          </h1>
+
+          {/* Botón */}
+          <Link href="/productos">
+            <button className="font-lato-thin font-light bg-white text-black text-sm font-medium px-6 py-3 rounded-xs cursor-pointer">
+              Ver más
+            </button>
+          </Link>
+
+          {/* Logos */}
+          <div className="mt-6 flex flex-wrap justify-center items-center gap-24 px-4">
+            <img src="/xiom.png" alt="Xiom" className="h-8 w-auto" />
+            <img src="/sanwei.png" alt="Sanwei" className="h-8 w-auto" />
+            <img src="/butter2.png" alt="Butterfly" className="h-8 w-auto" />
+            <img src="/victas_logo2.png" alt="Victas" className="h-8 w-auto" />
+          </div>
         </div>
-      </motion.div>
+      </motion.section>
 
       {/* Sección de productos con efecto de fade-in */}
       <motion.div

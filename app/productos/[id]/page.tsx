@@ -1,7 +1,7 @@
 import { Suspense, use } from "react"
 import ProductSkeleton from "../_components/ProductSkeleton"
 import ProductDetails from "../_components/ProductDetails"
- 
+import TrustSection from "../_components/TrustSection"
  
 
 export default function ProductPage({ params }: { params: Promise<{ id: string }> }){
@@ -9,6 +9,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   return (
     <Suspense fallback={<ProductSkeleton />}>
       <ProductDetails slug={resolvedParams.id} />
+      <TrustSection/>
     </Suspense>
   )
 }

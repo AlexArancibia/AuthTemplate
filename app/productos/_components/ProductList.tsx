@@ -34,6 +34,7 @@ interface Filters {
   categories: string[]
   variants: Record<string, string[]>
   priceRange: [number, number]
+  brand?: string | null
 }
 
 function ProductListContent({
@@ -101,6 +102,7 @@ function ProductListContent({
           ? calculatedMaxPrice
           : 1000,
     ],
+    brand: null,
   })
 
   // Update URL when filters change
@@ -207,6 +209,14 @@ function ProductListContent({
       if (
         productPrice &&
         (productPrice < filters.priceRange[0] || productPrice > filters.priceRange[1])
+      ) {
+        return false
+      }
+
+      // Filtrar por marca (brand)
+      if (
+        filters.brand &&
+        (!product.vendor || product.vendor.toLowerCase() !== filters.brand.toLowerCase())
       ) {
         return false
       }

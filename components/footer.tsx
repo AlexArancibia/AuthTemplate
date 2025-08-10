@@ -3,6 +3,7 @@
 import type React from "react"
 import { motion } from "framer-motion"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,6 +23,16 @@ import {
   Shield,
   FileText,
   BookOpen,
+  LogIn,
+  User,
+  Tag,
+  History,
+  HelpCircle,
+  CreditCard,
+  RotateCcw,
+  Megaphone,
+  Star,
+  UserCog,
 } from "lucide-react"
 import { useMainStore } from "@/stores/mainStore"
 
@@ -51,6 +62,19 @@ export function Footer() {
   const [email, setEmail] = useState("")
   const [isSubscribing, setIsSubscribing] = useState(false)
   const { shopSettings } = useMainStore()
+  const pathname = usePathname()
+
+  const onClickTestimonios: React.MouseEventHandler<HTMLAnchorElement> = (e) => {
+    if (pathname === "/") {
+      e.preventDefault()
+      const el = document.getElementById("testimonios")
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" })
+        // actualiza el hash sin navegar
+        history.replaceState(null, "", "/#testimonios")
+      }
+    }
+  }
 
   const shopInfo = shopSettings?.[0]
 
@@ -76,13 +100,25 @@ export function Footer() {
   }
 
   const navigationLinks = [
-    { name: "Inicio", href: "/" },
-    { name: "Nosotros", href: "/nosotros" },
-    { name: "Productos", href: "/productos" },
-    { name: "Promociones", href: "/promociones" },
-    { name: "Catálogo", href: "/catalogo" },
-    { name: "Blog", href: "/blog" },
-    { name: "Contáctenos", href: "/contactenos" },
+    { name: "Login", href: "/login", icon: LogIn },
+    { name: "Tu cuenta", href: "/login", icon: User },
+    { name: "Ofertas", href: "/ofertas", icon: Tag },
+    { name: "Hstorial de pedidos", href: "/historial", icon: History },
+  ]
+
+  const serviceClientLinks = [
+    { name: "Preguntas Frecuentes", href: "/preguntas-frecuentes", icon: HelpCircle },
+    { name: "Formas de Pago", href: "/formas-pago", icon: CreditCard },
+    { name: "Política de privacidad", href: "/politica-de-privacidad", icon: Shield },
+    { name: "Cambios y Devoluciones", href: "/cambios-devoluciones", icon: RotateCcw },
+    { name: "Libro de Reclamaciones", href: "/libro-de-reclamaciones", icon: BookOpen },
+  ]
+
+  const aboutAJN = [
+    { name: "Nosotros", href: "/nosotros", icon: FileText },
+    { name: "Nuestros Productos", href: "/productos", icon: Star },
+    { name: "Testimonios", href: "/#testimonios", icon: Megaphone },
+    { name: "Noticias", href: "/nosotros", icon: BookOpen },
   ]
 
   const legalLinks = [
@@ -115,7 +151,7 @@ export function Footer() {
   }
 
   return (
-    <footer className="bg-gray-900 text-white">
+    <footer className="bg-black text-white">
       <div className="container mx-auto px-4 py-12">
         <motion.div
           variants={containerVariants}
@@ -127,11 +163,30 @@ export function Footer() {
           {/* Información de la empresa */}
           <motion.div variants={itemVariants} className="space-y-4">
             <div>
-              <img src={shopSettings[0]?.logo3} className="h-32 w-32 mb-3 object-contain" alt="Logo" />
-              <p className="text-gray-300 text-sm leading-relaxed">
+              <h3 className="text-lg font-semibold mb-4">Mi cuenta</h3>
+              {/* <img src={shopSettings[0]?.logo3} className="h-32 w-32 object-contain" alt="Logo" /> */}
+              {/* <p className="text-gray-300 text-sm leading-relaxed">
                 {shopInfo?.description ||
                   "Comprometidos con la excelencia y la satisfacción de nuestros clientes. Ofrecemos productos y servicios de la más alta calidad."}
-              </p>
+              </p> */}
+              <ul className="space-y-2">
+                {navigationLinks.map((link) => {
+                  const IconComponent = link.icon
+                  return (
+                    <li key={link.name}>
+                      <Link
+                        href={link.href}
+                        className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors text-sm group"
+                      >
+                        {IconComponent && (
+                          <IconComponent className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                        )}
+                        <span>{link.name}</span>
+                      </Link>
+                    </li>
+                  )
+                })}
+              </ul>
             </div>
 
             {/* Newsletter */}
@@ -140,23 +195,9 @@ export function Footer() {
 
           {/* Enlaces de navegación */}
           <motion.div variants={itemVariants}>
-            <h3 className="text-lg font-semibold mb-4">Navegación</h3>
+            <h3 className="text-lg font-semibold mb-4">Servicio al Cliente</h3>
             <ul className="space-y-2">
-              {navigationLinks.map((link) => (
-                <li key={link.name}>
-                  <Link href={link.href} className="text-gray-300 hover:text-white transition-colors text-sm">
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-
-          {/* Enlaces legales */}
-          <motion.div variants={itemVariants}>
-            <h3 className="text-lg font-semibold mb-4">Legal</h3>
-            <ul className="space-y-2">
-              {legalLinks.map((link) => {
+              {serviceClientLinks.map((link) => {
                 const IconComponent = link.icon
                 return (
                   <li key={link.name}>
@@ -164,7 +205,32 @@ export function Footer() {
                       href={link.href}
                       className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors text-sm group"
                     >
-                      <IconComponent className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                      {IconComponent && (
+                        <IconComponent className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                      )}
+                      <span>{link.name}</span>
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          </motion.div>
+
+          {/* Enlaces legales */}
+          <motion.div variants={itemVariants}>
+            <h3 className="text-lg font-semibold mb-4">Sobre ANJ</h3>
+            <ul className="space-y-2">
+              {aboutAJN.map((link) => {
+                const IconComponent = link.icon
+                return (
+                  <li key={link.name}>
+                    <Link
+                      href={link.href}
+                      className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors text-sm group"
+                    >
+                      {IconComponent && (
+                        <IconComponent className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                      )}
                       <span>{link.name}</span>
                     </Link>
                   </li>
@@ -177,6 +243,18 @@ export function Footer() {
           <motion.div variants={itemVariants}>
             <h3 className="text-lg font-semibold mb-4">Contacto</h3>
             <div className="space-y-3">
+              {(shopInfo?.shopOwner || shopInfo?.city) && (
+                <a
+                  href="https://api.whatsapp.com/send/?phone=51986607951&text&type=phone_number&app_absent=0"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start space-x-3"
+                >
+                  <UserCog className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-gray-300 text-sm">{shopInfo?.shopOwner}</p>
+                </a>
+              )}
+
               {(shopInfo?.address1 || shopInfo?.city) && (
                 <div className="flex items-start space-x-3">
                   <MapPin className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />

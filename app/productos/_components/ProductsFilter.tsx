@@ -27,6 +27,7 @@ interface Filters {
   categories: string[]
   variants: Record<string, string[]>
   priceRange: [number, number]
+  brand?: string | null;
 }
 
 interface GroupedPresentation {
@@ -49,6 +50,34 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string[]>>(initialFilters.variants)
   const [priceRange, setPriceRange] = useState<[number, number]>(initialFilters.priceRange)
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm)
+  const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
+
+  const brands = ["XIOM", "DR. NEUBAUER", "NEOTEC", "SANWEI", "VICTAS", "BUTTERFLY"];
+
+  // Filtro adicional por marcas
+  const handleBrandChange = useCallback((brand: string) => {
+    setSelectedBrand((prev) => (prev === brand ? null : brand))
+  }, [])
+
+const filteredProducts = products
+  .filter((product) => product.status !== "DRAFT")
+  .filter((product) => {
+    const matchesSearch =
+      !searchTerm ||
+      product.title.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesBrand =
+      !selectedBrand ||
+      product.vendor?.toLowerCase() === selectedBrand.toLowerCase();
+
+    const price = Number(product.variants?.[0]?.prices?.[0]?.price) || 0;
+
+    const inPriceRange =
+      price >= priceRange[0] && price <= priceRange[1];
+
+    return matchesSearch && matchesBrand && inPriceRange;
+  });
+
 
   const defaultCurrency = useMemo(() => {
     if (selectedCurrencyId) {
@@ -60,6 +89,7 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
   // Debounce search term
   useEffect(() => {
     console.log("currencies aceptados: ", defaultCurrency)
+    console.log("Productos cargados:", products)
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm)
     }, 300)
@@ -74,6 +104,7 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
       categories: selectedCategories,
       variants: selectedVariants,
       priceRange,
+      brand: selectedBrand,
     }
 
     // Crear una clave única para comparar filtros
@@ -84,6 +115,7 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
         Object.entries(currentFilters.variants).map(([key, values]) => [key, [...values].sort()]),
       ),
       priceRange: currentFilters.priceRange,
+      brand: currentFilters.brand,
     })
 
     // Solo actualizar si los filtros realmente cambiaron
@@ -108,7 +140,7 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
         updateTimeoutRef.current = null
       }, 100)
     }
-  }, [debouncedSearchTerm, selectedCategories, selectedVariants, priceRange, onFilterChange])
+  }, [debouncedSearchTerm, selectedCategories, selectedVariants, priceRange, selectedBrand, onFilterChange])
 
   // Función separada para actualizar URL
   const updateURL = useCallback(
@@ -133,6 +165,10 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
       if (filters.priceRange[0] !== minPrice || filters.priceRange[1] !== maxPrice) {
         params.set("minPrice", filters.priceRange[0].toString())
         params.set("maxPrice", filters.priceRange[1].toString())
+      }
+
+      if (filters.brand) {
+        params.set("brand", filters.brand)
       }
 
       const newUrl = `${pathname}?${params.toString()}`
@@ -273,6 +309,7 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
     setSelectedCategories([])
     setSelectedVariants({})
     setPriceRange([minPrice, maxPrice])
+    setSelectedBrand(null)
 
     // Limpiar la referencia
     lastFiltersRef.current = ""
@@ -282,14 +319,14 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
   }, [minPrice, maxPrice, pathname, router])
 
   return (
-    <div className="w-72 bg-white space-y-6">
+    <div className="font-lato-bold w-72 bg-white space-y-6">
       {/* Search */}
       <Input
         type="text"
         placeholder="Buscar productos"
         value={searchTerm}
         onChange={handleSearchChange}
-        className="w-full text-sm mt-1"
+        className="w-full text-sm mt-1 rounded-none"
       />
 
       {/* Categories */}
@@ -335,6 +372,45 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
               {defaultCurrency?.symbol}
               {isFinite(priceRange[1]) ? priceRange[1] : 1000}
             </span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-2">Marcas</h3>
+          <div className="flex flex-wrap gap-2">
+            {brands.map((brand) => (
+                <button
+                  key={brand}
+                  onClick={() => handleBrandChange(brand)}
+                  className={`px-3 py-1 rounded-full border text-sm transition ${
+                    selectedBrand === brand
+                      ? 'bg-black text-white border-black'
+                      : 'bg-white text-black border-gray-300'
+                  }`}
+                >
+                  {brand}
+                </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      
+      <div>
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-2">Ropa & Accesorios</h3>
+          <div className="flex flex-wrap gap-3">
+            {["Shirts", "Shorts", "T-Shirts", "Toallas"].map((type) => (
+              <button
+                key={type}
+                disabled
+                className="px-4 py-2 text-sm border rounded-md bg-gray-100 text-gray-400 cursor-not-allowed"
+              >
+                {type}
+              </button>
+            ))}
           </div>
         </div>
       </div>

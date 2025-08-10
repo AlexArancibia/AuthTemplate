@@ -38,7 +38,7 @@ const defaultFeatures = [
 // Simple component to display card as feature card
 function FeatureCard({ card, index, isInView }: { card: Card; index: number; isInView: boolean }) {
   if (!card.isActive) return null
-
+  
   // Use default icons in order, cycling if there are more than 4 cards
   const featureStyle = defaultFeatures[index % defaultFeatures.length]
   const IconComponent = featureStyle.icon
@@ -48,15 +48,44 @@ function FeatureCard({ card, index, isInView }: { card: Card; index: number; isI
       initial={{ opacity: 0, y: 20 }}
       animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
       transition={{ duration: 0.5, delay: 0.2 + index * 0.1 }}
-      className="bg-white/50 hover:bg-white/80 rounded-2xl p-6 shadow-lg shadow-secondary/5 hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+      className="bg-white rounded-lg overflow-hidden cursor-pointer"
+      onClick={() => {
+        if (card.linkUrl) {
+          window.open(card.linkUrl, '_blank');
+        }
+      }}
     >
-      <div className="space-y-4">
-        <div className={`w-16 h-16 rounded-2xl ${featureStyle.iconBg} flex items-center justify-center`}>
-          <IconComponent className={`w-8 h-8 ${featureStyle.iconColor}`} />
-        </div>
-        <h3 className="text-secondary font-semibold">{card.title}</h3>
+      {/* Imagen cuadrada */}
+      <div className="w-full aspect-square overflow-hidden transition-transform duration-300 hover:scale-95">
+        <img
+          src={card.imageUrl || ""}
+          alt={card.title || ""}
+          className="object-cover w-full h-full"
+        />
+      </div>
+
+      {/* Título */}
+      <div className="p-0 pt-4 text-center">
+        <h3 className="font-adi-bold text-base font-semibold uppercase text-black tracking-wide text-left">
+          {card.title}
+        </h3>
+
+        {/* Secciones reservadas para futuro uso */}
         {card.description && (
-          <div className="text-sm text-muted-foreground" dangerouslySetInnerHTML={{ __html: card.description }} />
+          <div
+            className="hidden text-sm text-muted-foreground"
+            dangerouslySetInnerHTML={{ __html: card.description }}
+          />
+        )}
+        {card.subtitle && (
+          <div className="hidden text-xs text-muted-foreground">
+            {card.subtitle}
+          </div>
+        )}
+        {card.linkText && (
+          <div className="hidden mt-2 text-xs underline text-primary">
+            {card.linkText}
+          </div>
         )}
       </div>
     </motion.div>
@@ -77,7 +106,7 @@ function CardSectionRenderer({ cardSection }: { cardSection: CardSection }) {
   return (
     <section ref={ref} className="relative overflow-hidden">
       {/* Gradient Background */}
-      <div className="absolute inset-0 bg-[url('/gradient1.png')] bg-cover bg-center" />
+      <div className="absolute inset-0 bg-white bg-cover bg-center" />
 
       <div className="container-section relative py-16 lg:py-24">
         <div className="content-section">
@@ -86,7 +115,7 @@ function CardSectionRenderer({ cardSection }: { cardSection: CardSection }) {
               initial={{ opacity: 0, y: 20 }}
               animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
               transition={{ duration: 0.5 }}
-              className="text-secondary tracking-tight font-bold text-2xl md:text-4xl"
+              className="font-druk text-secondary tracking-tight font-bold text-lg uppercase md:text-3xl"
             >
               {cardSection.title}
             </motion.h2>
@@ -111,7 +140,7 @@ function CardSectionRenderer({ cardSection }: { cardSection: CardSection }) {
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
             {activeCards.map((card, index) => (
               <FeatureCard key={card.id} card={card} index={index} isInView={isInView} />
             ))}

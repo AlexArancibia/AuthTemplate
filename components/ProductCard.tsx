@@ -15,6 +15,8 @@ interface ProductCardProps {
   product: Product
   selectedCurrencyId: String
   acceptedCurrencies: CurrencyOption[];
+  showSaleBadge?: boolean
+  salePercentage?: number
 }
 
 // Hook personalizado para el contador de lanzamiento
@@ -69,7 +71,13 @@ function useReleaseCountdown(releaseDate: Date | string | null | undefined) {
   return { timeLeft, isReleased }
 }
 
-export function ProductCard({ product, selectedCurrencyId, acceptedCurrencies }: ProductCardProps) {
+export function ProductCard({ 
+  product, 
+  selectedCurrencyId, 
+  acceptedCurrencies, 
+  showSaleBadge = false,
+  salePercentage = 10 
+}: ProductCardProps) {
   const { shopSettings } = useMainStore()
   const [isPulsing, setIsPulsing] = useState(false)
 
@@ -128,11 +136,7 @@ export function ProductCard({ product, selectedCurrencyId, acceptedCurrencies }:
   const image = product.imageUrls && product.imageUrls.length > 0 ? product.imageUrls[0] : "/placeholder.svg"
 
   return (
-    <motion.div
-      className="group relative bg-white rounded-2xl p-4 border hover:shadow-md transition-shadow duration-300 flex flex-col h-full"
-      whileHover={{ y: -5 }}
-      transition={{ duration: 0.2 }}
-    >
+    <div className="group relative bg-white rounded-none p-4 flex flex-col h-full">
       <Link href={`/productos/${product.slug}`} className="flex flex-col h-full">
         {/* Badges */}
         <div className="absolute top-6 left-6 flex flex-col gap-2 z-10">
@@ -148,13 +152,23 @@ export function ProductCard({ product, selectedCurrencyId, acceptedCurrencies }:
           )}
         </div>
 
-        {/* Image Container */}
+        {/* Sale Badge */}
+        {showSaleBadge && (
+          <div className="absolute top-6 right-6 z-10">
+            <Badge className="font-lato-thin bg-red-500 text-white text-xs px-2 py-1">
+              SALE
+            </Badge>
+          </div>
+        )}
+
+        {/* Image Container - Ahora más grande */}
         <div className="relative aspect-square mb-4 bg-gray-50 rounded-xl overflow-hidden flex-shrink-0">
+          
           <Image
             src={image || "/placeholder.svg"}
             alt={product.title}
             fill
-            className="object-contain p-4"
+            className="object-contain p-2"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
 
@@ -180,39 +194,51 @@ export function ProductCard({ product, selectedCurrencyId, acceptedCurrencies }:
         {/* Product Info - Ahora con espacio fijo */}
         <div className="flex-grow flex flex-col">
           <div className="mb-2">
-            <p className="text-sm text-secondary line-clamp-2 ">{product.title}</p>
+            <p className="font-lato-thin text-sm font-medium text-gray-900 line-clamp-2 uppercase tracking-wide">{product.title}</p>
           </div>
 
-          <div className="flex items-center gap-2 mb-2">
-            {priceDisplay && <span className="text-md font-bold text-gray-700">{priceDisplay}</span>}
-
-            {/* Etiqueta de prelanzamiento */}
-            {hasUpcomingRelease && (
-              <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                Prelanzamiento
-              </Badge>
-            )}
-          </div>
-
-          {/* Espacio reservado para el botón */}
-          <div className="h-8 mt-auto"></div>
+          {/* Etiqueta de prelanzamiento */}
+          {hasUpcomingRelease && (
+            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 mb-2 w-fit">
+              Prelanzamiento
+            </Badge>
+          )}
         </div>
-      </Link>
 
-      {/* Ver Producto Button - Ahora fuera del contenido principal */}
-      <div className="absolute inset-x-4 bottom-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-        <Button
-          className="w-full gap-2 bg-white border border-gray-200 text-primary hover:bg-gray-50 h-7 text-xs"
-          disabled={false}
-          onClick={(e) => {
-            e.stopPropagation()
-            window.location.href = `/productos/${product.slug}`
-          }}
-        >
-          <Eye className="w-4 h-4" />
-          {hasUpcomingRelease ? "Ver Prelanzamiento" : "Ver Producto"}
-        </Button>
-      </div>
-    </motion.div>
+        {/* Precio en la parte inferior */}
+        {priceDisplay && (
+          <div className="mt-auto pt-4">
+            <div className="font-lato-thin flex items-center gap-2">
+              {showSaleBadge ? (
+                <>
+                  <span className="text-base font-medium text-black">{priceDisplay}</span>
+                  <span className="text-sm text-gray-400 line-through">
+                    {formatPrice(lowestPrice * (1 + salePercentage / 100))}
+                  </span>
+                </>
+              ) : (
+                <span className="text-sm font-medium text-black">{priceDisplay}</span>
+              )}
+            </div>
+          </div>
+        )}
+      </Link>
+      <motion.div>
+        {/* Ver Producto Button - Ahora fuera del contenido principal */}
+        <div className="absolute inset-x-4 bottom-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <Button
+            className="w-full gap-2 bg-white text-primary hover:bg-white h-7 text-xs shadow-none border-0"
+            disabled={false}
+            onClick={(e) => {
+              e.stopPropagation()
+              window.location.href = `/productos/${product.slug}`
+            }}
+          >
+            <Eye className="w-4 h-4" />
+            {hasUpcomingRelease ? "Ver Prelanzamiento" : "Ver Producto"}
+          </Button>
+        </div>
+      </motion.div>
+    </div>
   )
 }

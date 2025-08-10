@@ -32,7 +32,7 @@ export async function openCulqiCheckout(amount: number, description: string) {
     });
 
     window.Culqi.settings({
-        title: "Clefast",
+        title: "ANJ",
         currency: "PEN",
         description,
         amount,

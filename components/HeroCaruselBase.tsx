@@ -280,7 +280,7 @@ export function HeroCarouselBase({
     <div className="w-full overflow-hidden relative" ref={carouselRef}>
       {/* Carrusel principal */}
       <div
-        className="relative h-[100vh] min-h-[600px] lg:h-[92vh] "
+        className="relative h-[500px] md:h-[600px] lg:h-[700px] min-h-[500px] "
         // style={{
         //   height: containerHeight,
         //   willChange: "transform", // Optimización de rendimiento

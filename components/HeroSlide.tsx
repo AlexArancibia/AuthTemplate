@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import Image from "next/image"
 import { useState } from "react"
+import { cn } from "@/lib/utils"
 
 interface HeroSlideProps {
   heroSection: HeroSectionType
@@ -59,9 +60,12 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
   const hasVideo = Boolean(youtubeId)
 
   // Clases para el contenedor principal
-  const containerClasses = `relative w-full ${styles.height?.mobile || ""} md:${styles.height?.tablet || ""} lg:${
-    styles.height?.desktop || ""
-  }`
+  const containerClasses = `
+    relative w-full 
+    ${styles.height?.mobile || "h-[500px]"} 
+    md:${styles.height?.tablet || "h-[600px]"} 
+    lg:${styles.height?.desktop || "h-[670px]"}
+  `;
 
   // Clases para la imagen de fondo
   const backgroundImageClasses = `object-cover ${styles.backgroundSize || ""} object-center`
@@ -211,9 +215,14 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: animationDelay }}
             >
+              <div className="w-full flex justify-start">
+                <div className="inline-block px-5 py-1 mb-6 rounded-full bg-gradient-to-r from-blue-400 to-fuchsia-500 text-white text-base md:text-lg font-druk font-extrabold uppercase tracking-wide shadow-lg">
+                  DESDE 2010
+                </div>
+              </div>
               {title && (
                 <motion.h1
-                  className={`text-[2em] lg:text-[3.5em] font-bold mt-[120px] lg:mt-0 ${styles.titleColor || ""} `}
+                  className={`font-druk font-extrabold uppercase text-[6em] lg:text-[3.5em] mt-[120px] lg:mt-0 ${styles.titleColor || ""} `}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: animationDelay }}
@@ -223,14 +232,19 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
               )}
 
               {subtitle && (
-              <motion.div
-                className={`text-sm md:text-lg ${styles.subtitleColor || ""} [&_*]:text-sm [&_*]:md:text-lg [&_*]:!text-inherit`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.1 + animationDelay }}
-                dangerouslySetInnerHTML={{ __html: subtitle }}
-              />
-            )}
+                <motion.div
+                  className={cn(
+                    "font-lato font-light text-sm md:text-lg",
+                    styles?.subtitleChildrenSize ?? "[&_*]:text-sm md:[&_*]:text-lg",
+                    "[&_*]:[font-family:inherit] [&_*]:text-[inherit]",
+                    styles?.subtitleColor ?? ""
+                  )}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.1 + animationDelay }}
+                  dangerouslySetInnerHTML={{ __html: subtitle }}
+                />
+              )}
 
               {buttonText && buttonLink && (
                 <motion.div
@@ -242,8 +256,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
                   <Button
                     variant={(styles.buttonVariant || "default") as any}
                     size={(styles.buttonSize || "default") as any}
-                    className="font-medium text-sm hover:scale-105 transition-transform shadow-lg"
-                    asChild
+                    className="px-7 py-5 rounded-xl bg-white text-neutral-800 text-xs font-light uppercase tracking-[0.2em] shadow-[0_0_10px_rgba(0,0,0,0.05)] hover:bg-white hover:text-neutral-800 hover:shadow-[0_0_12px_rgba(0,0,0,0.08)] transition-all duration-200"
                   >
                     <Link href={buttonLink}>{buttonText}</Link>
                   </Button>

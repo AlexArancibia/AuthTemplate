@@ -10,6 +10,7 @@ import { QuienesSomosHero } from "./_components/AboutHeroSection"
 import ValuesSection from "./_components/ValuesSection"
 import MissionVisionSection from "./_components/MisionVision"
 import SectorsSection from "./_components/SectorsSection"
+import { SimpleListSection } from "./_components/Nosotros"
 
 export default function AboutPage() {
 
@@ -19,20 +20,22 @@ export default function AboutPage() {
   return (
     <main className=" ">
       {/* Hero Section with Video Background */}
-      <QuienesSomosHero />
+      {/* <QuienesSomosHero /> */}
       {/* Mission and Vision */}
-      <MissionVisionSection id="cs_30a28f27-58ee" />
+      {/* <MissionVisionSection id="cs_30a28f27-58ee" /> */}
  
 
  
  
       {/* Values Section */}
-      <ValuesSection id="cs_4ce0ea48-52d5" />
+      {/* <ValuesSection id="cs_4ce0ea48-52d5" /> */}
       
 
       {/* Sectors Section - Side-by-Side Accordion */}
-      <SectorsSection id="cs_b6e904f5-519f" />
+      {/* <SectorsSection id="cs_b6e904f5-519f" /> */}
 
+      
+      <SimpleListSection id="cs_a53d4ffe-88ec" />
       {/* CTA Section */}
       {/* <section className="py-16 bg-[url('/fondoproduct.jpg')] bg-cover text-white">
         <div className="container mx-auto px-4 text-center">

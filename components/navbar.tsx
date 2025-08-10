@@ -3,9 +3,9 @@
 import type React from "react"
 
 import Link from "next/link"
-import { useState, useEffect, useRef } from "react"
-import { usePathname } from "next/navigation"
-import { Menu, ShoppingCart, User, X, Search, Store, Loader2 } from "lucide-react"
+import { useState, useEffect, useRef, useMemo } from "react"
+import { useRouter, usePathname } from "next/navigation"
+import { Menu, ShoppingCart, User, X, Search, Store, Loader2, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
@@ -40,12 +40,9 @@ interface NavbarProps {
 
 const navItems = [
   { name: "Inicio", href: "/" },
-  { name: "Nosotros", href: "/nosotros" },
-  { name: "Productos", href: "/productos" },
-  { name: "Promociones", href: "/promociones" },
-  { name: "Catálogo", href: "/catalogo" },
-  { name: "Blog", href: "/blog" },
-  { name: "Contáctenos", href: "/contactenos" },
+  { name: "Tienda", href: "/productos" },
+  { name: "Contacto", href: "/contactenos" },
+  { name: "Ofertas", href: "/ofertas" },
 ]
 
 export default function Navbar({ user }: NavbarProps) {
@@ -63,6 +60,7 @@ export default function Navbar({ user }: NavbarProps) {
     shopSettings,
     loading,
     error,
+    categories,
   } = useMainStore()
 const { 
     showDialog, 
@@ -71,12 +69,24 @@ const {
     acceptSelectedCookies, 
     openCookieSettings 
   } = useCookieConsent();
+  const router = useRouter()
     const isCookieConsentEnabled: boolean = shopSettings?.[0]?.cookieConsentEnabled ?? false;
   const { items, removeItem, updateQuantity, getTotal, getItemsCount } = useCartStore()
   const [mounted, setMounted] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [showInitialLoading, setShowInitialLoading] = useState(true)
+  const [shopOpen, setShopOpen] = useState(false)
+
+  const sortedCategories = useMemo(() => {
+    if (!categories) return []
+    return [...categories].sort((a, b) => {
+      const priorityA = a.priority ?? Number.MAX_SAFE_INTEGER
+      const priorityB = b.priority ?? Number.MAX_SAFE_INTEGER
+      return priorityA - priorityB
+    })
+  }, [categories])
+
   
   const {
     selectedCurrencyId,
@@ -280,7 +290,7 @@ const {
   return (
     <>
 
-    <nav className="bg-background/95 backdrop-blur-md border-b sticky top-0 z-[180]">
+    <nav className="bg-background/95 backdrop-blur-md border-b sticky top-0 z-[180] font-adi-regular font-light uppercase">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-18">
           {/* Logo */}
@@ -289,7 +299,7 @@ const {
               {loading ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : shopLogo ? (
-                <img src={shopLogo || "/placeholder.svg"} alt={shopName} className="h-10 lg:h-12 w-auto mr-2" />
+                <img src={shopLogo || "/placeholder.svg"} alt={shopName} className="h-10 lg:h-7 w-auto mr-2" />
               ) : (
                 <Store className="h-5 w-5 mr-2" />
               )}
@@ -297,19 +307,67 @@ const {
           </div>
 
           {/* Navigation Links - Desktop */}
-          <div className="hidden lg:flex lg:w-1/2 xl:w-1/2 justify-center">
-            {navItems.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  "px-2 xl:px-4 py-1 text-sm font-normal transition-colors hover:text-primary",
-                  pathname === item.href ? "text-primary font-medium" : "text-secondary",
-                )}
-              >
-                {item.name}
-              </Link>
-            ))}
+          <div className="hidden lg:flex lg:w-1/2 xl:w-1/2 justify-center relative">
+            {navItems.map((item) => {
+              const isShop = item.name.toLowerCase() === "tienda"
+              if (!isShop) {
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={cn(
+                      "px-6 xl:px-12 py-1 text-sm transition-colors hover:text-primary",
+                      pathname === item.href ? "text-primary" : "text-secondary",
+                    )}
+                  >
+                    {item.name}
+                  </Link>
+                )
+              }
+
+              // --- Tienda con dropdown ---
+              return (
+                <div
+                  key="tienda"
+                  className="px-6 xl:px-12 py-1 text-sm relative"
+                  onMouseEnter={() => setShopOpen(true)}
+                  onMouseLeave={() => setShopOpen(false)}
+                >
+                  <Link
+                    href="/productos"
+                    className={cn(
+                      "flex items-center gap-1 transition-colors hover:text-primary",
+                      pathname.startsWith("/productos") ? "text-primary" : "text-secondary",
+                    )}
+                  >
+                    Tienda
+                    <ChevronDown className={cn("h-4 w-4 transition-transform", shopOpen ? "rotate-180" : "rotate-0")} />
+                  </Link>
+
+                  {shopOpen && (
+                    <div
+                      role="menu"
+                      className="absolute left-0 top-full -mt-px w-48 bg-white border border-gray-200 shadow-md rounded-none flex flex-col z-[500]"
+                    >
+                      {sortedCategories.length === 0 ? (
+                        <div className="text-sm text-muted-foreground p-2">Cargando...</div>
+                      ) : (
+                        sortedCategories.map((category: any) => (
+                          <Link
+                            key={category.id}
+                            href={`/productos?category=${category.id}`}
+                            className="text-sm px-4 py-2 hover:bg-gray-100"
+                            role="menuitem"
+                          >
+                            {category.name}
+                          </Link>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
 
           {/* Search and Icons */}
@@ -327,7 +385,7 @@ const {
                 </Button>
               </DialogTrigger>
               <DialogContent className="w-[90%] max-w-md z-[555] bg-background/95 backdrop-blur-md border-none shadow-lg">
-                <DialogTitle className="text-lg font-semibold text-center">Buscar productos</DialogTitle>
+                <DialogTitle className="text-lg text-center">Buscar productos</DialogTitle>
                 <form onSubmit={handleSearch} className="flex flex-col gap-4 mt-2">
                   <div className="flex w-full items-center space-x-2">
                     <Input
@@ -400,7 +458,7 @@ const {
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-medium text-sm truncate">{item.product.title}</h4>
+                            <h4 className="text-sm truncate">{item.product.title}</h4>
                             <p className="text-xs text-muted-foreground truncate mb-1">{item.variant.title}</p>
 
                             {/* Quantity Controls */}
@@ -414,7 +472,7 @@ const {
                               >
                                 <span className="text-xs">-</span>
                               </Button>
-                              <span className="text-xs font-medium min-w-[20px] text-center">{item.quantity}</span>
+                              <span className="text-xs min-w-[20px] text-center">{item.quantity}</span>
                               <Button
                                 variant="outline"
                                 size="icon"
@@ -425,7 +483,7 @@ const {
                               </Button>
                             </div>
 
-                            <p className="text-xs font-medium">
+                            <p className="text-xs">
                               {item.variant.prices && item.variant.prices.length > 0
                                 ? formatCurrency(
                                     item.variant.prices.find(p => p.currency?.id === activeCurrency?.id)!.price * item.quantity,
@@ -449,7 +507,7 @@ const {
                   </div>
                   {items.length > 0 && (
                     <div className="mt-auto pt-3 border-t">
-                      <p className="font-medium text-base mb-3 flex justify-between">
+                      <p className="text-base mb-3 flex justify-between">
                         <span>Total:</span>
                         <span>{formatCurrency(totalPrice, activeCurrency)}</span>
                       </p>
@@ -496,7 +554,7 @@ const {
                       key={currency.id}
                       onClick={() => setSelectedCurrencyId(currency.id)}
                       className={`cursor-pointer px-3 py-1.5 text-sm rounded-md hover:bg-secondary/10 ${
-                        selectedCurrencyId === currency.id ? "font-semibold text-primary" : ""
+                        selectedCurrencyId === currency.id ? "text-primary" : ""
                       }`}
                     >
                       {currency.label}
@@ -519,7 +577,7 @@ const {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56 z-[999]" align="end" forceMount>
                   <div className="flex flex-col space-y-1 p-2">
-                    <p className="text-sm font-medium">{user.name}</p>
+                    <p className="text-sm">{user.name}</p>
                     <p className="text-xs text-muted-foreground">{user.email}</p>
                     {user.role && (
                       <p className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full w-fit">
@@ -547,7 +605,7 @@ const {
             ) : (
               <Button
                 variant="ghost"
-                className="hidden sm:flex bg-primary text-white hover:text-primary font-normal text-xs hover:bg-secondary/10 px-2 h-8"
+                className="hidden sm:flex bg-primary text-white hover:text-primary text-xs hover:bg-secondary/10 px-2 h-8"
                 asChild
               >
                 <Link href="/login">
@@ -573,14 +631,14 @@ const {
                 <SheetHeader className="pb-2">
                   <SheetTitle className="text-lg">Menú</SheetTitle>
                 </SheetHeader>
-                <nav className="flex flex-col space-y-3 mt-4">
+                <nav className="flex flex-col space-y-3 mt-4 font-adi-regular font-light uppercase">
                   {navItems.map((item) => (
                     <SheetClose asChild key={item.name}>
                       <Link
                         href={item.href}
                         className={cn(
-                          "text-sm font-medium transition-colors hover:text-primary py-1.5",
-                          pathname === item.href ? "text-primary font-semibold" : "text-secondary",
+                          "text-sm font-adi-regular font-light uppercase transition-colors hover:text-primary py-1.5",
+                          pathname === item.href ? "text-primary" : "text-secondary",
                         )}
                       >
                         {item.name}
@@ -591,7 +649,7 @@ const {
                     <SheetClose asChild>
                       <Link
                         href="/login"
-                        className="text-sm font-medium transition-colors hover:text-primary py-1.5 flex items-center lg:hidden"
+                        className="text-sm transition-colors hover:text-primary py-1.5 flex items-center lg:hidden"
                       >
                         <User className="h-4 w-4 mr-2" />
                         Iniciar Sesión

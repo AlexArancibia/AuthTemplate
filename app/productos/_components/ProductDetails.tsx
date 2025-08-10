@@ -72,6 +72,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
   // Precargar todas las imágenes de variantes cuando se carga el producto
   useEffect(() => {
     if (!product) return
+    console.log("estructura del product: ", product)
 
     const imagesToPreload: string[] = []
 
@@ -189,17 +190,22 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
     variant: ProductVariant,
     currencyId: string,
     acceptedCurrencies: CurrencyOption[]
-  ): { price: number; symbol: string } => { 
-    if (!variant.prices || variant.prices.length === 0) return { price: 0, symbol: "" }
+  ): { originalPrice: number | string, price: number; symbol: string } => { 
+    if (!variant.prices || variant.prices.length === 0) return { originalPrice:0, price: 0, symbol: "" }
 
     const priceObj = variant.prices.find((p) => p.currencyId === currencyId)
     const price = priceObj?.price ? Number(priceObj.price) : 0
+    const originalPrice =
+      priceObj?.originalPrice != null
+        ? Number(priceObj.originalPrice)
+        : "";
+
     const currency = acceptedCurrencies.find((c) => c.id === currencyId)
     const symbol = currency?.symbol || ""
 
-    return { price, symbol }
+    return { originalPrice, price, symbol }
   }
-  const { price, symbol } = getPriceAndSymbol(selectedVariant, selectedCurrencyId, acceptedCurrencies)
+  const { originalPrice, price, symbol } = getPriceAndSymbol(selectedVariant, selectedCurrencyId, acceptedCurrencies)
 
   const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
     const { left, top, width, height } = event.currentTarget.getBoundingClientRect()
@@ -323,7 +329,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
       className="min-h-screen"
     >
       {/* Header Section */}
-      <div className="bg-[url('/fondoproduct.jpg')] bg-cover py-8">
+      <div className="bg-black bg-cover py-8">
         <div className="container mx-auto px-4">
           <div className="py-6">
             <motion.div
@@ -500,6 +506,11 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                 <div className="space-y-4">
                   {hasValidPrice(selectedVariant) && (
                     <div className="flex items-center gap-2">
+                      {originalPrice !== "" && originalPrice !== price && (
+                        <span className="line-through text-sm text-muted-foreground">
+                          {symbol}{Number(originalPrice).toFixed(2)}
+                        </span>
+                      )}
                       <span className="text-2xl font-bold text-primary">
                         {symbol}{(price * quantity).toFixed(2)}
                       </span>
