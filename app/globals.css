@@ -2,7 +2,7 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
-
+html { scroll-behavior: smooth; }
 
 @layer components{
   .container-section {
@@ -13,6 +13,34 @@
     @apply max-w-screen-2xl w-full mx-auto 
   }
 
+  .font-lato-light {
+    font-family: 'Lato', sans-serif;
+    font-weight: 300;
+  }
+  
+  .font-lato-thin {
+    font-family: 'Lato', sans-serif;
+    font-weight: 100;
+  }
+  
+  .font-lato-bold {
+    font-family: 'Lato', sans-serif;
+    font-weight: 700;
+  }
+  .font-archivo-black {
+    font-family: 'Archivo Black', sans-serif;
+  }
+  .font-druk {
+    font-family: var(--font-druk);
+  }
+
+  .font-adi-bold {
+    font-family: var(--font-adi-bold);
+  }
+
+  .font-adi-regular {
+    font-family: var(--font-adi-regular);
+  }
 }
 
 @theme inline {
@@ -54,6 +82,9 @@
 }
 
 :root {
+  --font-druk: 'Druk Wide Bold', sans-serif;
+  --font-adi-bold: 'AdihausDIN Bold', sans-serif;
+  --font-adi-regular: 'AdihausDIN-Regular', sans-serif;
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -61,7 +92,7 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.6049 0.1765 146.74);
+  --primary: oklch(58.25% 0.21657 260.303);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.123 0.108 258);
   --secondary-foreground: oklch(0.205 0 0);

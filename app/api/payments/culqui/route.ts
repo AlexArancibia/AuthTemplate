@@ -5,7 +5,7 @@ export async function OPTIONS() {
   return NextResponse.json({}, {
     status: 200,
     headers: {
-      "Access-Control-Allow-Origin": "https://clefast.com.pe/",
+      "Access-Control-Allow-Origin": "https://anj.com/",
       "Access-Control-Allow-Methods": "POST, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type, Authorization",
     },
@@ -58,14 +58,14 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, data }, {
         headers: {
-            "Access-Control-Allow-Origin": "https://clefast.com.pe/",
+            "Access-Control-Allow-Origin": "https://anj.com/",
         },
     });
   } catch (error) {
     return NextResponse.json({ error: "Error procesando el pago" }, {
       status: 500,
       headers: {
-        "Access-Control-Allow-Origin": "https://clefast.com.pe/",
+        "Access-Control-Allow-Origin": "https://anj.com/",
       },
     });
   }

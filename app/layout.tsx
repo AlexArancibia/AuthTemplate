@@ -28,11 +28,11 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: "Clefast - Detergentes Ecológicos Industriales | Perú",
-    template: "%s | Clefast - Detergentes Ecológicos",
+    default: "ANJ SPORTs - Detergentes Ecológicos Industriales | Perú",
+    template: "%s | ANJ SPORTs - Detergentes Ecológicos",
   },
   description:
-    "Clefast es líder en detergentes ecológicos industriales en Perú. Ofrecemos soluciones de limpieza profesional eco-amigables y biodegradables para empresas, hoteles, restaurantes y centros de salud.",
+    "ANJ SPORTs es líder en detergentes ecológicos industriales en Perú. Ofrecemos soluciones de limpieza profesional eco-amigables y biodegradables para empresas, hoteles, restaurantes y centros de salud.",
   keywords: [
     "detergentes ecológicos",
     "detergentes industriales",
@@ -48,29 +48,29 @@ export const metadata: Metadata = {
     "limpieza hospitalaria",
     "limpieza hotelera",
     "detergentes biodegradables",
-    "Clefast Perú",
+    "ANJ",
   ],
-  metadataBase: new URL("https://clefast.com.pe"),
+  metadataBase: new URL("https://anjsports.com"),
   openGraph: {
     type: "website",
     locale: "es_PE",
-    url: "https://clefast.com.pe",
-    title: "Clefast - Detergentes Ecológicos Industriales",
+    url: "https://anjsports.com/",
+    title: "ANJ SPORTs",
     description:
-      "Líder en detergentes ecológicos industriales en Perú. Soluciones de limpieza profesional eco-amigables para empresas, hoteles, restaurantes y centros de salud.",
-    siteName: "Clefast",
+      "",
+    siteName: "ANJ SPORTs",
     images: [
       {
         url: "/fotoportada.jpg", // Imagen principal para compartir
         width: 1200,
         height: 630,
-        alt: "Clefast - Detergentes Industriales Ecológicos",
+        alt: "ANJ SPORTs - Detergentes Industriales Ecológicos",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Clefast - Detergentes Industriales Ecológicos",
+    title: "ANJ SPORTs - Detergentes Industriales Ecológicos",
     description: "Líder en detergentes industriales. Soluciones de limpieza profesional certificadas y eco-amigables.",
     images: ["/fotoportada.jpg"], // Misma imagen para Twitter
   },
@@ -94,6 +94,20 @@ export default async function RootLayout({
   return (
     <html lang="es">
       <head>
+        {/* Google Fonts - Lato */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap"
+          rel="stylesheet"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap"
+          rel="stylesheet"
+        />
+        <link href="https://fonts.cdnfonts.com/css/druk-wide-bold" rel="stylesheet"/>
+        <link href="https://db.onlinewebfonts.com/c/c2001d0359daadcd014fba0e808555d0?family=AdihausDIN+Bold" rel="stylesheet"/>
+        <script src="https://c.webfontfree.com/c.js?f=AdihausDIN-Regular" type="text/javascript"></script>
         {/* Structured Data */}
         <script
           type="application/ld+json"
@@ -101,12 +115,12 @@ export default async function RootLayout({
             __html: JSON.stringify({
               "@context": "https://schema.org",
               "@type": "Organization",
-              name: "Clefast",
-              url: "https://clefast.com.pe",
-              logo: "https://clefast.com.pe/logo.png",
+              name: "ANJ",
+              url: "https://anjsports.com/",
+              logo: "",
               sameAs: [
-                "https://www.facebook.com/clefast",
-                "https://www.instagram.com/clefast",
+                "https://www.facebook.com/TenisdeMesaAnjSports",
+                "https://www.instagram.com/anj.sports",
               ],
             }),
           }}
@@ -115,7 +129,7 @@ export default async function RootLayout({
       <body className={poppins.className}>
         <Toaster position="top-center" richColors />
         <Navbar user={session?.user} />
-        <main className="min-h-screen">{children}</main>
+        <main className="min-h-[80vh]">{children}</main>
         <PreFooterContact />
         <Footer />
         <WhatsAppButton />
