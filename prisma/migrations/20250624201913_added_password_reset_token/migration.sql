@@ -1,5 +1,5 @@
 -- CreateTable
-CREATE TABLE "clefast"."PasswordResetToken" (
+CREATE TABLE "anj"."PasswordResetToken" (
     "identifier" TEXT NOT NULL,
     "token" TEXT NOT NULL,
     "expires" TIMESTAMP(3) NOT NULL,
@@ -8,4 +8,4 @@ CREATE TABLE "clefast"."PasswordResetToken" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "PasswordResetToken_identifier_key" ON "clefast"."PasswordResetToken"("identifier");
+CREATE UNIQUE INDEX "PasswordResetToken_identifier_key" ON "anj"."PasswordResetToken"("identifier");

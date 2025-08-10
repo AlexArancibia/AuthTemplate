@@ -5,10 +5,10 @@
 
 */
 -- CreateEnum
-CREATE TYPE "clefast"."AddressType" AS ENUM ('shipping', 'billing', 'both');
+CREATE TYPE "anj"."AddressType" AS ENUM ('shipping', 'billing', 'both');
 
 -- AlterTable
-ALTER TABLE "clefast"."User" ADD COLUMN     "acceptsMarketing" BOOLEAN NOT NULL DEFAULT false,
+ALTER TABLE "anj"."User" ADD COLUMN     "acceptsMarketing" BOOLEAN NOT NULL DEFAULT false,
 ADD COLUMN     "company" TEXT,
 ADD COLUMN     "firstName" TEXT,
 ADD COLUMN     "lastName" TEXT,
@@ -16,14 +16,14 @@ ADD COLUMN     "phone" TEXT,
 ADD COLUMN     "taxId" TEXT;
 
 -- DropTable
-DROP TABLE "clefast"."Product";
+DROP TABLE "anj"."Product";
 
 -- CreateTable
-CREATE TABLE "clefast"."Address" (
+CREATE TABLE "anj"."Address" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "isDefault" BOOLEAN NOT NULL DEFAULT false,
-    "addressType" "clefast"."AddressType" NOT NULL DEFAULT 'both',
+    "addressType" "anj"."AddressType" NOT NULL DEFAULT 'both',
     "address1" TEXT NOT NULL,
     "address2" TEXT,
     "city" TEXT NOT NULL,
@@ -39,4 +39,4 @@ CREATE TABLE "clefast"."Address" (
 );
 
 -- AddForeignKey
-ALTER TABLE "clefast"."Address" ADD CONSTRAINT "Address_userId_fkey" FOREIGN KEY ("userId") REFERENCES "clefast"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "anj"."Address" ADD CONSTRAINT "Address_userId_fkey" FOREIGN KEY ("userId") REFERENCES "anj"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

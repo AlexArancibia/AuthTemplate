@@ -1,18 +1,18 @@
 -- CreateSchema
-CREATE SCHEMA IF NOT EXISTS "clefast";
+CREATE SCHEMA IF NOT EXISTS "anj";
 
 -- CreateEnum
-CREATE TYPE "clefast"."Role" AS ENUM ('user', 'admin');
+CREATE TYPE "anj"."Role" AS ENUM ('user', 'admin');
 
 -- CreateTable
-CREATE TABLE "clefast"."User" (
+CREATE TABLE "anj"."User" (
     "id" TEXT NOT NULL,
     "name" TEXT,
     "email" TEXT NOT NULL,
     "password" TEXT,
     "emailVerified" TIMESTAMP(3),
     "image" TEXT,
-    "role" "clefast"."Role" NOT NULL DEFAULT 'user',
+    "role" "anj"."Role" NOT NULL DEFAULT 'user',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -20,7 +20,7 @@ CREATE TABLE "clefast"."User" (
 );
 
 -- CreateTable
-CREATE TABLE "clefast"."Account" (
+CREATE TABLE "anj"."Account" (
     "userId" TEXT NOT NULL,
     "type" TEXT NOT NULL,
     "provider" TEXT NOT NULL,
@@ -39,7 +39,7 @@ CREATE TABLE "clefast"."Account" (
 );
 
 -- CreateTable
-CREATE TABLE "clefast"."VerificationToken" (
+CREATE TABLE "anj"."VerificationToken" (
     "identifier" TEXT NOT NULL,
     "token" TEXT NOT NULL,
     "expires" TIMESTAMP(3) NOT NULL,
@@ -48,7 +48,7 @@ CREATE TABLE "clefast"."VerificationToken" (
 );
 
 -- CreateTable
-CREATE TABLE "clefast"."Product" (
+CREATE TABLE "anj"."Product" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
@@ -60,10 +60,10 @@ CREATE TABLE "clefast"."Product" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "User_email_key" ON "clefast"."User"("email");
+CREATE UNIQUE INDEX "User_email_key" ON "anj"."User"("email");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "VerificationToken_identifier_key" ON "clefast"."VerificationToken"("identifier");
+CREATE UNIQUE INDEX "VerificationToken_identifier_key" ON "anj"."VerificationToken"("identifier");
 
 -- AddForeignKey
-ALTER TABLE "clefast"."Account" ADD CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "clefast"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "anj"."Account" ADD CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "anj"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
