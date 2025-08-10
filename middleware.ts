@@ -22,6 +22,10 @@ const publicRoutes = [
   "/libro-de-reclamaciones",
   "/promociones",
   "/catalogo",
+  "/ofertas",
+  "/preguntas-frecuentes",
+  "/formas-pago",
+  "/cambios-devoluciones",
   "/forgot-password", // Nueva ruta pública
   "/reset-password", // Nueva ruta pública
 ];
