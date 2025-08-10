@@ -2,7 +2,7 @@
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["public", "clefast"] // Just include the schema for this store
+  schemas  = ["public", "anj"] // Just include the schema for this store
 }
 
 generator client {
@@ -34,7 +34,7 @@ model User {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  @@schema("clefast") // This would be different for each store
+  @@schema("anj") // This would be different for each store
 }
 
 model Account {
@@ -56,7 +56,7 @@ model Account {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([provider, providerAccountId])
-  @@schema("clefast")
+  @@schema("anj")
 }
 
 model VerificationToken {
@@ -65,7 +65,7 @@ model VerificationToken {
   expires    DateTime
 
   @@id([identifier])
-  @@schema("clefast")
+  @@schema("anj")
 }
 
 model PasswordResetToken {
@@ -74,7 +74,7 @@ model PasswordResetToken {
   expires    DateTime
 
   @@id([identifier])
-  @@schema("clefast")
+  @@schema("anj")
 }
 
 // New model for user addresses
@@ -99,7 +99,7 @@ model Address {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  @@schema("clefast")
+  @@schema("anj")
 }
 
 // Enum for address types
@@ -108,12 +108,12 @@ enum AddressType {
   billing
   both
 
-  @@schema("clefast")
+  @@schema("anj")
 }
 
 enum Role {
   user
   admin
 
-  @@schema("clefast")
+  @@schema("anj")
 }
