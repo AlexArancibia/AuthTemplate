@@ -188,12 +188,13 @@ function CardSectionRenderer({ cardSection, allowMultiple = false }: { cardSecti
 }
 
 /* --------- Componente principal --------- */
-export default function FAQSection({
-  id = "cs_e3c1826c-3489",
-  metadata,
-  allowMultiple = false,
-}: FAQSectionProps = {}) {
+export default function FAQSection() {
   const { cardSections, loading, error } = useMainStore()
+  
+  // Default values for the page
+  const id = "cs_e3c1826c-3489"
+  const metadata: Partial<CardSectionMetadata> | undefined = undefined
+  const allowMultiple = false
 
   // Filtrar secciones por id o metadata (igual que tu referencia)
   const activeSections: CardSection[] = useMemo(() => {
