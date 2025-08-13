@@ -11,6 +11,8 @@ interface FilterDrawerProps {
   initialFilters: Filters
   minPrice: number
   maxPrice: number
+  selectedCurrencyId: string
+  acceptedCurrencies: any[]
 }
 
 interface Filters {
@@ -20,7 +22,7 @@ interface Filters {
   priceRange: [number, number]
 }
 
-export function FilterDrawer({ onFilterChange, initialFilters, minPrice, maxPrice }: FilterDrawerProps) {
+export function FilterDrawer({ onFilterChange, initialFilters, minPrice, maxPrice, selectedCurrencyId, acceptedCurrencies }: FilterDrawerProps) {
   const handleFilterChange = useCallback(
     (filters: Filters) => {
       onFilterChange(filters)
@@ -46,6 +48,8 @@ export function FilterDrawer({ onFilterChange, initialFilters, minPrice, maxPric
             initialFilters={initialFilters}
             minPrice={minPrice}
             maxPrice={maxPrice}
+            selectedCurrencyId={selectedCurrencyId}
+            acceptedCurrencies={acceptedCurrencies}
           />
         </div>
       </SheetContent>

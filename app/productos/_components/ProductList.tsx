@@ -319,6 +319,8 @@ function ProductListContent({
             initialFilters={filters}
             minPrice={calculatedMinPrice}
             maxPrice={calculatedMaxPrice}
+            selectedCurrencyId={selectedCurrencyId}
+            acceptedCurrencies={acceptedCurrencies}
           />
           <p className="text-sm text-muted-foreground hidden sm:block">
             Mostrando {paginatedProducts.length} de {sortedProducts.length} productos
