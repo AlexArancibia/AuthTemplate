@@ -63,14 +63,14 @@ function ProductsContent() {
         transition={{ duration: 0.5 }}
       >
         <div className="content-section text-center">
-          <motion.h2
+          <motion.h1
             className="text-white mb-2"
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.8 }}
           >
             Nuestros Productos
-          </motion.h2>
+          </motion.h1>
           <motion.p
             className="text-white/90 text-lg"
             initial={{ y: -10, opacity: 0 }}
@@ -118,7 +118,7 @@ export default function ProductsPage() {
       <main className="min-h-screen bg-white">
         <div className="container-section py-16 md:py-16 bg-[url('/fondoproduct.jpg')] bg-cover">
           <div className="content-section text-center">
-            <h2 className="text-white mb-2">Nuestros Productos</h2>
+            <h1 className="text-white mb-2">Nuestros Productos</h1>
             <p className="text-white/90 text-lg">Descubre nuestra línea completa de productos de limpieza industrial</p>
           </div>
         </div>

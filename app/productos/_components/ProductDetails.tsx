@@ -326,14 +326,14 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
               <ChevronRightIcon className="w-4 h-4 text-white/70" />
               <span className="text-white/90 font-medium">{product.title}</span>
             </motion.div>
-            <motion.h2
+            <motion.h1
               initial={{ y: -20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.3, duration: 0.5 }}
               className="text-white"
             >
               {product.title}
-            </motion.h2>
+            </motion.h1>
           </div>
         </div>
       </div>

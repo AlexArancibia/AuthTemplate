@@ -25,6 +25,9 @@ export default function BlogPage() {
     <main className="bg-gray-50">
       <div className="container-section py-8">
         <div className="content-section">
+          {/* H1 principal para la página */}
+          <h1 className="text-3xl md:text-4xl font-bold text-center mb-8 text-gray-900">Blog y Noticias</h1>
+          
           {/* Featured Post */}
           {featuredPost && <FeaturedContent content={featuredPost} />}
 

@@ -152,11 +152,11 @@ export default function CatalogSection({ id = "cs_9235fb0d-a4d0", metadata }: Ca
   return (
     <div>
       <div className="py-20 bg-[url('/fondoproduct.jpg')] bg-cover bg-center">
-        <motion.div className="relative text-center" {...fadeIn}>
-          <h2 className="text-2xl md:text-4xl font-semibold text-white">
-            {catalogSection.title || "Nuestro Catálogo"}
-          </h2>
-        </motion.div>
+                  <motion.div className="relative text-center" {...fadeIn}>
+            <h1 className="text-2xl md:text-4xl font-semibold text-white">
+              {catalogSection.title || "Nuestro Catálogo"}
+            </h1>
+          </motion.div>
       </div>
 
       <div className="container mx-auto px-4 py-16">

@@ -241,7 +241,7 @@ export function ContactForm({ id = "cs_4cc2f669-73d1", metadata }: ContactFormPr
       <section className="py-16 bg-gradient-to-br from-gray-50 to-white">
         <div className="container mx-auto px-4">
           <div className="text-center pb-12">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Contáctanos</h2>
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">Contáctanos</h1>
             <p className="text-base md:text-lg text-gray-600 max-w-2xl mx-auto">
               Estamos aquí para responder a tus preguntas y ayudarte con tus necesidades.
             </p>
@@ -268,7 +268,7 @@ export function ContactForm({ id = "cs_4cc2f669-73d1", metadata }: ContactFormPr
     <section className="py-8 md:py-16 bg-gradient-to-br from-gray-50 to-white">
       <div className="container mx-auto px-4">
         <div className="text-center pb-8 md:pb-12">
-          <motion.h2
+          <motion.h1
             variants={itemVariants}
             className="text-2xl md:text-4xl font-bold text-gray-900 mb-4"
             initial="hidden"
@@ -276,7 +276,7 @@ export function ContactForm({ id = "cs_4cc2f669-73d1", metadata }: ContactFormPr
             transition={{ duration: 0.3 }}
           >
             {contactSection.title}
-          </motion.h2>
+          </motion.h1>
           <motion.p
             variants={itemVariants}
             className="text-sm md:text-base lg:text-lg text-gray-600 max-w-2xl mx-auto"
