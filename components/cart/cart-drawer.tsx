@@ -144,7 +144,9 @@ export default function CartDrawer() {
                             item.variant.prices.length > 0 &&
                             formatCurrency(
                               item.variant.prices[0].price * item.quantity,
-                              item.variant.prices[0].currency?.code || "USD",
+                              item.variant.prices[0].currency ? 
+                                { ...item.variant.prices[0].currency, label: item.variant.prices[0].currency.code } : 
+                                { id: "usd", code: "USD", symbol: "$", name: "US Dollar", label: "USD" }
                             )}
                         </div>
                       </div>
