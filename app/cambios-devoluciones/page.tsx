@@ -74,11 +74,12 @@ function CardSectionRenderer({ cardSection }: { cardSection: CardSection }) {
   )
 }
 
-export default function ReturnsExchangesSection({
-  id = "cs_a01a8ea0-877c",
-  metadata,
-}: ReturnsExchangesSectionProps = {}) {
+export default function ReturnsExchangesSection() {
   const { cardSections, loading, error } = useMainStore()
+  
+  // Default values for the page
+  const id = "cs_a01a8ea0-877c"
+  const metadata: Partial<CardSectionMetadata> | undefined = undefined
 
   const activeSections = (() => {
     if (!cardSections?.length) return []
