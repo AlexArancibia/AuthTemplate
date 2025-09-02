@@ -6,6 +6,7 @@ import { type loginSchema, registerSchema } from "@/lib/zod"
 import bcrypt from "bcryptjs"
 import { AuthError } from "next-auth"
 import type { z } from "zod"
+import { nanoid } from "nanoid"
 
 export const loginAction = async (values: z.infer<typeof loginSchema>) => {
   try {
@@ -67,17 +68,56 @@ export const registerAction = async (values: z.infer<typeof registerSchema>) => 
       },
     })
 
-    await signIn("credentials", {
-      email: data.email,
-      password: data.password,
-      redirect: false,
+    // Eliminar token anterior si existe
+    await db.verificationToken.deleteMany({
+      where: { identifier: data.email },
     })
+    // Crear token de verificación y enviar email
+    const token = nanoid()
+    await db.verificationToken.create({
+      data: {
+        identifier: data.email,
+        token,
+        expires: new Date(Date.now() + 1000 * 60 * 60 * 24),
+      },
+    })
+    try {
+      const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/email/send-verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: data.email,
+          verificationToken: token,
+          verificationUrl: process.env.NEXTAUTH_URL || 'http://localhost:3000'
+        })
+      })
+      const contentType = response.headers.get('content-type')
+      let result
+      if (contentType && contentType.includes('application/json')) {
+        result = await response.json()
+      } else {
+        const text = await response.text()
+        throw new Error(`Respuesta no es JSON: ${text}`)
+      }
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Error enviando email de verificación")
+      }
+    } catch (error) {
+      // Log del error pero no fallar el proceso
+      console.error("Error enviando email de verificación:", error)
+    }
 
-    return { success: true }
+    // Avisar que la cuenta fue creada
+    return { success: true, message: "Cuenta creada correctamente. Revisa tu correo para verificarla." }
   } catch (error) {
     if (error instanceof AuthError) {
       return { error: error.cause?.err?.message }
     }
-    return { error: "error 500" }
+    if (error instanceof Error) {
+      return { error: error.message }
+    }
+    return { error: "Error desconocido" }
   }
 }
