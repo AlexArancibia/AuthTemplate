@@ -80,7 +80,14 @@ export default {
               })
             })
 
-            const result = await response.json()
+            const contentType = response.headers.get('content-type')
+            let result
+            if (contentType && contentType.includes('application/json')) {
+              result = await response.json()
+            } else {
+              const text = await response.text()
+              throw new Error(`Respuesta no es JSON: ${text}`)
+            }
 
             if (!response.ok || !result.success) {
               throw new Error(result.error || "Error enviando email de verificación")
