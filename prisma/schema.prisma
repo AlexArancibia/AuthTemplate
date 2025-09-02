@@ -2,7 +2,7 @@
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["public", "anj"] // Just include the schema for this store
+  schemas  = ["anj"] // Just include the schema for this store
 }
 
 generator client {
