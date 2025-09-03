@@ -41,8 +41,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ emai
 
     // Eliminar el campo password por seguridad antes de devolverlo
     const { password, ...safeUser } = user
+    // Agregar flag hasPassword
+    const userWithPasswordFlag = { ...safeUser, hasPassword: Boolean(password) }
 
-    return NextResponse.json(safeUser)
+    return NextResponse.json(userWithPasswordFlag)
   } catch (error: any) {
     console.error("Error obteniendo usuario por email:", error)
     return NextResponse.json({ message: "Error al obtener datos del usuario" }, { status: 500 })
