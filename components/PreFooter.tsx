@@ -134,14 +134,26 @@ export function PreFooterContact() {
 
             <div className="flex gap-4">
               {/* Ícono Facebook */}
-              <div className="w-9 h-9 bg-black rounded-full flex items-center justify-center">
+              <a
+                href={shopInfo?.facebookUrl || "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 bg-black rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors"
+                aria-label="Facebook"
+              >
                 <Facebook className="text-white w-6 h-6" />
-              </div>
+              </a>
 
               {/* Ícono Instagram */}
-              <div className="w-9 h-9 bg-black rounded-full flex items-center justify-center">
+              <a
+                href={shopInfo?.instagramUrl || "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 bg-black rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors"
+                aria-label="Instagram"
+              >
                 <Instagram className="text-white w-6 h-6" />
-              </div>
+              </a>
             </div>
             {/* <ul className="space-y-3 text-sm">
               <li className="flex items-center text-muted-foreground">
