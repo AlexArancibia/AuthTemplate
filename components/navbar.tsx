@@ -1,5 +1,6 @@
 "use client"
 
+// ...existing code...
 import type React from "react"
 
 import Link from "next/link"
@@ -28,14 +29,15 @@ import { useCurrencyStore } from "@/stores/currency"
 import { useCartStore } from "@/stores/cartStore"
 import { useCookieConsent } from "@/hooks/useCookieConsent"
 import CookieConsentDialog from "./CookieConsentDialog"
+import { useUserStore } from "@/stores/userStore"
 
 interface NavbarProps {
-  user?: {
-    name?: string | null
-    email?: string | null
-    image?: string | null
-    role?: string | null
-  } | null
+  // user?: {
+  //   name?: string | null
+  //   email?: string | null
+  //   image?: string | null
+  //   role?: string | null
+  // } | null
 }
 
 const navItems = [
@@ -45,8 +47,9 @@ const navItems = [
   { name: "Ofertas", href: "/ofertas" },
 ]
 
-export default function Navbar({ user }: NavbarProps) {
+export default function Navbar() {
   const pathname = usePathname()
+  const { currentUser } = useUserStore()
   const {
     fetchShopSettings,
     fetchProducts,
@@ -565,23 +568,23 @@ const {
             }
 
             {/* User Menu */}
-            {user ? (
+            {currentUser ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full p-0">
                     <Avatar className="h-7 w-7">
-                      <AvatarImage src={user.image || ""} alt={user.name || "Usuario"} />
-                      <AvatarFallback className="text-xs">{getInitials(user.name)}</AvatarFallback>
+                      <AvatarImage src={currentUser.image || ""} alt={currentUser.name || "Usuario"} />
+                      <AvatarFallback className="text-xs">{getInitials(currentUser.name)}</AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56 z-[999]" align="end" forceMount>
                   <div className="flex flex-col space-y-1 p-2">
-                    <p className="text-sm">{user.name}</p>
-                    <p className="text-xs text-muted-foreground">{user.email}</p>
-                    {user.role && (
+                    <p className="text-sm">{currentUser.name}</p>
+                    <p className="text-xs text-muted-foreground">{currentUser.email}</p>
+                    {currentUser.role && (
                       <p className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full w-fit">
-                        {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                        {currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)}
                       </p>
                     )}
                   </div>
@@ -645,7 +648,7 @@ const {
                       </Link>
                     </SheetClose>
                   ))}
-                  {!user && (
+                  {!currentUser && (
                     <SheetClose asChild>
                       <Link
                         href="/login"
