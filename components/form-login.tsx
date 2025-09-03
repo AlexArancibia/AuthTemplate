@@ -17,6 +17,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Separator } from "@/components/ui/separator"
 import ButtonSocial from "./button-social"
 import { Eye, EyeOff, Loader2, Github, Mail } from "lucide-react"
+import { useUserStore } from "@/stores/userStore"
 
 interface FormLoginProps {
   isVerified?: boolean;
@@ -45,6 +46,8 @@ const FormLogin = ({
     },
   })
 
+  const fetchUserByEmail = useUserStore((state) => state.fetchUserByEmail)
+
   async function onSubmit(values: z.infer<typeof loginSchema>) {
     startTransition(async () => {
       const response = await loginAction(values)
@@ -53,6 +56,8 @@ const FormLogin = ({
           description: response.error,
         })
       } else {
+        // Actualizar el usuario en el store global
+        await fetchUserByEmail(values.email)
         toast.success("Inicio de sesión exitoso", {
           description: `Redirigiendo a ${redirectTo}...`,
         })
