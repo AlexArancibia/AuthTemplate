@@ -44,7 +44,7 @@ export function Sponsors() {
                     <div className="aspect-[3/4] w-full bg-white flex items-center justify-center">
                         <div className="relative w-full h-full">
                         <Image
-                            src={card.imageUrl || "/placeholder.svg"}
+                            src={card.imageUrl || "/placeholder.png"}
                             alt={card.title || "Auspiciador"}
                             fill
                             className="object-contain"

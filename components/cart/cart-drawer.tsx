@@ -82,14 +82,14 @@ export default function CartDrawer() {
                       {/* Use variant imageUrl if available, otherwise use first product imageUrl */}
                       {item.variant.imageUrls ? (
                         <Image
-                          src={item.variant.imageUrls[0] || "/placeholder.svg"}
+                          src={item.variant.imageUrls[0] || "/placeholder.png"}
                           alt={item.product.title}
                           fill
                           className="object-cover"
                         />
                       ) : item.product.imageUrls && item.product.imageUrls.length > 0 ? (
                         <Image
-                          src={item.product.imageUrls[0] || "/placeholder.svg"}
+                          src={item.product.imageUrls[0] || "/placeholder.png"}
                           alt={item.product.title}
                           fill
                           className="object-cover"

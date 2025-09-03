@@ -133,7 +133,7 @@ export function ProductCard({
   const { timeLeft, isReleased } = useReleaseCountdown(product.releaseDate)
   const hasUpcomingRelease = timeLeft !== null
 
-  const image = product.imageUrls && product.imageUrls.length > 0 ? product.imageUrls[0] : "/placeholder.svg"
+  const image = product.imageUrls && product.imageUrls.length > 0 ? product.imageUrls[0] : "/placeholder.png"
 
   return (
     <div className="group relative bg-white rounded-none p-4 flex flex-col h-full">
@@ -165,7 +165,7 @@ export function ProductCard({
         <div className="relative aspect-square mb-4 bg-gray-50 rounded-xl overflow-hidden flex-shrink-0">
           
           <Image
-            src={image || "/placeholder.svg"}
+            src={image || "/placeholder.png"}
             alt={product.title}
             fill
             className="object-contain p-2"

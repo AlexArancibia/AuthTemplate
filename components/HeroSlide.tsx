@@ -121,9 +121,9 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
           {/* Fallback image mientras carga el video */}
           {bgImage && !isVideoReady && (
             <>
-              <div className="absolute inset-0 block lg:hidden">
-                <Image
-                  src={mobileBackgroundImage || "/placeholder.svg"}
+            <div className="absolute inset-0 block lg:hidden">
+              <Image
+                src={mobileBackgroundImage || "/placeholder.png"}
                   alt={title || "Background"}
                   fill
                   className={backgroundImageClasses}
@@ -134,7 +134,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
 
               <div className="absolute inset-0 hidden lg:block">
                 <Image
-                  src={backgroundImage || "/placeholder.svg"}
+                  src={backgroundImage || "/placeholder.png"}
                   alt={title || "Background"}
                   fill
                   className={backgroundImageClasses}
@@ -177,7 +177,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
           <>
             <div className="absolute inset-0 block lg:hidden">
               <Image
-                src={mobileBackgroundImage || "/placeholder.svg"}
+                src={mobileBackgroundImage || "/placeholder.png"}
                 alt={title || "Background"}
                 fill
                 className="object-cover object-center"
@@ -189,7 +189,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
 
             <div className="absolute inset-0 hidden lg:block">
               <Image
-                src={backgroundImage || "/placeholder.svg"}
+                src={backgroundImage || "/placeholder.png"}
                 alt={title || "Background"}
                 fill
                 className="object-cover object-center"
