@@ -54,7 +54,7 @@ interface UserPasswordFormProps {
 
 export function UserPasswordForm({ user }: UserPasswordFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [hasPassword, setHasPassword] = useState(!!user.password)
+  const [hasPassword, setHasPassword] = useState(!!user.hasPassword)
 
   // Formulario para cambiar contraseña
   const changeForm = useForm<PasswordChangeValues>({
