@@ -58,6 +58,7 @@ export interface Address {
 export interface UserWithRelations extends User {
   accounts?: Account[]
   addresses?: Address[]
+  hasPassword?: boolean // Flag para saber si el usuario tiene contraseña
 }
 
 // Tipo para actualización de usuario
