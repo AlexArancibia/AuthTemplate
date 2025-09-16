@@ -193,7 +193,78 @@ function ProductListContent({
       if (!variantMatches) {
         return false
       }
+      
+      // Función robusta para obtener el rango de precios de un producto
+      const getProductPriceRange = (product: Product) => {
+        // Validar que el producto tenga variantes
+        if (!product.variants || product.variants.length === 0) {
+          return { productMin: null, productMax: null }
+        }
 
+        // Validar que exista moneda por defecto
+        if (!defaultCurrency?.id) {
+          return { productMin: null, productMax: null }
+        }
+
+        // Extraer todos los precios válidos de todas las variantes
+        const validPrices: number[] = []
+        
+        for (const variant of product.variants) {
+          // Verificar que la variante tenga precios
+          if (!variant.prices || variant.prices.length === 0) {
+            continue
+          }
+
+          // Buscar el precio para la moneda por defecto
+          const priceEntry = variant.prices.find(p => p.currencyId === defaultCurrency.id)
+          
+          if (priceEntry?.price) {
+            // Convertir string a número
+            const price = parseFloat(priceEntry.price)
+            
+            // Validar que el precio sea un número válido y mayor que 0
+            if (!isNaN(price) && isFinite(price) && price > 0) {
+              validPrices.push(price)
+            }
+          }
+        }
+
+        // Si no hay precios válidos, devolver null
+        if (validPrices.length === 0) {
+          return { productMin: null, productMax: null }
+        }
+
+        // Calcular y devolver el rango
+        const productMin = Math.min(...validPrices)
+        const productMax = Math.max(...validPrices)
+        
+        return { productMin, productMax }
+      }
+      
+      // Uso:
+      const { productMin, productMax } = getProductPriceRange(product)
+      
+      // Debug: mostrar valores en consola
+      console.log(`Producto: ${product.title}`)
+      console.log(`  productMin: ${productMin}`)
+      console.log(`  productMax: ${productMax}`)
+      console.log(`  priceRange: [${filters.priceRange[0]}, ${filters.priceRange[1]}]`)
+      
+      // Si no hay precios válidos, no se excluye el producto
+      if (productMin === null || productMax === null) {
+        console.log(`  ⚠️ Producto sin precios válidos - INCLUIDO`)
+        return true
+      }
+      
+      if (( productMin < filters.priceRange[0] &&  productMax < filters.priceRange[0] ) ||  ( productMin > filters.priceRange[1] &&  productMax > filters.priceRange[1] ) ) {
+        console.log(`  ❌ Producto EXCLUIDO - no hay solapamiento`)
+        return false
+      } else {
+        console.log(`  ✅ Producto INCLUIDO - hay solapamiento`)
+      }
+      return true
+
+      /*  codigo original
       // Filter by price
       const productPrice = product.variants[0].prices.find((price) => price.currencyId === defaultCurrency?.id)?.price
       if (productPrice && (productPrice < filters.priceRange[0] || productPrice > filters.priceRange[1])) {
@@ -201,6 +272,7 @@ function ProductListContent({
       }
 
       return true
+      */
     })
   }, [products, filters, defaultCurrency])
 
