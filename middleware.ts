@@ -16,6 +16,7 @@ const publicRoutes = [
   "/api/email/send-to-client",
   "/api/email/send-to-admin",
   "/api/email/send-verification", // Esta ya estaba, es para la verificación de email
+  "/api/email/contact-form", // Permitir envío del formulario de contacto
   "/api/payments/culqui",
   "/terminos-y-condiciones",
   "/politica-de-privacidad",

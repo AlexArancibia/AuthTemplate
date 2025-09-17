@@ -60,7 +60,7 @@ const itemVariants = {
 }
 
 // Función para verificar coincidencia de metadata
-function matchesMetadata(
+function  matchesMetadata(
   sectionMetadata: CardSectionMetadata | null | undefined,
   searchMetadata: Partial<CardSectionMetadata>,
 ): boolean {
@@ -86,6 +86,7 @@ function matchesMetadata(
 
 export function ContactForm({ id = "cs_4cc2f669-73d1", metadata }: ContactFormProps = {}) {
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showTermsError, setShowTermsError] = useState(false)
   const { shopSettings, cardSections, loading, error } = useMainStore()
   const { sendContactForm } = useEmailStore()
 
@@ -140,14 +141,21 @@ export function ContactForm({ id = "cs_4cc2f669-73d1", metadata }: ContactFormPr
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitted },
     reset,
     setValue,
     watch,
+    clearErrors,
   } = useForm<FormValues>({
     resolver: zodResolver(formSchema),
+    mode: "onSubmit",
     defaultValues: {
+      name: "",
+      email: "",
+      phone: "",
+      company: "",
       subject: "",
+      message: "",
       acceptTerms: false,
     },
   })
@@ -156,6 +164,15 @@ export function ContactForm({ id = "cs_4cc2f669-73d1", metadata }: ContactFormPr
 
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true)
+    
+    // Si no acepta términos, mostrar error y no enviar
+    if (!data.acceptTerms) {
+      setShowTermsError(true)
+      setIsSubmitting(false)
+      return
+    }
+    
+    setShowTermsError(false)
 
     try {
       // Excluir acceptTerms del envío ya que es solo para validación
@@ -165,6 +182,8 @@ export function ContactForm({ id = "cs_4cc2f669-73d1", metadata }: ContactFormPr
         description: "Gracias por contactarnos. Te responderemos pronto.",
       })
       reset()
+      clearErrors()
+      setShowTermsError(false)
     } catch (error) {
       console.error("Error al enviar el formulario:", error)
       toast.error("Error al enviar el formulario", {
@@ -181,6 +200,11 @@ export function ContactForm({ id = "cs_4cc2f669-73d1", metadata }: ContactFormPr
 
   const handleTermsChange = (checked: boolean) => {
     setValue("acceptTerms", checked, { shouldValidate: true })
+    if (checked) {
+      setShowTermsError(false)
+    } else {
+      setShowTermsError(true)
+    }
   }
 
   // Construir dirección desde shopSettings
@@ -418,7 +442,7 @@ export function ContactForm({ id = "cs_4cc2f669-73d1", metadata }: ContactFormPr
                     <Label htmlFor="subject" className="text-sm">
                       Asunto
                     </Label>
-                    <Select onValueChange={handleSubjectChange} defaultValue="">
+                    <Select onValueChange={handleSubjectChange} value={watch("subject")}>
                       <SelectTrigger id="subject" className="text-sm">
                         <SelectValue placeholder="Selecciona un asunto" />
                       </SelectTrigger>
@@ -473,7 +497,7 @@ export function ContactForm({ id = "cs_4cc2f669-73d1", metadata }: ContactFormPr
                         </a>
                         .
                       </Label>
-                      {errors.acceptTerms && <p className="text-xs text-red-500 mt-1">{errors.acceptTerms.message}</p>}
+                      {errors.acceptTerms && showTermsError && <p className="text-xs text-red-500 mt-1">{errors.acceptTerms.message}</p>}
                     </div>
                   </motion.div>
 
