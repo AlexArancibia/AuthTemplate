@@ -220,7 +220,7 @@ function ProductListContent({
           
           if (priceEntry?.price) {
             // Convertir string a número
-            const price = parseFloat(priceEntry.price)
+            const price = parseFloat(priceEntry.price.toString())
             
             // Validar que el precio sea un número válido y mayor que 0
             if (!isNaN(price) && isFinite(price) && price > 0) {
@@ -244,23 +244,23 @@ function ProductListContent({
       // Uso:
       const { productMin, productMax } = getProductPriceRange(product)
       
-      // Debug: mostrar valores en consola
+      /*// Debug: mostrar valores en consola
       console.log(`Producto: ${product.title}`)
       console.log(`  productMin: ${productMin}`)
       console.log(`  productMax: ${productMax}`)
       console.log(`  priceRange: [${filters.priceRange[0]}, ${filters.priceRange[1]}]`)
-      
+      */
       // Si no hay precios válidos, no se excluye el producto
       if (productMin === null || productMax === null) {
-        console.log(`  ⚠️ Producto sin precios válidos - INCLUIDO`)
+        //console.log(`  ⚠️ Producto sin precios válidos - INCLUIDO`)
         return true
       }
       
       if (( productMin < filters.priceRange[0] &&  productMax < filters.priceRange[0] ) ||  ( productMin > filters.priceRange[1] &&  productMax > filters.priceRange[1] ) ) {
-        console.log(`  ❌ Producto EXCLUIDO - no hay solapamiento`)
+        //console.log(`  ❌ Producto EXCLUIDO - no hay solapamiento`)
         return false
       } else {
-        console.log(`  ✅ Producto INCLUIDO - hay solapamiento`)
+        //console.log(`  ✅ Producto INCLUIDO - hay solapamiento`)
       }
       return true
 
