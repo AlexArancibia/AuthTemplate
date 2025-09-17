@@ -227,11 +227,18 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
         body: JSON.stringify({ ...formData, shopSettings }),
       })
 
-      const result: EmailResponse = await response.json()
+      const text = await response.text()
+      let result: EmailResponse
+      try {
+        result = JSON.parse(text)
+      } catch (e) {
+        result = { success: false, message: "El servidor no devolvió JSON válido" }
+      }
 
       if (!response.ok) {
-        throw new Error(result.message || "Error enviando formulario de contacto")
+        throw new Error(result.message || "El servidor respondió con un error")
       }
+
 
       // Agregar al historial
       get().addToHistory({
@@ -461,3 +468,5 @@ export const useEmailStats = () => {
 
 // Exportar tipos para uso en componentes
 export type { ContactFormData, EmailResponse, EmailHistoryItem, ShopSettings }
+
+

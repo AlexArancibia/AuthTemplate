@@ -5,7 +5,14 @@ import type { ShopSettings } from "@/types/store"
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    const rawBody = await request.text()
+    let body: any = {}
+    try {
+      body = rawBody ? JSON.parse(rawBody) : {}
+    } catch (parseErr) {
+      console.error("[API contact-form] Error al parsear JSON:", parseErr)
+      return NextResponse.json({ error: "El cuerpo de la solicitud no es JSON válido" }, { status: 400 })
+    }
     const { name, email, phone, subject, message, shopSettings } = body as {
       name: string
       email: string
@@ -16,10 +23,20 @@ export async function POST(request: NextRequest) {
     }
 
     if (!name || !email || !subject || !message) {
-      return NextResponse.json({ error: "Todos los campos requeridos deben ser completados" }, { status: 400 })
+      return NextResponse.json({ error: "Faltan campos requeridos: nombre, email, asunto y mensaje" }, { status: 400 })
     }
 
     const formData = { name, email, phone, subject, message }
+
+    const smtpSummary = {
+      host: process.env.SMTP_HOST || "(no definido)",
+      port: process.env.SMTP_PORT || "(no definido)",
+      secure: process.env.SMTP_SECURE || "(no definido)",
+      hasUser: Boolean(process.env.SMTP_USER),
+      hasPass: Boolean(process.env.SMTP_PASS),
+      fromEmail: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || "(no definido)",
+      adminEmail: process.env.ADMIN_EMAIL || process.env.SMTP_USER || "(no definido)",
+    }
 
     // Enviar email al administrador
     const adminEmailResult = await sendEmailToAdmin({
@@ -41,7 +58,7 @@ export async function POST(request: NextRequest) {
       clientMessageId: clientEmailResult.messageId,
     })
   } catch (error) {
-    console.error("Error procesando formulario de contacto:", error)
-    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 })
+    const message = error instanceof Error ? error.message : "Error interno del servidor"
+    return NextResponse.json({ error: `Fallo en el envío de correos: ${message}` }, { status: 500 })
   }
 }
