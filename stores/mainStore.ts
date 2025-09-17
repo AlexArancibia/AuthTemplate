@@ -286,7 +286,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<Collection[]>(`/categories?storeId=${STORE_ID}`)
+      const response = await apiClient.get<Collection[]>(`/collections?storeId=${STORE_ID}`)
       set({
         collections: response.data,
         loading: false,
@@ -630,11 +630,8 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
   // Método fetchShopSettings mejorado con caché en cookies
   fetchShopSettings: async () => {
-    console.log("[STORE] Iniciando fetchShopSettings")
-
     // Verificar si estamos en el cliente
     if (typeof window === "undefined") {
-      console.log("[STORE] Ejecutando en el servidor, no se pueden usar cookies")
       set({ loading: true, error: null })
       try {
         if (!STORE_ID) {
@@ -666,7 +663,6 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
       // Verificar si la caché aún es válida (menos de 10 minutos)
       if (now - cachedTimestamp < SHOP_SETTINGS_CACHE_DURATION) {
-        console.log("[STORE] Usando datos de shop settings desde cookies (caché válida)")
         try {
           const cachedData = JSON.parse(cachedDataStr)
           set({
@@ -676,14 +672,9 @@ export const useMainStore = create<MainStore>((set, get) => ({
           })
           return cachedData
         } catch (e) {
-          console.error("[STORE] Error al parsear datos de la cookie:", e)
           // Si hay un error al parsear, continuamos con la solicitud normal
         }
-      } else {
-        console.log("[STORE] Caché de shop settings expirada, solicitando nuevos datos")
       }
-    } else {
-      console.log("[STORE] No se encontraron datos en caché para shop settings")
     }
 
     // Si no hay caché válida, hacemos la solicitud
@@ -693,7 +684,6 @@ export const useMainStore = create<MainStore>((set, get) => ({
         throw new Error("No store ID provided in environment variables")
       }
 
-      console.log("[STORE] Realizando fetch de shop settings")
       const response = await apiClient.get<ShopSettings>(`/shop-settings/store/${STORE_ID}`)
 
       // Guardar en el store
@@ -707,15 +697,12 @@ export const useMainStore = create<MainStore>((set, get) => ({
       try {
         Cookies.set(SHOP_SETTINGS_COOKIE, JSON.stringify(response.data), { expires: 1 / 144 }) // 1/144 de un día = 10 minutos
         Cookies.set(SHOP_SETTINGS_TIMESTAMP_COOKIE, now.toString(), { expires: 1 / 144 })
-        console.log("[STORE] Shop settings guardados en cookies")
       } catch (e) {
-        console.error("[STORE] Error al guardar en cookies:", e)
         // Continuamos aunque haya error al guardar en cookies
       }
 
       return response.data
     } catch (error) {
-      console.error("[STORE] Error al obtener shop settings:", error)
       set({ error: "Failed to fetch shop settings", loading: false })
       throw error
     }
@@ -984,7 +971,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
         apiClient.get(`/categories/store/${STORE_ID}`),
         apiClient.get(`/products/store/${STORE_ID}`),
         apiClient.get(`/product-variants/store/${STORE_ID}`),
-        apiClient.get(`/collections/store/${STORE_ID}`),
+        apiClient.get(`/collections?storeId=${STORE_ID}`),
         apiClient.get(`/orders/store/${STORE_ID}`),
         apiClient.get(`/customers/store/${STORE_ID}`),
         apiClient.get(`/coupons/store/${STORE_ID}`),
@@ -1055,9 +1042,8 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
           Cookies.set(SHOP_SETTINGS_COOKIE, JSON.stringify(shopSettingsData), { expires: 1 / 144 }) // 10 minutos
           Cookies.set(SHOP_SETTINGS_TIMESTAMP_COOKIE, now.toString(), { expires: 1 / 144 })
-          console.log("[STORE] Shop settings actualizados en cookies durante refreshData")
         } catch (e) {
-          console.error("[STORE] Error al actualizar cookies en refreshData:", e)
+          // Error al actualizar cookies
         }
       }
     } catch (error) {

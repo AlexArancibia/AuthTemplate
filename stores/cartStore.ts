@@ -25,7 +25,6 @@ export const useCartStore = create<CartStore>()(
       items: [],
 
       addItem: (product, variant, quantity) => {
-        console.log("[CART] Adding item to cart:", product.title, variant.title, quantity)
         set((state) => {
           const existingItem = state.items.find((item) => item.variant.id === variant.id)
           if (existingItem) {
@@ -41,21 +40,18 @@ export const useCartStore = create<CartStore>()(
       },
 
       removeItem: (variantId) => {
-        console.log("[CART] Removing item from cart:", variantId)
         set((state) => ({
           items: state.items.filter((item) => item.variant.id !== variantId),
         }))
       },
 
       updateQuantity: (variantId, quantity) => {
-        console.log("[CART] Updating quantity:", variantId, quantity)
         set((state) => ({
           items: state.items.map((item) => (item.variant.id === variantId ? { ...item, quantity } : item)),
         }))
       },
 
       clearCart: () => {
-        console.log("[CART] Clearing cart")
         set({ items: [] })
       },
 
@@ -65,7 +61,6 @@ export const useCartStore = create<CartStore>()(
           const price = item.variant.prices && item.variant.prices.length > 0 ? item.variant.prices[0].price : 0
           return total + price * item.quantity
         }, 0)
-        console.log("[CART] Calculated total:", total)
         return total
       },
 

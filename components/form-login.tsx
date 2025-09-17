@@ -36,6 +36,7 @@ const FormLogin = ({
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectTo = searchParams.get('redirect') || '/dashboard'
+  const fromLogin = searchParams.get('fromLogin')
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -56,7 +57,13 @@ const FormLogin = ({
         toast.success("Inicio de sesión exitoso", {
           description: `Redirigiendo a ${redirectTo}...`,
         })
-        router.push(redirectTo)
+        
+        // Construir la URL de redirección preservando el parámetro fromLogin
+        const redirectUrl = fromLogin === 'true' 
+          ? `${redirectTo}?fromLogin=true`
+          : redirectTo
+        
+        router.push(redirectUrl)
       }
     })
   }

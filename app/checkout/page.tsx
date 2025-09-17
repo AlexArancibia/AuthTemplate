@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
 import { useCartStore } from "@/stores/cartStore"
 import { useEmailStore } from "@/stores/emailStore"
@@ -25,6 +25,40 @@ import Image from "next/image"
 import { useMainStore } from "@/stores/mainStore"
 import { AddressType } from "@/types/auth"
 
+// Helper function to safely get price from variant (copied from order-summary.tsx)
+const getSafePrice = (variant: any): number => {
+  try {
+    if (!variant) {
+      console.warn("Variant is undefined or null")
+      return 0
+    }
+
+    if (!variant.prices || !Array.isArray(variant.prices)) {
+      console.warn("Variant prices is undefined or not an array:", variant)
+      return 0
+    }
+
+    if (variant.prices.length === 0) {
+      console.warn("Variant prices array is empty:", variant)
+      return 0
+    }
+
+    const price = variant.prices[0]?.price
+    
+    // Convert to number and validate
+    const numericPrice = Number(price)
+    if (isNaN(numericPrice) || numericPrice < 0) {
+      console.warn("Invalid price value:", price, "for variant:", variant)
+      return 0
+    }
+
+    return numericPrice
+  } catch (error) {
+    console.error("Error getting price from variant:", error, variant)
+    return 0
+  }
+}
+
 const STEPS = {
   CART_REVIEW: 0,
   CUSTOMER_INFO: 1,
@@ -37,6 +71,7 @@ export default function CheckoutPage() {
   const { shopSettings, shippingMethods, paymentProviders, coupons, couponCode, createOrder } = useMainStore()
   const { currentUser, loading: userLoading, fetchUserByEmail, createAddress } = useUserStore()
   const { sendOrderEmails } = useEmailStore()
+  const searchParams = useSearchParams()
 
   const [session, setSession] = useState<any>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -45,7 +80,14 @@ export default function CheckoutPage() {
   const [selectedShippingAddressId, setSelectedShippingAddressId] = useState<string | null>(null)
   const [selectedBillingAddressId, setSelectedBillingAddressId] = useState<string | null>(null)
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null)
-  const [currentStep, setCurrentStep] = useState(STEPS.CART_REVIEW)
+  
+  // Determinar el paso inicial basado en si viene del login
+  const getInitialStep = () => {
+    const fromLogin = searchParams.get('fromLogin')
+    return fromLogin === 'true' ? STEPS.CUSTOMER_INFO : STEPS.CART_REVIEW
+  }
+  
+  const [currentStep, setCurrentStep] = useState(getInitialStep())
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [pageLoading, setPageLoading] = useState(true)
@@ -94,6 +136,7 @@ export default function CheckoutPage() {
 
 
   const applyCoupon = () => {
+    
     if (!couponCode || !coupons || coupons.length === 0) {
       setAppliedCoupon(null)
       return
@@ -107,12 +150,21 @@ export default function CheckoutPage() {
       return
     }
 
+
     // Verify coupon is active and within date range
     const now = new Date()
     const startDate = new Date(foundCoupon.startDate)
     const endDate = new Date(foundCoupon.endDate)
 
     if (!foundCoupon.isActive || now < startDate || now > endDate) {
+      console.log("❌ Coupon not active or expired:", {
+        isActive: foundCoupon.isActive,
+        now: now.toISOString(),
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        beforeStart: now < startDate,
+        afterEnd: now > endDate
+      })
       toast.error("El cupón no está disponible o ha expirado")
       setAppliedCoupon(null)
       return
@@ -121,6 +173,10 @@ export default function CheckoutPage() {
     // Verify minimum purchase if specified
     const subtotal = getTotal()
     if (foundCoupon.minPurchase && subtotal < foundCoupon.minPurchase) {
+      console.log("❌ Minimum purchase not met:", {
+        minPurchase: foundCoupon.minPurchase,
+        subtotal: subtotal
+      })
       toast.error(`El cupón requiere un mínimo de compra de ${foundCoupon.minPurchase}`)
       setAppliedCoupon(null)
       return
@@ -128,43 +184,81 @@ export default function CheckoutPage() {
 
     // Verify max uses if specified
     if (foundCoupon.maxUses && foundCoupon.usedCount >= foundCoupon.maxUses) {
+      console.log("❌ Max uses reached:", {
+        maxUses: foundCoupon.maxUses,
+        usedCount: foundCoupon.usedCount
+      })
       toast.error("Este cupón ha alcanzado su límite de usos")
       setAppliedCoupon(null)
       return
     }
 
+    
     setAppliedCoupon(foundCoupon)
     toast.success(`Cupón "${foundCoupon.code}" aplicado correctamente`)
   }
 
   const calculateDiscounts = () => {
+    
     if (!appliedCoupon) return 0
 
+    // Si el cupón no tiene restricciones específicas, se aplica a todo el carrito
+    const hasSpecificRestrictions = (
+      appliedCoupon.applicableProducts?.length > 0 ||
+      appliedCoupon.applicableCategories?.length > 0 ||
+      appliedCoupon.applicableCollections?.length > 0
+    )
+
+    if (!hasSpecificRestrictions) {
+      // Cupón para todo el carrito
+      const subtotal = getTotal()
+      if (appliedCoupon.type === "PERCENTAGE") {
+        return subtotal * (Number(appliedCoupon.value) / 100)
+      } else if (appliedCoupon.type === "FIXED_AMOUNT") {
+        return Math.min(Number(appliedCoupon.value), subtotal)
+      }
+    }
+
+    // Cupón con restricciones específicas
+    const isFeaturedCoupon = appliedCoupon.code === "TEST4"
+    
+    
     return items.reduce((totalDiscount, item) => {
+      
       const isProductEligible = appliedCoupon.applicableProducts?.some(
         (prod: any) => prod.id === item.product.id
       )
       
       const isCategoryEligible = item.product.categories?.some(
         cat => appliedCoupon.applicableCategories?.some(
-          (          coupCat: { id: string }) => coupCat.id === cat.id
+          (coupCat: { id: string }) => coupCat.id === cat.id
         )
       )
       
       const isCollectionEligible = item.product.collections?.some(
         col => appliedCoupon.applicableCollections?.some(
-          (          coupCol: { id: string }) => coupCol.id === col.id
+          (coupCol: { id: string }) => coupCol.id === col.id
         )
       )
 
       const isEligible = isProductEligible || isCategoryEligible || isCollectionEligible
+      
+      if (isFeaturedCoupon) {
+        console.log(`  Elegibilidad: Producto=${isProductEligible}, Categoría=${isCategoryEligible}, Colección=${isCollectionEligible} = ${isEligible}`)
+      }
 
       if (isEligible) {
-        if (appliedCoupon.type === "PERCENTAGE") {
-          return totalDiscount + (Number(item.variant.prices[0].price) * (Number(appliedCoupon.value) / 100) * item.quantity)
-        } else if (appliedCoupon.type === "FIXED_AMOUNT") {
-          return totalDiscount + Number(appliedCoupon.value) * item.quantity
+        // Usar la función segura para obtener el precio
+        const itemPrice = getSafePrice(item.variant)
+        
+        const discount = appliedCoupon.type === "PERCENTAGE" 
+          ? (itemPrice * (Number(appliedCoupon.value) / 100) * item.quantity)
+          : Number(appliedCoupon.value) * item.quantity
+        
+        if (isFeaturedCoupon) {
+          console.log(`  ✅ Descuento aplicado: ${discount}`)
         }
+        return totalDiscount + discount
       }
       return totalDiscount
     }, 0)
@@ -195,12 +289,10 @@ export default function CheckoutPage() {
   // Fetch user session and data
   useEffect(() => {
     const fetchSessionAndUser = async () => {
-      console.log("🔍 Starting to fetch session and user data...")
       try {
         // For client components, we need to use a different approach to get the session
         // Instead of importing auth directly, we'll make a fetch request to an API endpoint
         const response = await fetch("/api/auth/session")
-        console.log("📡 Session API response status:", response.status)
 
         if (!response.ok) {
           throw new Error(`Failed to fetch session: ${response.status}`)
@@ -1044,31 +1136,62 @@ if (taxesIncluded) {
 }
 
   const prepareLineItems = () => {
-    return items.map((item) => {
-      const isProductEligible = appliedCoupon?.applicableProducts?.some(
-        (prod: any) => prod.id === item.product.id
-      )
-      
-      const isCategoryEligible = item.product.categories?.some(
-        cat => appliedCoupon?.applicableCategories?.some(
-          (          coupCat: { id: string }) => coupCat.id === cat.id
-        )
-      )
-      
-      const isCollectionEligible = item.product.collections?.some(
-        col => appliedCoupon?.applicableCollections?.some(
-          (          coupCol: { id: string }) => coupCol.id === col.id
-        )
-      )
+    if (!appliedCoupon) {
+      return items.map((item) => ({
+        variantId: item.variant.id,
+        title: `${item.product.title} - ${item.variant.title}`,
+        price: item.variant.prices[0].price,
+        quantity: item.quantity,
+        totalDiscount: 0,
+      }))
+    }
 
-      const isEligible = isProductEligible || isCategoryEligible || isCollectionEligible
-      
+    // Si el cupón no tiene restricciones específicas, se aplica a todo el carrito
+    const hasSpecificRestrictions = (
+      appliedCoupon.applicableProducts?.length > 0 ||
+      appliedCoupon.applicableCategories?.length > 0 ||
+      appliedCoupon.applicableCollections?.length > 0
+    )
+
+    return items.map((item) => {
       let discount = 0
-      if (isEligible && appliedCoupon) {
+      
+      if (!hasSpecificRestrictions) {
+        // Cupón para todo el carrito - distribuir el descuento proporcionalmente
+        const itemTotal = Number(item.variant.prices[0].price) * item.quantity
+        const subtotal = getTotal()
+        
         if (appliedCoupon.type === "PERCENTAGE") {
-          discount = (Number(item.variant.prices[0].price) * (Number(appliedCoupon.value) / 100) * item.quantity)
+          discount = itemTotal * (Number(appliedCoupon.value) / 100)
         } else if (appliedCoupon.type === "FIXED_AMOUNT") {
-          discount = Number(appliedCoupon.value) * item.quantity
+          discount = (itemTotal / subtotal) * Math.min(Number(appliedCoupon.value), subtotal)
+        }
+      } else {
+        // Cupón con restricciones específicas
+        const isProductEligible = appliedCoupon.applicableProducts?.some(
+          (prod: any) => prod.id === item.product.id
+        )
+        
+        const isCategoryEligible = item.product.categories?.some(
+          cat => appliedCoupon.applicableCategories?.some(
+            (coupCat: { id: string }) => coupCat.id === cat.id
+          )
+        )
+        
+        const isCollectionEligible = item.product.collections?.some(
+          col => appliedCoupon.applicableCollections?.some(
+            (coupCol: { id: string }) => coupCol.id === col.id
+          )
+        )
+
+        const isEligible = isProductEligible || isCategoryEligible || isCollectionEligible
+        
+        if (isEligible) {
+          if (appliedCoupon.type === "PERCENTAGE") {
+            discount = (Number(item.variant.prices[0].price) * (Number(appliedCoupon.value) / 100) * item.quantity)
+          } else if (appliedCoupon.type === "FIXED_AMOUNT") {
+            discount = Number(appliedCoupon.value) * item.quantity
+          }
         }
       }
 
