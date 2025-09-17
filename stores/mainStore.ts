@@ -286,7 +286,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<Collection[]>(`/categories?storeId=${STORE_ID}`)
+      const response = await apiClient.get<Collection[]>(`/collections?storeId=${STORE_ID}`)
       set({
         collections: response.data,
         loading: false,
@@ -984,7 +984,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
         apiClient.get(`/categories/store/${STORE_ID}`),
         apiClient.get(`/products/store/${STORE_ID}`),
         apiClient.get(`/product-variants/store/${STORE_ID}`),
-        apiClient.get(`/collections/store/${STORE_ID}`),
+        apiClient.get(`/collections?storeId=${STORE_ID}`),
         apiClient.get(`/orders/store/${STORE_ID}`),
         apiClient.get(`/customers/store/${STORE_ID}`),
         apiClient.get(`/coupons/store/${STORE_ID}`),

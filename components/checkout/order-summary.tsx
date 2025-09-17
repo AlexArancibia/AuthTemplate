@@ -38,12 +38,15 @@ const getSafePrice = (variant: any): number => {
     }
 
     const price = variant.prices[0]?.price
-    if (typeof price !== "number" || isNaN(price)) {
+    
+    // Convert to number and validate
+    const numericPrice = Number(price)
+    if (isNaN(numericPrice) || numericPrice < 0) {
       console.warn("Invalid price value:", price, "for variant:", variant)
       return 0
     }
 
-    return price
+    return numericPrice
   } catch (error) {
     console.error("Error getting price from variant:", error, variant)
     return 0
@@ -99,10 +102,10 @@ export function OrderSummary({
   }
 
   // Determinar si mostrar mensaje de cupón y su estilo
-  const showCouponMessage = couponCode && (totalDiscounts > 0 || inputValue)
+  const showCouponMessage = couponCode && couponCode.trim() !== ""
   const couponMessageStyle = totalDiscounts > 0 
     ? "text-green-600" 
-    : "text-gray-500"
+    : "text-red-500"
 
   return (
     <div className="bg-white rounded-xl shadow-md border border-slate-100 p-6 sticky top-24">
@@ -158,7 +161,7 @@ export function OrderSummary({
           <p className={`mt-1 text-sm ${couponMessageStyle}`}>
             {totalDiscounts > 0 
               ? `Cupón aplicado: ${couponCode}` 
-              : "Cupón inválido"}
+              : "Cupón no válido o no aplicable"}
           </p>
         )}
       </div>
