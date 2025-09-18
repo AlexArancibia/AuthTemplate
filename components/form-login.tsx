@@ -63,7 +63,9 @@ const FormLogin = ({
           ? `${redirectTo}?fromLogin=true`
           : redirectTo
         
-        router.push(redirectUrl)
+        // Usar window.location.href para forzar la actualización del header
+        // Esto asegura que la sesión del servidor se actualice y el header muestre el estado correcto
+        window.location.href = redirectUrl
       }
     })
   }
