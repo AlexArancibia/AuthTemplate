@@ -169,9 +169,9 @@ const generatePasswordResetEmailHTML = (resetLink: string, userName: string) => 
             .button {
                 display: inline-block;
                 background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-                color: white;
+                color: white !important;
                 padding: 16px 32px;
-                text-decoration: none;
+                text-decoration: none !important;
                 border-radius: 12px;
                 font-weight: 600;
                 font-size: 16px;
@@ -179,6 +179,15 @@ const generatePasswordResetEmailHTML = (resetLink: string, userName: string) => 
                 transition: all 0.3s ease;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
+            }
+            .button:link {
+                color: white !important;
+            }
+            .button:visited {
+                color: white !important;
+            }
+            .button:hover {
+                color: white !important;
             }
             .button:hover {
                 transform: translateY(-2px);
@@ -207,8 +216,8 @@ const generatePasswordResetEmailHTML = (resetLink: string, userName: string) => 
                 border: 1px solid #d1d5db;
             }
             .warning {
-                background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-                border-left: 4px solid #f59e0b;
+                background: #dcfce7;
+                border-left: 4px solid #22c55e;
                 border-radius: 12px;
                 padding: 20px;
                 margin: 25px 0;
@@ -217,13 +226,13 @@ const generatePasswordResetEmailHTML = (resetLink: string, userName: string) => 
                 display: flex;
                 align-items: center;
                 font-weight: 600;
-                color: #92400e;
+                color: #166534;
                 margin-bottom: 12px;
                 font-size: 16px;
             }
             .warning ul {
                 margin-left: 20px;
-                color: #78350f;
+                color: #166534;
             }
             .warning li {
                 margin-bottom: 8px;
@@ -284,7 +293,7 @@ const generatePasswordResetEmailHTML = (resetLink: string, userName: string) => 
                 
                 <div class="button-container">
                     <a href="${resetLink}" class="button">
-                        🔓 Restablecer Mi Contraseña
+                        Restablecer Mi Contraseña
                     </a>
                 </div>
                 
