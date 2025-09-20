@@ -227,7 +227,36 @@ export const useUserStore = create<UserStore>((set, get) => ({
       // Actualizar el estado del usuario con la nueva dirección
       const { currentUser } = get()
       if (currentUser && currentUser.id === userId) {
-        const updatedAddresses = [...(currentUser.addresses || []), newAddress]
+        // Si la nueva dirección es predeterminada, desmarcar otras del mismo tipo
+        let updatedAddresses = [...(currentUser.addresses || [])]
+        
+        if (data.isDefault) {
+          // Desmarcar otras direcciones según el tipo de la nueva dirección
+          updatedAddresses = updatedAddresses.map((addr) => {
+            if (addr.isDefault) {
+              let shouldUpdate = false
+              
+              if (newAddress.addressType === "both") {
+                // Si la nueva es "both", desmarcar todas
+                shouldUpdate = true
+              } else if (newAddress.addressType === "shipping") {
+                // Si la nueva es "shipping", desmarcar shipping y both
+                shouldUpdate = addr.addressType === "shipping" || addr.addressType === "both"
+              } else if (newAddress.addressType === "billing") {
+                // Si la nueva es "billing", desmarcar billing y both
+                shouldUpdate = addr.addressType === "billing" || addr.addressType === "both"
+              }
+              
+              if (shouldUpdate) {
+                return { ...addr, isDefault: false }
+              }
+            }
+            return addr
+          })
+        }
+        
+        // Agregar la nueva dirección
+        updatedAddresses.push(newAddress)
 
         // Ordenar direcciones con las predeterminadas primero
         updatedAddresses.sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0))
@@ -274,10 +303,33 @@ export const useUserStore = create<UserStore>((set, get) => ({
 
       // Actualizar el estado del usuario con la dirección actualizada
       const { currentUser } = get()
-      if (currentUser) {
-        const updatedAddresses = currentUser.addresses
-          ? currentUser.addresses.map((addr) => (addr.id === addressId ? updatedAddress : addr))
-          : [updatedAddress]
+      if (currentUser && currentUser.addresses) {
+        // Si la dirección se marcó como predeterminada, desmarcar otras según el tipo
+        let updatedAddresses = currentUser.addresses.map((addr) => {
+          if (addr.id === addressId) {
+            return updatedAddress
+          }
+          // Si se estableció como predeterminada, desmarcar otras según el tipo
+          if (data.isDefault && addr.isDefault) {
+            let shouldUpdate = false
+            
+            if (updatedAddress.addressType === "both") {
+              // Si se establece "both", desmarcar todas
+              shouldUpdate = true
+            } else if (updatedAddress.addressType === "shipping") {
+              // Si se establece "shipping", desmarcar shipping y both
+              shouldUpdate = addr.addressType === "shipping" || addr.addressType === "both"
+            } else if (updatedAddress.addressType === "billing") {
+              // Si se establece "billing", desmarcar billing y both
+              shouldUpdate = addr.addressType === "billing" || addr.addressType === "both"
+            }
+            
+            if (shouldUpdate) {
+              return { ...addr, isDefault: false }
+            }
+          }
+          return addr
+        })
 
         // Ordenar direcciones con las predeterminadas primero
         updatedAddresses.sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0))
@@ -358,16 +410,32 @@ export const useUserStore = create<UserStore>((set, get) => ({
       // Actualizar el estado del usuario con las direcciones actualizadas
       const { currentUser } = get()
       if (currentUser && currentUser.addresses) {
-        // Obtener el tipo de dirección actualizada
-        const addressType = currentUser.addresses.find((addr) => addr.id === addressId)?.addressType
+        // Obtener el tipo de dirección que se está estableciendo como predeterminada
+        const targetAddressType = updatedAddress.addressType
 
         const updatedAddresses = currentUser.addresses.map((addr) => {
           if (addr.id === addressId) {
-            return { ...addr, isDefault: true }
+            // Usar los datos actualizados de la API
+            return { ...updatedAddress }
           }
-          // Solo actualizar el estado de predeterminada en direcciones del mismo tipo
-          if (addressType && addr.addressType === addressType && addr.isDefault) {
-            return { ...addr, isDefault: false }
+          // Actualizar el estado de predeterminada según el tipo de dirección seleccionada
+          if (targetAddressType && addr.isDefault) {
+            let shouldUpdate = false
+            
+            if (targetAddressType === "both") {
+              // Si se selecciona "both", desmarcar todas las direcciones
+              shouldUpdate = true
+            } else if (targetAddressType === "shipping") {
+              // Si se selecciona "shipping", desmarcar shipping y both
+              shouldUpdate = addr.addressType === "shipping" || addr.addressType === "both"
+            } else if (targetAddressType === "billing") {
+              // Si se selecciona "billing", desmarcar billing y both
+              shouldUpdate = addr.addressType === "billing" || addr.addressType === "both"
+            }
+            
+            if (shouldUpdate) {
+              return { ...addr, isDefault: false }
+            }
           }
           return addr
         })

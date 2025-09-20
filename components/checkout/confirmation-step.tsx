@@ -18,6 +18,9 @@ interface ConfirmationStepProps {
   total: number
   currency: string
   shopSettings: ShopSettings[]
+  // Add new props for address handling
+  selectedShippingAddressId?: string | null
+  selectedBillingAddressId?: string | null
 }
 
 export function ConfirmationStep({
@@ -32,7 +35,71 @@ export function ConfirmationStep({
   total,
   currency,
   shopSettings,
+  selectedShippingAddressId = null,
+  selectedBillingAddressId = null,
 }: ConfirmationStepProps) {
+  // Helper function to get shipping address data
+  const getShippingAddressData = () => {
+    if (isAuthenticated && currentUser && selectedShippingAddressId) {
+      // If user has selected an existing address, get data from that address
+      const selectedAddress = currentUser.addresses?.find(
+        (addr: any) => addr.id === selectedShippingAddressId
+      )
+      if (selectedAddress) {
+        return {
+          address: selectedAddress.address1,
+          apartment: selectedAddress.address2 || "",
+          city: selectedAddress.city,
+          state: selectedAddress.province || "",
+          zipCode: selectedAddress.zip || "",
+          shippingPhone: selectedAddress.phone || "",
+        }
+      }
+    }
+    // Fallback to form data
+    return {
+      address: formData.address || "",
+      apartment: formData.apartment || "",
+      city: formData.city || "",
+      state: formData.state || "",
+      zipCode: formData.zipCode || "",
+      shippingPhone: formData.shippingPhone || "",
+    }
+  }
+
+  // Helper function to get billing address data
+  const getBillingAddressData = () => {
+    if (formData.sameBillingAddress) {
+      return getShippingAddressData()
+    }
+
+    if (isAuthenticated && currentUser && selectedBillingAddressId) {
+      // If user has selected an existing billing address, get data from that address
+      const selectedAddress = currentUser.addresses?.find(
+        (addr: any) => addr.id === selectedBillingAddressId
+      )
+      if (selectedAddress) {
+        return {
+          address: selectedAddress.address1,
+          apartment: selectedAddress.address2 || "",
+          city: selectedAddress.city,
+          state: selectedAddress.province || "",
+          zipCode: selectedAddress.zip || "",
+          billingPhone: selectedAddress.phone || "",
+        }
+      }
+    }
+    // Fallback to form data
+    return {
+      address: formData.billingAddress || "",
+      apartment: formData.billingApartment || "",
+      city: formData.billingCity || "",
+      state: formData.billingState || "",
+      zipCode: formData.billingZipCode || "",
+      billingPhone: formData.billingPhone || "",
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -121,14 +188,20 @@ export function ConfirmationStep({
 
               *Dirección de envío:*
               ${formData.firstName} ${formData.lastName}
-              ${formData.address}${formData.apartment ? `, ${formData.apartment}` : ""}
-              ${formData.city}, ${formData.state} ${formData.zipCode}
+              ${(() => {
+                const shippingData = getShippingAddressData()
+                return `${shippingData.address}${shippingData.apartment ? `, ${shippingData.apartment}` : ""}
+              ${shippingData.city}, ${shippingData.state} ${shippingData.zipCode}`
+              })()}
 
               ${
                 !formData.sameBillingAddress
                   ? `*Dirección de facturación:*
-              ${formData.billingAddress}${formData.billingApartment ? `, ${formData.billingApartment}` : ""}
-              ${formData.billingCity}, ${formData.billingState} ${formData.billingZipCode}`
+              ${(() => {
+                const billingData = getBillingAddressData()
+                return `${billingData.address}${billingData.apartment ? `, ${billingData.apartment}` : ""}
+              ${billingData.city}, ${billingData.state} ${billingData.zipCode}`
+              })()}`
                   : "*Dirección de facturación:* Misma que la dirección de envío"
               }
 
