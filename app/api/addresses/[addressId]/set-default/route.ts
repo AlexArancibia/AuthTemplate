@@ -29,11 +29,24 @@ export async function POST(request: Request, { params }: { params: Promise<{ add
       return NextResponse.json({ message: "No tienes permiso para modificar esta dirección" }, { status: 403 })
     }
 
-    // Quitar el estado predeterminado de otras direcciones del mismo tipo
+    // Quitar el estado predeterminado de otras direcciones según el tipo
+    let addressTypesToUpdate: ("both" | "shipping" | "billing")[] = []
+    
+    if (address.addressType === "both") {
+      // Si es tipo "both", desmarcar todas las direcciones (both, shipping, billing)
+      addressTypesToUpdate = ["both", "shipping", "billing"]
+    } else if (address.addressType === "shipping") {
+      // Si es tipo "shipping", desmarcar shipping y both
+      addressTypesToUpdate = ["shipping", "both"]
+    } else if (address.addressType === "billing") {
+      // Si es tipo "billing", desmarcar billing y both
+      addressTypesToUpdate = ["billing", "both"]
+    }
+
     await db.address.updateMany({
       where: {
         userId: address.userId,
-        addressType: address.addressType,
+        addressType: { in: addressTypesToUpdate },
         isDefault: true,
         id: { not: addressId },
       },

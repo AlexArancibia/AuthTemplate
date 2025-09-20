@@ -69,12 +69,13 @@ const STEPS = {
 export default function CheckoutPage() {
   const { items, clearCart, getTotal } = useCartStore()
   const { shopSettings, shippingMethods, paymentProviders, coupons, couponCode, createOrder } = useMainStore()
-  const { currentUser, loading: userLoading, fetchUserByEmail, createAddress } = useUserStore()
+  const { currentUser, loading: userLoading, fetchUserByEmail, createAddress, deleteAddress } = useUserStore()
   const { sendOrderEmails } = useEmailStore()
   const searchParams = useSearchParams()
 
   const [session, setSession] = useState<any>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [authCheckComplete, setAuthCheckComplete] = useState(false)
   const [showNewShippingAddress, setShowNewShippingAddress] = useState(false)
   const [showNewBillingAddress, setShowNewBillingAddress] = useState(false)
   const [selectedShippingAddressId, setSelectedShippingAddressId] = useState<string | null>(null)
@@ -324,6 +325,9 @@ export default function CheckoutPage() {
         }
       } catch (error) {
         console.error("❌ Error fetching session or user data:", error)
+        setIsAuthenticated(false)
+      } finally {
+        setAuthCheckComplete(true)
       }
     }
 
@@ -526,14 +530,6 @@ export default function CheckoutPage() {
 
   // Navigate to next step
   const nextStep = async () => {
-    if (currentStep === STEPS.CUSTOMER_INFO && isAuthenticated && currentUser) {
-      // If user is authenticated and we're moving from customer info to shipping/payment
-      // Save any new address to the user profile
-      if (showNewShippingAddress) {
-        await saveNewAddress(false)
-      }
-    }
-
     if (currentStep < STEPS.CONFIRMATION) {
       setCurrentStep((prev) => prev + 1)
       window.scrollTo(0, 0)
@@ -591,7 +587,23 @@ export default function CheckoutPage() {
   const handleSelectShippingAddress = (addressId: string) => {
     setSelectedShippingAddressId(addressId)
     setShippingAddressId(addressId)
+    // Minimizar el formulario cuando se selecciona una dirección existente
     setShowNewShippingAddress(false)
+    
+    // Limpiar el formulario de nueva dirección
+    setFormData((prev) => ({
+      ...prev,
+      address: "",
+      apartment: "",
+      city: "",
+      state: "",
+      zipCode: "",
+      shippingPhone: "",
+      country: "",
+      countryCode3: "",
+      stateId: "",
+      cityId: "",
+    }))
 
     // If using same address for billing, update billing address too
     if (formData.sameBillingAddress) {
@@ -604,81 +616,237 @@ export default function CheckoutPage() {
   const handleSelectBillingAddress = (addressId: string) => {
     setSelectedBillingAddressId(addressId)
     setBillingAddressId(addressId)
+    // Minimizar el formulario cuando se selecciona una dirección existente
     setShowNewBillingAddress(false)
+    
+    // Limpiar el formulario de nueva dirección de facturación
+    setFormData((prev) => ({
+      ...prev,
+      billingAddress: "",
+      billingApartment: "",
+      billingCity: "",
+      billingState: "",
+      billingZipCode: "",
+      billingPhone: "",
+      billingCountry: "",
+      billingCountryCode: "",
+      billingCountryCode3: "",
+      billingStateId: "",
+      billingCityId: "",
+    }))
   }
 
-  // Save a new address to the user profile
-  const saveNewAddress = async (isBilling: boolean) => {
+  // Handle deselecting shipping address (for new address form)
+  const handleDeselectShippingAddress = () => {
+    setSelectedShippingAddressId(null)
+    setShippingAddressId(null)
+  }
+
+  // Handle deselecting billing address (for new address form)
+  const handleDeselectBillingAddress = () => {
+    setSelectedBillingAddressId(null)
+    setBillingAddressId(null)
+  }
+
+  // Handle editing an address
+  const handleEditAddress = async (addressId: string) => {
+    if (!isAuthenticated || !currentUser) return
+    
+    try {
+      // La funcionalidad de edición se maneja en el componente CustomerInfoStep
+      // Esta función es solo un placeholder para la interfaz
+      console.log("Editing address:", addressId)
+    } catch (error) {
+      console.error("Error editing address:", error)
+      toast.error("Error al editar la dirección")
+    }
+  }
+
+  // Handle deleting an address
+  const handleDeleteAddress = async (addressId: string) => {
+    if (!isAuthenticated || !currentUser) return
+    
+    try {
+      await deleteAddress(addressId)
+      // Si la dirección eliminada estaba seleccionada, deseleccionarla
+      if (selectedShippingAddressId === addressId) {
+        setSelectedShippingAddressId(null)
+        setShippingAddressId(null)
+      }
+      if (selectedBillingAddressId === addressId) {
+        setSelectedBillingAddressId(null)
+        setBillingAddressId(null)
+      }
+      toast.success("Dirección eliminada correctamente")
+    } catch (error) {
+      console.error("Error deleting address:", error)
+      toast.error("Error al eliminar la dirección")
+    }
+  }
+
+  // Save new addresses based on the intelligent logic
+  const saveNewAddresses = async () => {
     if (!isAuthenticated || !currentUser) {
-      return null
+      return { shippingAddressId: null, billingAddressId: null }
     }
 
     try {
-      // Prepare the new address data
-      const newAddress: AddressCreateData = isBilling
-        ? {
-            addressType: AddressType.BILLING,
-            address1: formData.billingAddress,
-            address2: formData.billingApartment || undefined,
-            city: formData.billingCity,
-            province: formData.billingState || undefined,
-            zip: formData.billingZipCode,
-            country: "PE", // Default to Peru
-            phone: formData.billingPhone || undefined,
-            company: formData.company || undefined,
-            isDefault: false,
-          }
-        : {
-            addressType: AddressType.SHIPPING,
-            address1: formData.address,
-            address2: formData.apartment || undefined,
-            city: formData.city,
-            province: formData.state || undefined,
-            zip: formData.zipCode,
-            country: "PE", // Default to Peru
-            phone: formData.shippingPhone || undefined,
-            company: formData.company || undefined,
-            isDefault: !currentUser.addresses?.length,
-          }
+      let shippingAddressId = null
+      let billingAddressId = null
 
-      console.log(
-        `Creating new ${isBilling ? "billing" : "shipping"} address for user ID: ${currentUser.id}`,
-        newAddress,
+      // Check if user has existing billing addresses
+      const hasExistingBillingAddress = currentUser.addresses?.some(
+        addr => addr.addressType === AddressType.BILLING || addr.addressType === AddressType.BOTH
       )
 
-      // Create the new address using the user store
-      const createdAddress = await createAddress(currentUser.id, newAddress)
+      console.log("=== ADDRESS CREATION LOGIC ===")
+      console.log("Same billing address:", formData.sameBillingAddress)
+      console.log("Has existing billing address:", hasExistingBillingAddress)
+      console.log("Show new shipping address:", showNewShippingAddress)
+      console.log("Show new billing address:", showNewBillingAddress)
 
-      if (createdAddress) {
-        console.log(`Successfully created address with ID: ${createdAddress.id}`)
-
-        // Update the selected address ID
-        if (isBilling) {
-          setSelectedBillingAddressId(createdAddress.id)
-          setBillingAddressId(createdAddress.id)
-        } else {
-          setSelectedShippingAddressId(createdAddress.id)
-          setShippingAddressId(createdAddress.id)
-
-          // If using same address for billing, update billing address too
-          if (formData.sameBillingAddress) {
-            setSelectedBillingAddressId(createdAddress.id)
-            setBillingAddressId(createdAddress.id)
-          }
+      if (formData.sameBillingAddress) {
+        // Scenario 1: Same billing address - Create ONE address of type BOTH
+        console.log("Creating ONE address of type BOTH")
+        
+        const bothAddress: AddressCreateData = {
+          addressType: AddressType.BOTH,
+          address1: formData.address,
+          address2: formData.apartment || undefined,
+          city: formData.city,
+          province: formData.state || undefined,
+          zip: formData.zipCode,
+          country: "PE",
+          phone: formData.shippingPhone || undefined,
+          company: formData.company || undefined,
+          isDefault: !currentUser.addresses?.length,
         }
 
-        toast.success(`Nueva dirección ${isBilling ? "de facturación" : "de envío"} guardada`)
-        return createdAddress.id
-      } else {
-        console.error("No address was created - returned null or undefined")
-        return null
-      }
-    } catch (error) {
-      console.error("Error saving new address:", error)
-      toast.error(`Error al guardar la dirección ${isBilling ? "de facturación" : "de envío"}`)
-    }
+        const createdAddress = await createAddress(currentUser.id, bothAddress)
+        if (createdAddress) {
+          shippingAddressId = createdAddress.id
+          billingAddressId = createdAddress.id
+          setSelectedShippingAddressId(createdAddress.id)
+          setSelectedBillingAddressId(createdAddress.id)
+          setShippingAddressId(createdAddress.id)
+          setBillingAddressId(createdAddress.id)
+          toast.success("Nueva dirección guardada (envío y facturación)")
+        }
+      } else if (hasExistingBillingAddress && showNewShippingAddress && !showNewBillingAddress) {
+        // Scenario 2: Has existing billing address and only creating shipping - Create ONE address of type SHIPPING only
+        console.log("Creating ONE address of type SHIPPING (existing billing address)")
+        
+        const shippingAddress: AddressCreateData = {
+          addressType: AddressType.SHIPPING,
+          address1: formData.address,
+          address2: formData.apartment || undefined,
+          city: formData.city,
+          province: formData.state || undefined,
+          zip: formData.zipCode,
+          country: "PE",
+          phone: formData.shippingPhone || undefined,
+          company: formData.company || undefined,
+          isDefault: !currentUser.addresses?.length,
+        }
 
-    return null
+        const createdAddress = await createAddress(currentUser.id, shippingAddress)
+        if (createdAddress) {
+          shippingAddressId = createdAddress.id
+          setSelectedShippingAddressId(createdAddress.id)
+          setShippingAddressId(createdAddress.id)
+          toast.success("Nueva dirección de envío guardada")
+        }
+      } else if (!showNewShippingAddress && showNewBillingAddress) {
+        // Scenario 2.5: Using existing shipping address and only creating billing - Create ONE address of type BILLING only
+        console.log("Creating ONE address of type BILLING (existing shipping address)")
+        
+        const billingAddress: AddressCreateData = {
+          addressType: AddressType.BILLING,
+          address1: formData.billingAddress,
+          address2: formData.billingApartment || undefined,
+          city: formData.billingCity,
+          province: formData.billingState || undefined,
+          zip: formData.billingZipCode,
+          country: "PE",
+          phone: formData.billingPhone || undefined,
+          company: formData.company || undefined,
+          isDefault: false, // Don't set as default since we're using existing shipping
+        }
+
+        const createdAddress = await createAddress(currentUser.id, billingAddress)
+        if (createdAddress) {
+          billingAddressId = createdAddress.id
+          setSelectedBillingAddressId(createdAddress.id)
+          setBillingAddressId(createdAddress.id)
+          toast.success("Nueva dirección de facturación guardada")
+        }
+      } else if (showNewShippingAddress && showNewBillingAddress) {
+        // Scenario 3: Create TWO addresses - one SHIPPING and one BILLING
+        console.log("Creating TWO addresses - SHIPPING and BILLING")
+        
+        // Create shipping address first
+        const shippingAddress: AddressCreateData = {
+          addressType: AddressType.SHIPPING,
+          address1: formData.address,
+          address2: formData.apartment || undefined,
+          city: formData.city,
+          province: formData.state || undefined,
+          zip: formData.zipCode,
+          country: "PE",
+          phone: formData.shippingPhone || undefined,
+          company: formData.company || undefined,
+          isDefault: !currentUser.addresses?.length,
+        }
+
+        const createdShippingAddress = await createAddress(currentUser.id, shippingAddress)
+        if (createdShippingAddress) {
+          shippingAddressId = createdShippingAddress.id
+          setSelectedShippingAddressId(createdShippingAddress.id)
+          setShippingAddressId(createdShippingAddress.id)
+        }
+
+        // Create billing address
+        const billingAddress: AddressCreateData = {
+          addressType: AddressType.BILLING,
+          address1: formData.billingAddress,
+          address2: formData.billingApartment || undefined,
+          city: formData.billingCity,
+          province: formData.billingState || undefined,
+          zip: formData.billingZipCode,
+          country: "PE",
+          phone: formData.billingPhone || undefined,
+          company: formData.company || undefined,
+          isDefault: false, // Don't set as default since shipping was created first
+        }
+
+        const createdBillingAddress = await createAddress(currentUser.id, billingAddress)
+        if (createdBillingAddress) {
+          billingAddressId = createdBillingAddress.id
+          setSelectedBillingAddressId(createdBillingAddress.id)
+          setBillingAddressId(createdBillingAddress.id)
+        }
+
+        if (createdShippingAddress && createdBillingAddress) {
+          toast.success("Nuevas direcciones de envío y facturación guardadas")
+        }
+      }
+
+      console.log("=== ADDRESS CREATION COMPLETE ===")
+      console.log("Shipping Address ID:", shippingAddressId)
+      console.log("Billing Address ID:", billingAddressId)
+
+      return { shippingAddressId, billingAddressId }
+    } catch (error) {
+      console.error("Error saving new addresses:", error)
+      toast.error("Error al guardar las direcciones")
+      return { shippingAddressId: null, billingAddressId: null }
+    }
+  }
+
+  // Legacy function for backward compatibility (now calls the new logic)
+  const saveNewAddress = async (isBilling: boolean) => {
+    const result = await saveNewAddresses()
+    return isBilling ? result.billingAddressId : result.shippingAddressId
   }
 
 
@@ -727,20 +895,36 @@ const applyCouponIfExists = () => {
         customer = { id: currentUser.id }
         console.log("Using authenticated user ID:", currentUser.id)
 
-        // Save any new addresses if needed
-        if (showNewShippingAddress) {
-          const newAddressId = await saveNewAddress(false)
-          if (newAddressId) {
-            calculatedShippingAddressId = newAddressId
+        // Initialize with selected address IDs if they exist
+        if (selectedShippingAddressId) {
+          calculatedShippingAddressId = selectedShippingAddressId
+        }
+        if (selectedBillingAddressId) {
+          calculatedBillingAddressId = selectedBillingAddressId
+        }
+
+        console.log("=== ADDRESS ID INITIALIZATION ===")
+        console.log("Selected shipping address ID:", selectedShippingAddressId)
+        console.log("Selected billing address ID:", selectedBillingAddressId)
+        console.log("Calculated shipping address ID:", calculatedShippingAddressId)
+        console.log("Calculated billing address ID:", calculatedBillingAddressId)
+        console.log("Show new shipping address:", showNewShippingAddress)
+        console.log("Show new billing address:", showNewBillingAddress)
+
+        // Save any new addresses using the intelligent logic
+        if (showNewShippingAddress || showNewBillingAddress) {
+          const addressResult = await saveNewAddresses()
+          if (addressResult.shippingAddressId) {
+            calculatedShippingAddressId = addressResult.shippingAddressId
+          }
+          if (addressResult.billingAddressId) {
+            calculatedBillingAddressId = addressResult.billingAddressId
           }
         }
 
-        if (!formData.sameBillingAddress && showNewBillingAddress) {
-          const newBillingAddressId = await saveNewAddress(true)
-          if (newBillingAddressId) {
-            calculatedBillingAddressId = newBillingAddressId
-          }
-        }
+        console.log("=== FINAL ADDRESS IDS ===")
+        console.log("Final calculated shipping address ID:", calculatedShippingAddressId)
+        console.log("Final calculated billing address ID:", calculatedBillingAddressId)
       } else {
         // For guest users, we'll use the form data directly in the order
         console.log("Guest checkout - using form data directly")
@@ -1021,12 +1205,14 @@ const lineItems = prepareLineItems()
               console.warn("⚠️ Both emails failed to send, but order was created successfully")
             }
           } catch (emailError) {
-            console.error("❌ Error sending order emails:", emailError)
+            const emailErrorMessage = emailError instanceof Error ? emailError.message : String(emailError)
+            console.error("❌ Error sending order emails:", emailErrorMessage)
             // Don't throw here, we don't want to fail the order if email fails
             // The order was created successfully, email failure is not critical
           }
         } catch (error) {
-          console.error(`Order creation attempt ${retryCount + 1} failed:`, error)
+          const errorMessage = error instanceof Error ? error.message : String(error)
+          console.error(`Order creation attempt ${retryCount + 1} failed:`, errorMessage)
           retryCount++
           if (retryCount < maxRetries) {
             // Generate a new orderNumber for the retry
@@ -1051,7 +1237,8 @@ const lineItems = prepareLineItems()
       setCurrentStep(STEPS.CONFIRMATION)
     } catch (error) {
       console.error("Error submitting order:", error)
-      console.error("Error details:", error instanceof Error ? error.message : String(error))
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      console.error("Error details:", errorMessage)
       toast.error("Error al procesar el pedido. Por favor, intenta nuevamente.")
     } finally {
       setIsSubmitting(false)
@@ -1366,6 +1553,7 @@ if (taxesIncluded) {
                     nextStep={nextStep}
                     prevStep={prevStep}
                     isAuthenticated={isAuthenticated}
+                    authCheckComplete={authCheckComplete}
                     currentUser={currentUser}
                     showNewShippingAddress={showNewShippingAddress}
                     setShowNewShippingAddress={setShowNewShippingAddress}
@@ -1375,8 +1563,12 @@ if (taxesIncluded) {
                     selectedBillingAddressId={selectedBillingAddressId}
                     handleSelectShippingAddress={handleSelectShippingAddress}
                     handleSelectBillingAddress={handleSelectBillingAddress}
+                    handleDeselectShippingAddress={handleDeselectShippingAddress}
+                    handleDeselectBillingAddress={handleDeselectBillingAddress}
                     handleBillingAddressToggle={handleBillingAddressToggle}
                     copyShippingToBilling={copyShippingToBilling}
+                    onEditAddress={handleEditAddress}
+                    onDeleteAddress={handleDeleteAddress}
                   />
                 )}
 
@@ -1401,19 +1593,21 @@ if (taxesIncluded) {
 
                 {/* Step 4: Confirmation */}
                 {currentStep === STEPS.CONFIRMATION && (
-                  <ConfirmationStep
-                    orderId={orderId}
-                    isAuthenticated={isAuthenticated}
-                    currentUser={currentUser}
-                    formData={formData}
-                    items={items}
-                    subtotal={subtotal}
-                    tax={tax}
-                    shipping={shipping}
-                    total={total}
-                    currency={currency}
-                    shopSettings={shopSettings}
-                  />
+                <ConfirmationStep
+                  orderId={orderId}
+                  isAuthenticated={isAuthenticated}
+                  currentUser={currentUser}
+                  formData={formData}
+                  items={items}
+                  subtotal={subtotal}
+                  tax={tax}
+                  shipping={shipping}
+                  total={total}
+                  currency={currency}
+                  shopSettings={shopSettings}
+                  selectedShippingAddressId={selectedShippingAddressId}
+                  selectedBillingAddressId={selectedBillingAddressId}
+                />
                 )}
               </motion.div>
             </div>
@@ -1433,6 +1627,10 @@ if (taxesIncluded) {
                   totalDiscounts={totalDiscounts}
                   shippingMethods={shippingMethods}
                   paymentProviders={paymentProviders}
+                  isAuthenticated={isAuthenticated}
+                  currentUser={currentUser}
+                  selectedShippingAddressId={selectedShippingAddressId}
+                  selectedBillingAddressId={selectedBillingAddressId}
                 />
               </div>
             )}

@@ -17,6 +17,11 @@ interface OrderSummaryProps {
   totalDiscounts: number
   shippingMethods: any[]
   paymentProviders: any[]
+  // Add new props for address handling
+  isAuthenticated?: boolean
+  currentUser?: any
+  selectedShippingAddressId?: string | null
+  selectedBillingAddressId?: string | null
 }
 
 // Helper function to safely get price from variant
@@ -88,6 +93,10 @@ export function OrderSummary({
   totalDiscounts,
   shippingMethods,
   paymentProviders,
+  isAuthenticated = false,
+  currentUser = null,
+  selectedShippingAddressId = null,
+  selectedBillingAddressId = null,
 }: OrderSummaryProps) {
   const { couponCode, setCouponCode } = useMainStore()
   const [inputValue, setInputValue] = useState("")
@@ -99,6 +108,68 @@ export function OrderSummary({
 
   const handleApplyCoupon = () => {
     setCouponCode(inputValue)
+  }
+
+  // Helper function to get shipping address data
+  const getShippingAddressData = () => {
+    if (isAuthenticated && currentUser && selectedShippingAddressId) {
+      // If user has selected an existing address, get data from that address
+      const selectedAddress = currentUser.addresses?.find(
+        (addr: any) => addr.id === selectedShippingAddressId
+      )
+      if (selectedAddress) {
+        return {
+          address: selectedAddress.address1,
+          apartment: selectedAddress.address2 || "",
+          city: selectedAddress.city,
+          state: selectedAddress.province || "",
+          zipCode: selectedAddress.zip || "",
+          shippingPhone: selectedAddress.phone || "",
+        }
+      }
+    }
+    // Fallback to form data
+    return {
+      address: formData.address || "",
+      apartment: formData.apartment || "",
+      city: formData.city || "",
+      state: formData.state || "",
+      zipCode: formData.zipCode || "",
+      shippingPhone: formData.shippingPhone || "",
+    }
+  }
+
+  // Helper function to get billing address data
+  const getBillingAddressData = () => {
+    if (formData.sameBillingAddress) {
+      return getShippingAddressData()
+    }
+
+    if (isAuthenticated && currentUser && selectedBillingAddressId) {
+      // If user has selected an existing billing address, get data from that address
+      const selectedAddress = currentUser.addresses?.find(
+        (addr: any) => addr.id === selectedBillingAddressId
+      )
+      if (selectedAddress) {
+        return {
+          address: selectedAddress.address1,
+          apartment: selectedAddress.address2 || "",
+          city: selectedAddress.city,
+          state: selectedAddress.province || "",
+          zipCode: selectedAddress.zip || "",
+          billingPhone: selectedAddress.phone || "",
+        }
+      }
+    }
+    // Fallback to form data
+    return {
+      address: formData.billingAddress || "",
+      apartment: formData.billingApartment || "",
+      city: formData.billingCity || "",
+      state: formData.billingState || "",
+      zipCode: formData.billingZipCode || "",
+      billingPhone: formData.billingPhone || "",
+    }
   }
 
   // Determinar si mostrar mensaje de cupón y su estilo
@@ -213,14 +284,21 @@ export function OrderSummary({
         <div className="mt-6 pt-6 border-t">
           <div className="mb-4">
             <h3 className="font-medium text-base mb-2">Dirección de envío</h3>
-            <p className="text-sm text-gray-600">
-              {formData.address || "No especificada"}
-              {formData.apartment && `, ${formData.apartment}`}
-              {formData.city && `, ${formData.city}`}
-              {formData.state && `, ${formData.state}`}
-              {formData.zipCode && ` ${formData.zipCode}`}
-            </p>
-            {formData.shippingPhone && <p className="text-sm text-gray-600">Tel: {formData.shippingPhone}</p>}
+            {(() => {
+              const shippingData = getShippingAddressData()
+              return (
+                <>
+                  <p className="text-sm text-gray-600">
+                    {shippingData.address || "No especificada"}
+                    {shippingData.apartment && `, ${shippingData.apartment}`}
+                    {shippingData.city && `, ${shippingData.city}`}
+                    {shippingData.state && `, ${shippingData.state}`}
+                    {shippingData.zipCode && ` ${shippingData.zipCode}`}
+                  </p>
+                  {shippingData.shippingPhone && <p className="text-sm text-gray-600">Tel: {shippingData.shippingPhone}</p>}
+                </>
+              )
+            })()}
           </div>
 
           {/* Billing Address */}
@@ -229,16 +307,21 @@ export function OrderSummary({
             {formData.sameBillingAddress ? (
               <p className="text-sm text-gray-600 italic">Misma que la dirección de envío</p>
             ) : (
-              <>
-                <p className="text-sm text-gray-600">
-                  {formData.billingAddress || "No especificada"}
-                  {formData.billingApartment && `, ${formData.billingApartment}`}
-                  {formData.billingCity && `, ${formData.billingCity}`}
-                  {formData.billingState && `, ${formData.billingState}`}
-                  {formData.billingZipCode && ` ${formData.billingZipCode}`}
-                </p>
-                {formData.billingPhone && <p className="text-sm text-gray-600">Tel: {formData.billingPhone}</p>}
-              </>
+              (() => {
+                const billingData = getBillingAddressData()
+                return (
+                  <>
+                    <p className="text-sm text-gray-600">
+                      {billingData.address || "No especificada"}
+                      {billingData.apartment && `, ${billingData.apartment}`}
+                      {billingData.city && `, ${billingData.city}`}
+                      {billingData.state && `, ${billingData.state}`}
+                      {billingData.zipCode && ` ${billingData.zipCode}`}
+                    </p>
+                    {billingData.billingPhone && <p className="text-sm text-gray-600">Tel: {billingData.billingPhone}</p>}
+                  </>
+                )
+              })()
             )}
           </div>
         </div>
