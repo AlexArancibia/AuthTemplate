@@ -12,6 +12,7 @@ import { formatDate } from "@/lib/utils"
 import { OrderFinancialStatus, OrderFulfillmentStatus, ShippingStatus } from "@/types/common"
 import { useMainStore } from "@/stores/mainStore"
 import { Package, Truck, CreditCard, Eye, ShoppingBag, AlertCircle } from "lucide-react"
+import { Order, OrderItem } from "@/types/order"
 
 interface UserOrdersProps {
   userId: string
@@ -69,7 +70,7 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
   console.log("[USER_ORDERS] Filtered orders by email:", userEmail)
   console.log("[USER_ORDERS] Total filtered orders:", userOrders.length)
 
-  const getStatusBadge = (order: any) => {
+  const getStatusBadge = (order: Order) => {
     // Financial status
     if (order.financialStatus === OrderFinancialStatus.PAID) {
       return <Badge className="bg-green-500">Pagado</Badge>
@@ -107,7 +108,7 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
     }
   }
 
-  const getStatusIcon = (order: any) => {
+  const getStatusIcon = (order: Order) => {
     // Shipping status
     if (order.shippingStatus === ShippingStatus.DELIVERED) {
       return <Package className="h-5 w-5 text-green-500" />
@@ -188,7 +189,7 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
     <div className="space-y-4">
  
 
-      {userOrders.map((order: any) => (
+      {userOrders.map((order: Order) => (
         <Card key={order.id} className="overflow-hidden">
           <CardContent className="p-0">
             <div className="p-4">
@@ -250,7 +251,7 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
               <div>
                 <h4 className="font-medium mb-3">Productos</h4>
                 <div className="space-y-3">
-                  {selectedOrder.lineItems.map((item: any) => (
+                  {selectedOrder.lineItems.map((item: OrderItem) => (
                     <div key={item.id} className="flex justify-between">
                       <div>
                         <p className="text-sm">{item.title}</p>

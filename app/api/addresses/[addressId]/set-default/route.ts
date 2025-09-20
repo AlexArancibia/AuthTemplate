@@ -64,10 +64,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ add
     })
 
     return NextResponse.json(updatedAddress)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error estableciendo dirección predeterminada:", error)
+    const errorMessage = error instanceof Error ? error.message : "Error desconocido"
     return NextResponse.json(
-      { message: `Error al establecer la dirección predeterminada: ${error.message}` },
+      { message: `Error al establecer la dirección predeterminada: ${errorMessage}` },
       { status: 500 },
     )
   }

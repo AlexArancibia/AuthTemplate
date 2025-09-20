@@ -13,4 +13,19 @@ export interface FrequentlyBoughtTogether {
   updatedAt: Date; // Cambiado a Date según Prisma
 }
 
+export interface CreateFrequentlyBoughtTogetherDto {
+  storeId: string;
+  name: string;
+  variants?: string[]; // Array of variant IDs
+  discountName?: string | null;
+  discount?: number | null;
+}
+
+export interface UpdateFrequentlyBoughtTogetherDto {
+  name?: string;
+  variants?: string[]; // Array of variant IDs
+  discountName?: string | null;
+  discount?: number | null;
+}
+
  

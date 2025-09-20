@@ -96,9 +96,10 @@ export function UserPasswordForm({ user }: UserPasswordFormProps) {
 
       toast.success("Contraseña actualizada correctamente")
       changeForm.reset()
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error changing password:", error)
-      toast.error(error.message || "Error al cambiar la contraseña")
+      const errorMessage = error instanceof Error ? error.message : "Error al cambiar la contraseña"
+      toast.error(errorMessage)
     } finally {
       setIsSubmitting(false)
     }
@@ -125,9 +126,10 @@ export function UserPasswordForm({ user }: UserPasswordFormProps) {
       toast.success("Contraseña establecida correctamente")
       setForm.reset()
       setHasPassword(true)
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error setting password:", error)
-      toast.error(error.message || "Error al establecer la contraseña")
+      const errorMessage = error instanceof Error ? error.message : "Error al establecer la contraseña"
+      toast.error(errorMessage)
     } finally {
       setIsSubmitting(false)
     }

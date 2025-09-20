@@ -6,7 +6,7 @@ import type { ShopSettings } from "@/types/store"
 export async function POST(request: NextRequest) {
   try {
     const rawBody = await request.text()
-    let body: any = {}
+    let body: Record<string, any> = {}
     try {
       body = rawBody ? JSON.parse(rawBody) : {}
     } catch (parseErr) {

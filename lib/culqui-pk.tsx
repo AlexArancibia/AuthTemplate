@@ -8,7 +8,7 @@ export async function getPublicKey() {
 
         // Buscar el método "Culqui" en la lista
         const culquiProvider = response.data.find(
-            (provider: any) => provider.name === "Culqui"
+            (provider: { name: string }) => provider.name === "Culqui"
         );
 
         if (!culquiProvider) {
@@ -34,7 +34,7 @@ export async function getSecretKey() {
 
         // Buscar el método "Culqui" en la lista
         const culquiProvider = response.data.find(
-            (provider: any) => provider.name === "Culqui"
+            (provider: { name: string }) => provider.name === "Culqui"
         );
 
         if (!culquiProvider) {

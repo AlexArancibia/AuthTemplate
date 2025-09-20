@@ -5,13 +5,16 @@ import Link from "next/link"
 import { CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ShopSettings } from "@/types/store"
+import { User } from "@/types/user"
+import { Address } from "@/stores/userStore"
+import { CartItem } from "@/stores/cartStore"
 
 interface ConfirmationStepProps {
   orderId: string | null
   isAuthenticated: boolean
-  currentUser: any
-  formData: any
-  items: any[]
+  currentUser: (User & { addresses?: Address[] }) | null
+  formData: Record<string, any>
+  items: CartItem[]
   subtotal: number
   tax: number
   shipping: number
@@ -43,7 +46,7 @@ export function ConfirmationStep({
     if (isAuthenticated && currentUser && selectedShippingAddressId) {
       // If user has selected an existing address, get data from that address
       const selectedAddress = currentUser.addresses?.find(
-        (addr: any) => addr.id === selectedShippingAddressId
+        (addr: Address) => addr.id === selectedShippingAddressId
       )
       if (selectedAddress) {
         return {
@@ -76,7 +79,7 @@ export function ConfirmationStep({
     if (isAuthenticated && currentUser && selectedBillingAddressId) {
       // If user has selected an existing billing address, get data from that address
       const selectedAddress = currentUser.addresses?.find(
-        (addr: any) => addr.id === selectedBillingAddressId
+        (addr: Address) => addr.id === selectedBillingAddressId
       )
       if (selectedAddress) {
         return {

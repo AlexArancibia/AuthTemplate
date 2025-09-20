@@ -27,15 +27,16 @@ import { toast } from "sonner";
 
 import type { Address } from "@/stores/userStore"
 import { AddressType } from "@/types/auth"
+import { User } from "@/types/user"
 
 interface CustomerInfoStepProps {
-  formData: any
+  formData: Record<string, any>
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void
   nextStep: () => void
   prevStep: () => void
   isAuthenticated: boolean
   authCheckComplete: boolean
-  currentUser: any
+  currentUser: (User & { addresses?: Address[] }) | null
   showNewShippingAddress: boolean
   setShowNewShippingAddress: (value: boolean) => void
   showNewBillingAddress: boolean
@@ -232,7 +233,7 @@ export function CustomerInfoStep({
 
     // Verificar dirección de envío
     let shippingValid = false
-    if (isAuthenticated && currentUser?.addresses?.length > 0) {
+    if (isAuthenticated && currentUser?.addresses && currentUser.addresses.length > 0) {
       // Si hay direcciones guardadas, debe haber una seleccionada O el formulario debe estar desplegado y completo
       if (selectedShippingAddressId) {
         shippingValid = true
@@ -257,7 +258,7 @@ export function CustomerInfoStep({
     // Verificar dirección de facturación si es diferente
     let billingValid = true
     if (!formData.sameBillingAddress) {
-      if (isAuthenticated && currentUser?.addresses?.length > 0) {
+      if (isAuthenticated && currentUser?.addresses && currentUser.addresses.length > 0) {
         // Si hay direcciones guardadas, debe haber una seleccionada O el formulario debe estar desplegado y completo
         if (selectedBillingAddressId) {
           billingValid = true

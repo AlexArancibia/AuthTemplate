@@ -65,9 +65,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ use
 
     console.log(`Address created successfully with ID: ${newAddress.id}`)
     return NextResponse.json(newAddress)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating address:", error)
-    return NextResponse.json({ message: `Error al crear la dirección: ${error.message}` }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : "Error desconocido"
+    return NextResponse.json({ message: `Error al crear la dirección: ${errorMessage}` }, { status: 500 })
   }
 }
 
@@ -109,7 +110,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ user
     })
 
     return NextResponse.json(addresses)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error obteniendo direcciones:", error)
     return NextResponse.json({ message: "Error al obtener las direcciones" }, { status: 500 })
   }

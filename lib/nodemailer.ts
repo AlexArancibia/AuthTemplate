@@ -27,7 +27,7 @@ export const sendEmailToClient = async ({
   to: string
   subject: string
   html: string
-  attachments?: any[]
+  attachments?: Array<{ filename: string; content: string | Buffer; contentType?: string }>
 }) => {
   try {
     const transporter = createTransporter()
@@ -57,7 +57,7 @@ export const sendEmailToAdmin = async ({
 }: {
   subject: string
   html: string
-  attachments?: any[]
+  attachments?: Array<{ filename: string; content: string | Buffer; contentType?: string }>
 }) => {
   try {
     const transporter = createTransporter()

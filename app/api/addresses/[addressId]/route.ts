@@ -54,9 +54,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ad
     })
 
     return NextResponse.json(updatedAddress)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error actualizando dirección:", error)
-    return NextResponse.json({ message: `Error al actualizar la dirección: ${error.message}` }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : "Error desconocido"
+    return NextResponse.json({ message: `Error al actualizar la dirección: ${errorMessage}` }, { status: 500 })
   }
 }
 
@@ -93,8 +94,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ a
     })
 
     return NextResponse.json({ success: true })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error eliminando dirección:", error)
-    return NextResponse.json({ message: `Error al eliminar la dirección: ${error.message}` }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : "Error desconocido"
+    return NextResponse.json({ message: `Error al eliminar la dirección: ${errorMessage}` }, { status: 500 })
   }
 }

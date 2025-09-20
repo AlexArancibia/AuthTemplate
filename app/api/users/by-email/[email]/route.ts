@@ -43,7 +43,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ emai
     const { password, ...safeUser } = user
 
     return NextResponse.json(safeUser)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error obteniendo usuario por email:", error)
     return NextResponse.json({ message: "Error al obtener datos del usuario" }, { status: 500 })
   }
@@ -97,11 +97,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ em
     const { password, ...safeUser } = updatedUser
 
     return NextResponse.json(safeUser)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error actualizando usuario por email:", error)
 
     // Manejar errores específicos de Prisma
-    if (error.code === "P2002") {
+    if (error && typeof error === 'object' && 'code' in error && error.code === "P2002") {
       return NextResponse.json({ message: "El email ya está en uso por otro usuario" }, { status: 409 })
     }
 

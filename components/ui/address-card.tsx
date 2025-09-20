@@ -77,11 +77,11 @@ export function AddressCard({
     }
   }
 
-  const handleEditSubmit = async (data: any) => {
+  const handleEditSubmit = async (data: Record<string, any>) => {
     try {
       // Llamar a la función onEdit si está disponible
       if (onEdit) {
-        await onEdit(data)
+        await onEdit(data as Address)
         toast.success("Dirección actualizada correctamente")
         setIsEditDialogOpen(false)
       } else {

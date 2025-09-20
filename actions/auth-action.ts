@@ -44,7 +44,7 @@ export const registerAction = async (values: z.infer<typeof registerSchema>) => 
 
     if (user) {
       // Verificar si tiene cuentas OAuth vinculadas
-      const oauthAccounts = user.accounts.filter((account: any) => account.type === "oauth")
+      const oauthAccounts = user.accounts.filter((account: { type: string }) => account.type === "oauth")
       if (oauthAccounts.length > 0) {
         return {
           error: "To confirm your identity, sign in with the same account you used originally.",

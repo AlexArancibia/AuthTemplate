@@ -4,7 +4,7 @@ import Cookies from "js-cookie"
 import type { Product } from "@/types/product"
 import type { Category } from "@/types/category"
 import type { Collection } from "@/types/collection"
-import type { Order } from "@/types/order"
+import type { Order, CreateOrderDto, UpdateOrderDto, CreateRefundDto } from "@/types/order"
 import type { Coupon } from "@/types/coupon"
 import type { ShippingMethod } from "@/types/shippingMethod"
 import type { ShopSettings } from "@/types/store"
@@ -17,7 +17,7 @@ import type { PaymentProvider, PaymentTransaction } from "@/types/payments"
 import type { HeroSection } from "@/types/heroSection"
 import type { CardSection } from "@/types/card"
 import type { TeamMember, TeamSection } from "@/types/team"
-import type { FrequentlyBoughtTogether } from "@/types/fbt"
+import type { FrequentlyBoughtTogether, CreateFrequentlyBoughtTogetherDto, UpdateFrequentlyBoughtTogetherDto } from "@/types/fbt"
 
 // Definir duración del caché (5 minutos)
 const CACHE_DURATION = 5 * 60 * 1000
@@ -105,16 +105,16 @@ interface MainStore {
 
   // Métodos adicionales para FBT
   fetchFrequentlyBoughtTogetherById: (id: string) => Promise<FrequentlyBoughtTogether>
-  createFrequentlyBoughtTogether: (data: any) => Promise<FrequentlyBoughtTogether>
-  updateFrequentlyBoughtTogether: (id: string, data: any) => Promise<FrequentlyBoughtTogether>
+  createFrequentlyBoughtTogether: (data: CreateFrequentlyBoughtTogetherDto) => Promise<FrequentlyBoughtTogether>
+  updateFrequentlyBoughtTogether: (id: string, data: UpdateFrequentlyBoughtTogetherDto) => Promise<FrequentlyBoughtTogether>
   deleteFrequentlyBoughtTogether: (id: string) => Promise<void>
 
   // Mantener solo los métodos de creación y actualización para orders y refunds
-  createOrder: (data: any) => Promise<Order>
-  updateOrder: (id: string, data: any) => Promise<Order>
-  createRefund: (data: any) => Promise<void>
+  createOrder: (data: CreateOrderDto) => Promise<Order>
+  updateOrder: (id: string, data: UpdateOrderDto) => Promise<Order>
+  createRefund: (data: CreateRefundDto) => Promise<void>
 
-  submitFormEmail: (formData: any) => Promise<void>
+  submitFormEmail: (formData: Record<string, any>) => Promise<void>
   sendEmail: (to: string, subject: string, html: string) => Promise<void>
   initializeStore: () => Promise<void>
 
@@ -807,7 +807,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
   },
 
   // Método para crear un nuevo FBT
-  createFrequentlyBoughtTogether: async (data: any) => {
+  createFrequentlyBoughtTogether: async (data: CreateFrequentlyBoughtTogetherDto) => {
     set({ loading: true, error: null })
     try {
       if (!STORE_ID) {
@@ -833,7 +833,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
   },
 
   // Método para actualizar un FBT existente
-  updateFrequentlyBoughtTogether: async (id: string, data: any) => {
+  updateFrequentlyBoughtTogether: async (id: string, data: UpdateFrequentlyBoughtTogetherDto) => {
     set({ loading: true, error: null })
     try {
       const response = await apiClient.patch<FrequentlyBoughtTogether>(`/frequently-bought-together/${id}`, data)
@@ -866,7 +866,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
   },
 
   // Mantener solo los métodos de creación y actualización para orders y refunds
-  createOrder: async (data: any) => {
+  createOrder: async (data: CreateOrderDto) => {
     set({ loading: true, error: null })
     try {
       if (!STORE_ID) {
@@ -891,7 +891,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  updateOrder: async (id: string, data: any) => {
+  updateOrder: async (id: string, data: UpdateOrderDto) => {
     set({ loading: true, error: null })
     try {
       const response = await apiClient.put<Order>(`/orders/${id}`, data)
@@ -906,7 +906,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  createRefund: async (data: any) => {
+  createRefund: async (data: CreateRefundDto) => {
     set({ loading: true, error: null })
     try {
       await apiClient.post("/refunds", data)
@@ -930,7 +930,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
       throw error
     }
   },
-  submitFormEmail: async (formData) => {
+  submitFormEmail: async (formData: Record<string, any>) => {
     try {
       const response = await apiClient.post("/email/submit-form", formData)
       return response.data

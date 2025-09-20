@@ -143,8 +143,8 @@ export const useUserStore = create<UserStore>((set, get) => ({
       })
 
       return user
-    } catch (error: any) {
-      const errorMessage = error.message || "Error al obtener datos del usuario"
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Error al obtener datos del usuario"
       set({ loading: false, error: errorMessage })
 
       throw new Error(`Error fetching user: ${errorMessage}`)
@@ -180,10 +180,10 @@ export const useUserStore = create<UserStore>((set, get) => ({
       })
 
       return updatedUser
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Manejar errores de la API
       let errorMessage = "Error al actualizar el usuario"
-      if (error.message) {
+      if (error instanceof Error) {
         errorMessage = error.message
       }
 
@@ -272,8 +272,8 @@ export const useUserStore = create<UserStore>((set, get) => ({
       }
 
       return newAddress
-    } catch (error: any) {
-      const errorMessage = error.message || "Error al crear la dirección"
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Error al crear la dirección"
       set({ addressLoading: false, addressError: errorMessage })
 
       throw new Error(`Error creating address: ${errorMessage}`)
@@ -345,8 +345,8 @@ export const useUserStore = create<UserStore>((set, get) => ({
       }
 
       return updatedAddress
-    } catch (error: any) {
-      const errorMessage = error.message || "Error al actualizar la dirección"
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Error al actualizar la dirección"
       set({ addressLoading: false, addressError: errorMessage })
 
       throw new Error(`Error updating address: ${errorMessage}`)
@@ -382,8 +382,8 @@ export const useUserStore = create<UserStore>((set, get) => ({
           addressError: null,
         })
       }
-    } catch (error: any) {
-      const errorMessage = error.message || "Error al eliminar la dirección"
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Error al eliminar la dirección"
       set({ addressLoading: false, addressError: errorMessage })
 
       throw new Error(`Error deleting address: ${errorMessage}`)
@@ -454,8 +454,8 @@ export const useUserStore = create<UserStore>((set, get) => ({
       }
 
       return updatedAddress
-    } catch (error: any) {
-      const errorMessage = error.message || "Error al establecer la dirección predeterminada"
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Error al establecer la dirección predeterminada"
       set({ addressLoading: false, addressError: errorMessage })
 
       throw new Error(`Error setting default address: ${errorMessage}`)

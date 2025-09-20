@@ -4,28 +4,42 @@ import { Separator } from "@/components/ui/separator"
 import { CartItem } from "@/stores/cartStore"
 import { useMainStore } from "@/stores/mainStore"
 import { useState } from "react"
+import { User } from "@/types/user"
+import { ShippingMethod } from "@/types/shippingMethod"
+import { PaymentProvider } from "@/types/payments"
+import { Address } from "@/stores/userStore"
 
 interface OrderSummaryProps {
-  items: any[]
+  items: CartItem[]
   subtotal: number
   tax: number
   shipping: number
   total: number
   currency: string
   currentStep: number
-  formData: any
+  formData: Record<string, any>
   totalDiscounts: number
-  shippingMethods: any[]
-  paymentProviders: any[]
+  shippingMethods: ShippingMethod[]
+  paymentProviders: PaymentProvider[]
   // Add new props for address handling
   isAuthenticated?: boolean
-  currentUser?: any
+  currentUser?: (User & { addresses?: Address[] }) | null
   selectedShippingAddressId?: string | null
   selectedBillingAddressId?: string | null
 }
 
+interface AddressData {
+  address: string
+  apartment: string
+  city: string
+  state: string
+  zipCode: string
+  shippingPhone?: string
+  billingPhone?: string
+}
+
 // Helper function to safely get price from variant
-const getSafePrice = (variant: any): number => {
+const getSafePrice = (variant: CartItem['variant']): number => {
   try {
     if (!variant) {
       console.warn("Variant is undefined or null")
@@ -59,7 +73,7 @@ const getSafePrice = (variant: any): number => {
 }
 
 // Helper function to safely get item total
-const getSafeItemTotal = (item: any): number => {
+const getSafeItemTotal = (item: CartItem): number => {
   try {
     if (!item) {
       console.warn("Item is undefined or null")
@@ -111,11 +125,11 @@ export function OrderSummary({
   }
 
   // Helper function to get shipping address data
-  const getShippingAddressData = () => {
+  const getShippingAddressData = (): AddressData => {
     if (isAuthenticated && currentUser && selectedShippingAddressId) {
       // If user has selected an existing address, get data from that address
       const selectedAddress = currentUser.addresses?.find(
-        (addr: any) => addr.id === selectedShippingAddressId
+        (addr: Address) => addr.id === selectedShippingAddressId
       )
       if (selectedAddress) {
         return {
@@ -140,7 +154,7 @@ export function OrderSummary({
   }
 
   // Helper function to get billing address data
-  const getBillingAddressData = () => {
+  const getBillingAddressData = (): AddressData => {
     if (formData.sameBillingAddress) {
       return getShippingAddressData()
     }
@@ -148,7 +162,7 @@ export function OrderSummary({
     if (isAuthenticated && currentUser && selectedBillingAddressId) {
       // If user has selected an existing billing address, get data from that address
       const selectedAddress = currentUser.addresses?.find(
-        (addr: any) => addr.id === selectedBillingAddressId
+        (addr: Address) => addr.id === selectedBillingAddressId
       )
       if (selectedAddress) {
         return {

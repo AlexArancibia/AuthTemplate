@@ -24,22 +24,21 @@ import { CreditCard } from "lucide-react"
 import Image from "next/image"
 import { useMainStore } from "@/stores/mainStore"
 import { AddressType } from "@/types/auth"
+import { User } from "@/types/user"
+import { Address } from "@/stores/userStore"
 
 // Helper function to safely get price from variant (copied from order-summary.tsx)
-const getSafePrice = (variant: any): number => {
+const getSafePrice = (variant: { prices?: Array<{ price: number }> }): number => {
   try {
     if (!variant) {
-      console.warn("Variant is undefined or null")
       return 0
     }
 
     if (!variant.prices || !Array.isArray(variant.prices)) {
-      console.warn("Variant prices is undefined or not an array:", variant)
       return 0
     }
 
     if (variant.prices.length === 0) {
-      console.warn("Variant prices array is empty:", variant)
       return 0
     }
 
@@ -48,13 +47,11 @@ const getSafePrice = (variant: any): number => {
     // Convert to number and validate
     const numericPrice = Number(price)
     if (isNaN(numericPrice) || numericPrice < 0) {
-      console.warn("Invalid price value:", price, "for variant:", variant)
       return 0
     }
 
     return numericPrice
   } catch (error) {
-    console.error("Error getting price from variant:", error, variant)
     return 0
   }
 }
@@ -158,14 +155,6 @@ export default function CheckoutPage() {
     const endDate = new Date(foundCoupon.endDate)
 
     if (!foundCoupon.isActive || now < startDate || now > endDate) {
-      console.log("❌ Coupon not active or expired:", {
-        isActive: foundCoupon.isActive,
-        now: now.toISOString(),
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        beforeStart: now < startDate,
-        afterEnd: now > endDate
-      })
       toast.error("El cupón no está disponible o ha expirado")
       setAppliedCoupon(null)
       return
@@ -174,10 +163,6 @@ export default function CheckoutPage() {
     // Verify minimum purchase if specified
     const subtotal = getTotal()
     if (foundCoupon.minPurchase && subtotal < foundCoupon.minPurchase) {
-      console.log("❌ Minimum purchase not met:", {
-        minPurchase: foundCoupon.minPurchase,
-        subtotal: subtotal
-      })
       toast.error(`El cupón requiere un mínimo de compra de ${foundCoupon.minPurchase}`)
       setAppliedCoupon(null)
       return
@@ -185,10 +170,6 @@ export default function CheckoutPage() {
 
     // Verify max uses if specified
     if (foundCoupon.maxUses && foundCoupon.usedCount >= foundCoupon.maxUses) {
-      console.log("❌ Max uses reached:", {
-        maxUses: foundCoupon.maxUses,
-        usedCount: foundCoupon.usedCount
-      })
       toast.error("Este cupón ha alcanzado su límite de usos")
       setAppliedCoupon(null)
       return
@@ -227,7 +208,7 @@ export default function CheckoutPage() {
     return items.reduce((totalDiscount, item) => {
       
       const isProductEligible = appliedCoupon.applicableProducts?.some(
-        (prod: any) => prod.id === item.product.id
+        (prod: { id: string }) => prod.id === item.product.id
       )
       
       const isCategoryEligible = item.product.categories?.some(
@@ -244,9 +225,6 @@ export default function CheckoutPage() {
 
       const isEligible = isProductEligible || isCategoryEligible || isCollectionEligible
       
-      if (isFeaturedCoupon) {
-        console.log(`  Elegibilidad: Producto=${isProductEligible}, Categoría=${isCategoryEligible}, Colección=${isCollectionEligible} = ${isEligible}`)
-      }
 
       if (isEligible) {
         // Usar la función segura para obtener el precio
@@ -256,9 +234,6 @@ export default function CheckoutPage() {
           ? (itemPrice * (Number(appliedCoupon.value) / 100) * item.quantity)
           : Number(appliedCoupon.value) * item.quantity
         
-        if (isFeaturedCoupon) {
-          console.log(`  ✅ Descuento aplicado: ${discount}`)
-        }
         return totalDiscount + discount
       }
       return totalDiscount
@@ -272,7 +247,6 @@ export default function CheckoutPage() {
       try {
         setPageLoading(false)
       } catch (error) {
-        console.error("Error loading initial data:", error)
         setPageLoading(false)
       }
     }
@@ -300,31 +274,17 @@ export default function CheckoutPage() {
         }
 
         const sessionData = await response.json()
-        console.log("🔐 Session data:", sessionData)
 
         if (sessionData && sessionData.user && sessionData.user.email) {
-          console.log("👤 User is authenticated, email:", sessionData.user.email)
           setSession(sessionData)
           setIsAuthenticated(true)
 
           // Fetch user data by email instead of ID
-          console.log("🔄 Fetching user data for email:", sessionData.user.email)
           const userData = await fetchUserByEmail(sessionData.user.email)
-          console.log("📋 User data fetched:", userData ? "Success" : "Failed")
-
-          if (userData) {
-            console.log("ℹ️ User info:", {
-              name: userData.firstName + " " + userData.lastName,
-              email: userData.email,
-              hasAddresses: userData.addresses && userData.addresses.length > 0,
-            })
-          }
         } else {
-          console.log("🔒 No authenticated user session found")
           setIsAuthenticated(false)
         }
       } catch (error) {
-        console.error("❌ Error fetching session or user data:", error)
         setIsAuthenticated(false)
       } finally {
         setAuthCheckComplete(true)
@@ -336,18 +296,8 @@ export default function CheckoutPage() {
 
   // Populate form with user data when currentUser changes
   useEffect(() => {
-    console.log("🔄 currentUser changed, checking for data to populate form...")
-
     if (currentUser) {
-      console.log("👤 User data loaded:", {
-        id: currentUser.id,
-        name: `${currentUser.firstName || ""} ${currentUser.lastName || ""}`,
-        email: currentUser.email,
-        addressCount: currentUser.addresses?.length || 0,
-      })
-
       // Populate form with user data
-      console.log("📝 Populating form with user data...")
       setFormData((prev) => {
         const newFormData = {
           ...prev,
@@ -358,65 +308,42 @@ export default function CheckoutPage() {
           company: currentUser.company || prev.company,
           shippingPhone: currentUser.phone || prev.shippingPhone,
         }
-        console.log("📋 Form data updated with user info:", {
-          firstName: newFormData.firstName,
-          lastName: newFormData.lastName,
-          email: newFormData.email,
-        })
         return newFormData
       })
 
       // Set customer ID
       setCustomerId(currentUser.id)
-      console.log("🆔 Customer ID set:", currentUser.id)
 
       // If user has addresses, select the default one
       if (currentUser.addresses && currentUser.addresses.length > 0) {
-        console.log("🏠 User has addresses:", currentUser.addresses.length)
-        console.log(
-          "🏠 Address details:",
-          currentUser.addresses.map((addr) => ({
-            id: addr.id,
-            type: addr.addressType,
-            isDefault: addr.isDefault,
-            address: addr.address1,
-          })),
-        )
-
         // Find default shipping address
         const defaultShippingAddress = currentUser.addresses.find(
           (addr) =>
             addr.isDefault && (addr.addressType === AddressType.SHIPPING || addr.addressType === AddressType.BOTH),
         )
-        console.log("🚚 Default shipping address:", defaultShippingAddress ? defaultShippingAddress.id : "None")
 
         // Find default billing address
         const defaultBillingAddress = currentUser.addresses.find(
           (addr) =>
             addr.isDefault && (addr.addressType === AddressType.BILLING || addr.addressType === AddressType.BOTH),
         )
-        console.log("💳 Default billing address:", defaultBillingAddress ? defaultBillingAddress.id : "None")
 
         // If no default addresses, use the first appropriate address
         const firstShippingAddress = currentUser.addresses.find(
           (addr) => addr.addressType === AddressType.SHIPPING || addr.addressType === AddressType.BOTH,
         )
-        console.log("🚚 First shipping address:", firstShippingAddress ? firstShippingAddress.id : "None")
 
         const firstBillingAddress = currentUser.addresses.find(
           (addr) => addr.addressType === AddressType.BILLING || addr.addressType === AddressType.BOTH,
         )
-        console.log("💳 First billing address:", firstBillingAddress ? firstBillingAddress.id : "None")
 
         // Set shipping address
         const shippingAddressToUse = defaultShippingAddress || firstShippingAddress
         if (shippingAddressToUse) {
-          console.log("🚚 Using shipping address:", shippingAddressToUse.id)
           setSelectedShippingAddressId(shippingAddressToUse.id)
           setShippingAddressId(shippingAddressToUse.id)
 
           // Also populate shipping form fields with the selected address data
-          console.log("📝 Populating shipping form fields with address data...")
           setFormData((prev) => {
             const newFormData = {
               ...prev,
@@ -427,28 +354,20 @@ export default function CheckoutPage() {
               zipCode: shippingAddressToUse.zip,
               shippingPhone: shippingAddressToUse.phone || currentUser.phone || "",
             }
-            console.log("📋 Shipping form fields updated:", {
-              address: newFormData.address,
-              city: newFormData.city,
-              zipCode: newFormData.zipCode,
-            })
             return newFormData
           })
         } else {
-          console.log("🚚 No shipping address found, showing new address form")
           setShowNewShippingAddress(true)
         }
 
         // Set billing address
         const billingAddressToUse = defaultBillingAddress || firstBillingAddress
         if (billingAddressToUse) {
-          console.log("💳 Using billing address:", billingAddressToUse.id)
           setSelectedBillingAddressId(billingAddressToUse.id)
           setBillingAddressId(billingAddressToUse.id)
 
           // Determine if shipping and billing are the same
           const isSameAddress = shippingAddressToUse?.id === billingAddressToUse?.id
-          console.log("🔄 Shipping and billing addresses are the same:", isSameAddress)
 
           setFormData((prev) => {
             const newFormData = {
@@ -466,32 +385,20 @@ export default function CheckoutPage() {
                     billingPhone: billingAddressToUse.phone || currentUser.phone || "",
                   }),
             }
-            if (!isSameAddress) {
-              console.log("📋 Billing form fields updated:", {
-                billingAddress: newFormData.billingAddress,
-                billingCity: newFormData.billingCity,
-                billingZipCode: newFormData.billingZipCode,
-              })
-            }
             return newFormData
           })
         } else if (shippingAddressToUse) {
           // Use shipping address for billing if no billing address exists
-          console.log("💳 No billing address found, using shipping address")
           setSelectedBillingAddressId(shippingAddressToUse.id)
           setBillingAddressId(shippingAddressToUse.id)
           setFormData((prev) => ({ ...prev, sameBillingAddress: true }))
         } else {
-          console.log("💳 No billing address found, showing new address form")
           setShowNewBillingAddress(true)
         }
       } else {
         // If no addresses, show the new address form
-        console.log("🏠 User has no addresses, showing new address forms")
         setShowNewShippingAddress(true)
       }
-    } else {
-      console.log("👤 No user data available")
     }
   }, [currentUser])
 
@@ -655,9 +562,7 @@ export default function CheckoutPage() {
     try {
       // La funcionalidad de edición se maneja en el componente CustomerInfoStep
       // Esta función es solo un placeholder para la interfaz
-      console.log("Editing address:", addressId)
     } catch (error) {
-      console.error("Error editing address:", error)
       toast.error("Error al editar la dirección")
     }
   }
@@ -679,7 +584,6 @@ export default function CheckoutPage() {
       }
       toast.success("Dirección eliminada correctamente")
     } catch (error) {
-      console.error("Error deleting address:", error)
       toast.error("Error al eliminar la dirección")
     }
   }
@@ -699,15 +603,9 @@ export default function CheckoutPage() {
         addr => addr.addressType === AddressType.BILLING || addr.addressType === AddressType.BOTH
       )
 
-      console.log("=== ADDRESS CREATION LOGIC ===")
-      console.log("Same billing address:", formData.sameBillingAddress)
-      console.log("Has existing billing address:", hasExistingBillingAddress)
-      console.log("Show new shipping address:", showNewShippingAddress)
-      console.log("Show new billing address:", showNewBillingAddress)
 
       if (formData.sameBillingAddress) {
         // Scenario 1: Same billing address - Create ONE address of type BOTH
-        console.log("Creating ONE address of type BOTH")
         
         const bothAddress: AddressCreateData = {
           addressType: AddressType.BOTH,
@@ -734,7 +632,6 @@ export default function CheckoutPage() {
         }
       } else if (hasExistingBillingAddress && showNewShippingAddress && !showNewBillingAddress) {
         // Scenario 2: Has existing billing address and only creating shipping - Create ONE address of type SHIPPING only
-        console.log("Creating ONE address of type SHIPPING (existing billing address)")
         
         const shippingAddress: AddressCreateData = {
           addressType: AddressType.SHIPPING,
@@ -758,7 +655,6 @@ export default function CheckoutPage() {
         }
       } else if (!showNewShippingAddress && showNewBillingAddress) {
         // Scenario 2.5: Using existing shipping address and only creating billing - Create ONE address of type BILLING only
-        console.log("Creating ONE address of type BILLING (existing shipping address)")
         
         const billingAddress: AddressCreateData = {
           addressType: AddressType.BILLING,
@@ -782,7 +678,6 @@ export default function CheckoutPage() {
         }
       } else if (showNewShippingAddress && showNewBillingAddress) {
         // Scenario 3: Create TWO addresses - one SHIPPING and one BILLING
-        console.log("Creating TWO addresses - SHIPPING and BILLING")
         
         // Create shipping address first
         const shippingAddress: AddressCreateData = {
@@ -831,13 +726,9 @@ export default function CheckoutPage() {
         }
       }
 
-      console.log("=== ADDRESS CREATION COMPLETE ===")
-      console.log("Shipping Address ID:", shippingAddressId)
-      console.log("Billing Address ID:", billingAddressId)
 
       return { shippingAddressId, billingAddressId }
     } catch (error) {
-      console.error("Error saving new addresses:", error)
       toast.error("Error al guardar las direcciones")
       return { shippingAddressId: null, billingAddressId: null }
     }
@@ -872,7 +763,6 @@ const applyCouponIfExists = () => {
     toast.error("El cupón no está disponible o ha expirado");
     return null;
   }
-  console.log("GAAAAA", foundCoupon)
   setAppliedCoupon(foundCoupon);
   return foundCoupon;
 };
@@ -882,9 +772,6 @@ const applyCouponIfExists = () => {
     setIsSubmitting(true)
 
     try {
-      console.log("========== INICIANDO PROCESO DE ORDEN ==========")
-      console.log("Starting order submission process...")
-
       // 1. Prepare customer and address data
       let calculatedShippingAddressId = shippingAddressId
       let calculatedBillingAddressId = billingAddressId
@@ -893,7 +780,6 @@ const applyCouponIfExists = () => {
       if (isAuthenticated && currentUser) {
         // For authenticated users
         customer = { id: currentUser.id }
-        console.log("Using authenticated user ID:", currentUser.id)
 
         // Initialize with selected address IDs if they exist
         if (selectedShippingAddressId) {
@@ -902,14 +788,6 @@ const applyCouponIfExists = () => {
         if (selectedBillingAddressId) {
           calculatedBillingAddressId = selectedBillingAddressId
         }
-
-        console.log("=== ADDRESS ID INITIALIZATION ===")
-        console.log("Selected shipping address ID:", selectedShippingAddressId)
-        console.log("Selected billing address ID:", selectedBillingAddressId)
-        console.log("Calculated shipping address ID:", calculatedShippingAddressId)
-        console.log("Calculated billing address ID:", calculatedBillingAddressId)
-        console.log("Show new shipping address:", showNewShippingAddress)
-        console.log("Show new billing address:", showNewBillingAddress)
 
         // Save any new addresses using the intelligent logic
         if (showNewShippingAddress || showNewBillingAddress) {
@@ -922,32 +800,22 @@ const applyCouponIfExists = () => {
           }
         }
 
-        console.log("=== FINAL ADDRESS IDS ===")
-        console.log("Final calculated shipping address ID:", calculatedShippingAddressId)
-        console.log("Final calculated billing address ID:", calculatedBillingAddressId)
       } else {
         // For guest users, we'll use the form data directly in the order
-        console.log("Guest checkout - using form data directly")
       }
 
       // 2. Verify we have the required address IDs for authenticated users
       if (isAuthenticated && (!calculatedShippingAddressId || !calculatedBillingAddressId)) {
-        console.error("Missing address IDs for authenticated user")
         throw new Error("Please select or create shipping and billing addresses")
       }
 
       // 3. Prepare line items from cart
-      console.log("Cart items:", items)
       const coupon = applyCouponIfExists();
-
- 
 
 // Preparar line items con descuentos
 const lineItems = prepareLineItems()
 
 // Calcular el total de descuentos
-
-      console.log("Prepared line items:", lineItems)
 
       // 4. Calculate totals
       const subtotalPrice = getTotal();
@@ -966,17 +834,10 @@ const lineItems = prepareLineItems()
         totalPrice = subtotalAfterDiscount + totalTax + Number(getShippingCost());
       }
 
-      console.log("Tax included in prices:", taxesIncluded)
-      console.log("Tax rate:", taxRate, "Total tax:", totalTax)
-
       const shippingCost = Number(getShippingCost())
-      console.log("Shipping cost:", shippingCost)
-      console.log("Total price:", totalPrice)
 
       // Get currency information
       const currencyId = shopSettings?.[0]?.defaultCurrency?.id || "curr_0536edd0-2193"
-      console.log("Using currency ID:", currencyId)
-      console.log("Currency symbol:", shopSettings?.[0]?.defaultCurrency?.symbol)
 
       // 5. Prepare order data
       // Generate a random order number between 1 and 1000
@@ -1026,7 +887,7 @@ const lineItems = prepareLineItems()
               },
         // Create billingAddress JSON object
         billingAddress: formData.sameBillingAddress
-          ? null
+          ? undefined
           : isAuthenticated && calculatedBillingAddressId
             ? { id: calculatedBillingAddressId }
             : {
@@ -1038,9 +899,9 @@ const lineItems = prepareLineItems()
                 country: "PE",
                 phone: formData.billingPhone,
               },
-        couponId: coupon?.id || null,
-        paymentProviderId: formData.paymentMethod || null, // Set to null when no payment method
-        shippingMethodId: formData.shippingMethod || null, // Set to null when no shipping method
+        couponId: coupon?.id || undefined,
+        paymentProviderId: formData.paymentMethod || undefined, // Set to undefined when no payment method
+        shippingMethodId: formData.shippingMethod || undefined, // Set to undefined when no shipping method
         financialStatus:
           formData.paymentMethod === "pp_9c77d30e-6d2b"
             ? OrderFinancialStatus.PAID
@@ -1050,42 +911,26 @@ const lineItems = prepareLineItems()
         customerNotes: formData.notes || "",
         internalNotes: "",
         source: "web",
-        preferredDeliveryDate: formData.preferredDeliveryDate,
+        preferredDeliveryDate: new Date(formData.preferredDeliveryDate),
       }
 
-      console.log("========== COMPLETE ORDER PAYLOAD ==========")
-      console.log(JSON.stringify(orderData, null, 2))
-      console.log("===========================================")
-
-      console.log("========== DATOS COMPLETOS DE LA ORDEN ==========")
-      console.log(JSON.stringify(orderData, null, 2))
-      console.log("=================================================")
-
       // 6. Create the order
-      console.log("Sending order data to server...")
       let orderCreationSuccess = false
       let retryCount = 0
       const maxRetries = 3
 
       while (!orderCreationSuccess && retryCount < maxRetries) {
         try {
-          console.log(`Attempt ${retryCount + 1} to create order with orderNumber: ${orderData.orderNumber}`)
           const order = await createOrder(orderData)
-          console.log("Order creation response:", order)
 
           if (!order || !order.id) {
-            console.error("Failed to create order - no order ID returned")
             throw new Error("Failed to create order")
           }
-
-          console.log("Order created successfully with ID:", order.id)
           setOrderId(order.id)
           orderCreationSuccess = true
 
           // 7. Send order confirmation emails using emailStore
           try {
-            console.log("📧 Preparing to send order confirmation emails...")
-
             // Prepare order data for email templates using the Order schema
             const emailOrderData: Order = {
               id: order.id,
@@ -1181,45 +1026,18 @@ const lineItems = prepareLineItems()
               paymentTransactions: [],
             }
 
-            console.log("📧 Email order data prepared:", emailOrderData)
-
             // Send both emails (client confirmation and admin notification) with shopSettings
             const emailResults = await sendOrderEmails(emailOrderData, shopSettings?.[0])
-
-            if (emailResults.clientResult.success) {
-              console.log("✅ Client confirmation email sent successfully")
-            } else {
-              console.error("❌ Failed to send client confirmation email:", emailResults.clientResult.message)
-            }
-
-            if (emailResults.adminResult.success) {
-              console.log("✅ Admin notification email sent successfully")
-            } else {
-              console.error("❌ Failed to send admin notification email:", emailResults.adminResult.message)
-            }
-
-            // Show success message even if some emails failed
-            if (emailResults.clientResult.success || emailResults.adminResult.success) {
-              console.log("📧 At least one email was sent successfully")
-            } else {
-              console.warn("⚠️ Both emails failed to send, but order was created successfully")
-            }
           } catch (emailError) {
-            const emailErrorMessage = emailError instanceof Error ? emailError.message : String(emailError)
-            console.error("❌ Error sending order emails:", emailErrorMessage)
             // Don't throw here, we don't want to fail the order if email fails
             // The order was created successfully, email failure is not critical
           }
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error)
-          console.error(`Order creation attempt ${retryCount + 1} failed:`, errorMessage)
           retryCount++
           if (retryCount < maxRetries) {
             // Generate a new orderNumber for the retry
             orderData.orderNumber = Math.floor(Math.random() * 1000) + 1
-            console.log(`Retrying with new orderNumber: ${orderData.orderNumber}`)
           } else {
-            console.error("Max retries reached. Order creation failed.")
             toast.error("Error al procesar el pedido. Por favor, intenta nuevamente.")
             setIsSubmitting(false)
             return
@@ -1228,7 +1046,6 @@ const lineItems = prepareLineItems()
       }
 
       // 8. Success
-      console.log("Order process completed successfully")
       toast.success("¡Pedido realizado con éxito!", {
         description: `Pedido creado. Recibirás un correo con los detalles de tu compra.`,
       })
@@ -1236,13 +1053,9 @@ const lineItems = prepareLineItems()
       clearCart()
       setCurrentStep(STEPS.CONFIRMATION)
     } catch (error) {
-      console.error("Error submitting order:", error)
-      const errorMessage = error instanceof Error ? error.message : String(error)
-      console.error("Error details:", errorMessage)
       toast.error("Error al procesar el pedido. Por favor, intenta nuevamente.")
     } finally {
       setIsSubmitting(false)
-      console.log("Order submission process finished")
     }
   }
 
@@ -1356,7 +1169,7 @@ if (taxesIncluded) {
       } else {
         // Cupón con restricciones específicas
         const isProductEligible = appliedCoupon.applicableProducts?.some(
-          (prod: any) => prod.id === item.product.id
+          (prod: { id: string }) => prod.id === item.product.id
         )
         
         const isCategoryEligible = item.product.categories?.some(
@@ -1554,7 +1367,7 @@ if (taxesIncluded) {
                     prevStep={prevStep}
                     isAuthenticated={isAuthenticated}
                     authCheckComplete={authCheckComplete}
-                    currentUser={currentUser}
+                    currentUser={currentUser as (User & { addresses?: Address[] }) | null}
                     showNewShippingAddress={showNewShippingAddress}
                     setShowNewShippingAddress={setShowNewShippingAddress}
                     showNewBillingAddress={showNewBillingAddress}
@@ -1596,7 +1409,7 @@ if (taxesIncluded) {
                 <ConfirmationStep
                   orderId={orderId}
                   isAuthenticated={isAuthenticated}
-                  currentUser={currentUser}
+                  currentUser={currentUser as (User & { addresses?: Address[] }) | null}
                   formData={formData}
                   items={items}
                   subtotal={subtotal}
@@ -1628,7 +1441,7 @@ if (taxesIncluded) {
                   shippingMethods={shippingMethods}
                   paymentProviders={paymentProviders}
                   isAuthenticated={isAuthenticated}
-                  currentUser={currentUser}
+                  currentUser={currentUser as (User & { addresses?: Address[] }) | null}
                   selectedShippingAddressId={selectedShippingAddressId}
                   selectedBillingAddressId={selectedBillingAddressId}
                 />

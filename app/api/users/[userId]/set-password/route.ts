@@ -48,7 +48,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ use
     })
 
     return NextResponse.json({ success: true })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error estableciendo contraseña:", error)
     return NextResponse.json({ message: "Error al establecer la contraseña" }, { status: 500 })
   }

@@ -43,7 +43,7 @@ export async function openCulqiCheckout(amount: number, description: string) {
 
 export function setCulqiCallback(
   onSuccess: (token: string) => void,
-  onError: (error: any) => void
+  onError: (error: unknown) => void
 ) {
   window.culqi = () => {
     if (window.Culqi.token) {

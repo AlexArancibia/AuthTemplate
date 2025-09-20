@@ -133,7 +133,7 @@ export function HeroCarouselBase({
   }
 
   // Manejadores para el arrastre (drag)
-  const handleDragStart = (_: any, info: PanInfo) => {
+  const handleDragStart = (_: unknown, info: PanInfo) => {
     dragStartX.current = info.point.x
 
     // Pausar el autoplay durante el arrastre
@@ -149,7 +149,7 @@ export function HeroCarouselBase({
     }
   }
 
-  const handleDragEnd = (_: any, info: PanInfo) => {
+  const handleDragEnd = (_: unknown, info: PanInfo) => {
     if (isTransitioning || sortedHeroSections.length <= 1) return
 
     const dragEndX = info.point.x
