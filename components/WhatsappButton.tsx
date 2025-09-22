@@ -9,6 +9,7 @@ export function WhatsAppButton() {
   const { shopSettings } = useMainStore()
   const [phoneNumber, setPhoneNumber] = useState("")
   const [whatsappMessage, setWhatsappMessage] = useState("")
+  const [bottomOffset, setBottomOffset] = useState(16) // 16px por defecto
 
   useEffect(() => {
     if (shopSettings && shopSettings.length > 0) {
@@ -27,6 +28,56 @@ export function WhatsAppButton() {
     }
   }, [shopSettings])
 
+  // Función para calcular la posición del botón
+  const updateButtonPosition = () => {
+    // Buscar la barra de cookies en el DOM
+    const cookieBar = document.querySelector('[data-cookie-bar]') as HTMLElement
+    
+    if (cookieBar && cookieBar.offsetHeight > 0) {
+      // Si la barra existe y es visible, calcular la nueva posición
+      const newOffset = cookieBar.offsetHeight + 16
+      setBottomOffset(newOffset)
+    } else {
+      // Si no hay barra, usar posición por defecto
+      setBottomOffset(16)
+    }
+  }
+
+  // Efecto para monitorear cambios en la barra de cookies
+  useEffect(() => {
+    // Actualizar posición inicial
+    updateButtonPosition()
+
+    // Crear un observer para detectar cambios en el DOM
+    const observer = new MutationObserver(() => {
+      updateButtonPosition()
+    })
+
+    // Observar cambios en el body
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['style', 'class']
+    })
+
+    // También escuchar cambios de tamaño de ventana
+    const handleResize = () => {
+      updateButtonPosition()
+    }
+
+    window.addEventListener('resize', handleResize)
+
+    // Polling adicional para asegurar que detectamos cambios
+    const interval = setInterval(updateButtonPosition, 1000)
+
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', handleResize)
+      clearInterval(interval)
+    }
+  }, [])
+
   // Si no tenemos número de teléfono, no mostramos el botón
   if (!phoneNumber) {
     return null
@@ -40,7 +91,11 @@ export function WhatsAppButton() {
       href={whatsappUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className="fixed bottom-4 right-4 z-50 bg-[#25D366] text-white p-3 rounded-full shadow-lg hover:bg-[#128C7E] transition-colors duration-300"
+      className="fixed right-4 z-50 bg-[#25D366] text-white p-3 rounded-full shadow-lg hover:bg-[#128C7E] transition-all duration-300"
+      style={{ 
+        bottom: `${bottomOffset}px`,
+        transition: 'bottom 0.3s ease-in-out'
+      }}
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.9 }}
       initial={{ opacity: 0, y: 50 }}

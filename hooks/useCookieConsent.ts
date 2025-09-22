@@ -8,19 +8,20 @@ export interface CookiePreferences {
 }
 
 export interface CookieConsentState {
-  showDialog: boolean;
+  showBar: boolean;
   cookiesAccepted: boolean;
   cookiePreferences: CookiePreferences | null;
   acceptAllCookies: () => void;
-  declineAllCookies: () => void;
-  acceptSelectedCookies: (preferences: CookiePreferences) => void;
-  openCookieSettings: () => void;
+  closeCookieBar: () => void;
+  cookieBarHeight: number;
+  setCookieBarHeight: (height: number) => void;
 }
 
 export const useCookieConsent = (): CookieConsentState => {
-  const [showDialog, setShowDialog] = useState<boolean>(false);
+  const [showBar, setShowBar] = useState<boolean>(false);
   const [cookiesAccepted, setCookiesAccepted] = useState<boolean>(false);
   const [cookiePreferences, setCookiePreferences] = useState<CookiePreferences | null>(null);
+  const [cookieBarHeight, setCookieBarHeight] = useState<number>(0);
 
   useEffect(() => {
     checkCookieConsent();
@@ -31,8 +32,8 @@ export const useCookieConsent = (): CookieConsentState => {
     const preferences = localStorage.getItem('cookiePreferences');
     
     if (consent === null) {
-      // No hay consentimiento previo, mostrar diálogo
-      setShowDialog(true);
+      // No hay consentimiento previo, mostrar barra
+      setShowBar(true);
     } else {
       // Ya hay consentimiento
       setCookiesAccepted(consent === 'accepted');
@@ -63,12 +64,13 @@ export const useCookieConsent = (): CookieConsentState => {
     
     setCookiesAccepted(true);
     setCookiePreferences(allAcceptedPreferences);
-    setShowDialog(false);
+    setShowBar(false);
     
     initializeServices(allAcceptedPreferences);
   };
 
-  const declineAllCookies = (): void => {
+  const closeCookieBar = (): void => {
+    // Al cerrar la barra sin aceptar, aplicar configuración mínima
     const minimalPreferences: CookiePreferences = {
       necessary: true,
       analytics: false,
@@ -82,28 +84,10 @@ export const useCookieConsent = (): CookieConsentState => {
     
     setCookiesAccepted(false);
     setCookiePreferences(minimalPreferences);
-    setShowDialog(false);
+    setShowBar(false);
     
     // Limpiar cookies existentes si es necesario
     cleanupCookies();
-  };
-
-  const acceptSelectedCookies = (preferences: CookiePreferences): void => {
-    const hasAcceptedAny = preferences.analytics || preferences.marketing || preferences.personalization;
-    
-    localStorage.setItem('cookieConsent', hasAcceptedAny ? 'accepted' : 'declined');
-    localStorage.setItem('cookiePreferences', JSON.stringify(preferences));
-    localStorage.setItem('cookieConsentDate', new Date().toISOString());
-    
-    setCookiesAccepted(hasAcceptedAny);
-    setCookiePreferences(preferences);
-    setShowDialog(false);
-    
-    initializeServices(preferences);
-  };
-
-  const openCookieSettings = (): void => {
-    setShowDialog(true);
   };
 
   const initializeServices = (preferences: CookiePreferences): void => {
@@ -180,13 +164,13 @@ export const useCookieConsent = (): CookieConsentState => {
   };
 
   return {
-    showDialog,
+    showBar,
     cookiesAccepted,
     cookiePreferences,
     acceptAllCookies,
-    declineAllCookies,
-    acceptSelectedCookies,
-    openCookieSettings
+    closeCookieBar,
+    cookieBarHeight,
+    setCookieBarHeight
   };
 };
 

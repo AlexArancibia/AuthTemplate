@@ -26,7 +26,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useMainStore } from "@/stores/mainStore"
 import { useCartStore } from "@/stores/cartStore"
 import { useCookieConsent } from "@/hooks/useCookieConsent"
-import CookieConsentDialog from "./CookieConsentDialog"
+import CookieBar from "./CookieBar"
 
 interface NavbarProps {
   user?: {
@@ -64,11 +64,9 @@ export default function Navbar({ user }: NavbarProps) {
     error,
   } = useMainStore()
 const { 
-    showDialog, 
+    showBar, 
     acceptAllCookies, 
-    declineAllCookies, 
-    acceptSelectedCookies, 
-    openCookieSettings 
+    closeCookieBar
   } = useCookieConsent();
     const isCookieConsentEnabled: boolean = shopSettings?.[0]?.cookieConsentEnabled ?? false;
   const { items, removeItem, updateQuantity, getTotal, getItemsCount } = useCartStore()
@@ -536,11 +534,10 @@ const {
       </div>
     </nav>
 
-    {isCookieConsentEnabled && showDialog && (
-        <CookieConsentDialog
+    {isCookieConsentEnabled && showBar && (
+        <CookieBar
           onAccept={acceptAllCookies}
-          onDecline={declineAllCookies}
-          onAcceptSelected={acceptSelectedCookies}
+          onClose={closeCookieBar}
         />
       )}
     </>
