@@ -4,6 +4,7 @@ import type React from "react"
 import { useState, useMemo, useEffect, useCallback, useRef, Suspense } from "react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Input } from "@/components/ui/input"
 import { Slider } from "@/components/ui/slider"
 import { Separator } from "@/components/ui/separator"
@@ -42,12 +43,19 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const [searchTerm, setSearchTerm] = useState(initialFilters.searchTerm)
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(initialFilters.categories)
+  const [selectedCategory, setSelectedCategory] = useState<string>("")
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string[]>>(initialFilters.variants)
   const [priceRange, setPriceRange] = useState<[number, number]>(initialFilters.priceRange)
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm)
 
   const defaultCurrency = shopSettings[0]?.defaultCurrency
+
+  // Sincronizar categoría seleccionada con los parámetros iniciales de URL
+  useEffect(() => {
+    if (initialFilters.categories.length > 0) {
+      setSelectedCategory(initialFilters.categories[0])
+    }
+  }, [initialFilters.categories])
 
   // Debounce search term
   useEffect(() => {
@@ -62,7 +70,7 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
   const updateFilters = useCallback(() => {
     const currentFilters = {
       searchTerm: debouncedSearchTerm,
-      categories: selectedCategories,
+      categories: selectedCategory ? [selectedCategory] : [],
       variants: selectedVariants,
       priceRange,
     }
@@ -70,7 +78,7 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
     // Crear una clave única para comparar filtros
     const filtersKey = JSON.stringify({
       searchTerm: currentFilters.searchTerm,
-      categories: [...currentFilters.categories].sort(),
+      categories: currentFilters.categories,
       variants: Object.fromEntries(
         Object.entries(currentFilters.variants).map(([key, values]) => [key, [...values].sort()]),
       ),
@@ -99,7 +107,7 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
         updateTimeoutRef.current = null
       }, 100)
     }
-  }, [debouncedSearchTerm, selectedCategories, selectedVariants, priceRange, onFilterChange])
+  }, [debouncedSearchTerm, selectedCategory, selectedVariants, priceRange, onFilterChange])
 
   // Función separada para actualizar URL
   const updateURL = useCallback(
@@ -118,7 +126,7 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
       }
 
       if (filters.categories.length > 0) {
-        params.set("categories", filters.categories.join(","))
+        params.set("category", filters.categories[0])
       }
 
       if (filters.priceRange[0] !== minPrice || filters.priceRange[1] !== maxPrice) {
@@ -240,10 +248,8 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
   }, [categories])
 
   const handleCategoryChange = useCallback((categoryId: string) => {
-    setSelectedCategories((prev) =>
-      prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [...prev, categoryId],
-    )
-  }, [])
+    setSelectedCategory(categoryId === selectedCategory ? "" : categoryId)
+  }, [selectedCategory])
 
   const handleVariantChange = useCallback((attribute: string, value: string) => {
     setSelectedVariants((prev) => {
@@ -267,7 +273,7 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
 
   const resetFilters = useCallback(() => {
     setSearchTerm("")
-    setSelectedCategories([])
+    setSelectedCategory("")
     setSelectedVariants({})
     setPriceRange([minPrice, maxPrice])
 
@@ -292,20 +298,30 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
       {/* Categories */}
       <div>
         <h3 className="text-lg font-medium mb-4">Categorías</h3>
-        <div className="space-y-2">
-          {sortedCategories.map((category: Category) => (
-            <div key={category.id} className="flex items-center space-x-2">
-              <Checkbox
-                id={category.id}
-                checked={selectedCategories.includes(category.id)}
-                onCheckedChange={() => handleCategoryChange(category.id)}
-              />
-              <label htmlFor={category.id} className="text-sm text-gray-700 cursor-pointer">
-                {category.name}
+        <RadioGroup value={selectedCategory} onValueChange={setSelectedCategory}>
+          <div className="space-y-2">
+            {/* Opción para mostrar todas las categorías */}
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="" id="all-categories" />
+              <label htmlFor="all-categories" className="text-sm text-gray-700 cursor-pointer font-medium">
+                Todas las categorías
               </label>
             </div>
-          ))}
-        </div>
+            
+            {/* Separador visual */}
+            <div className="border-t border-gray-200 my-2"></div>
+            
+            {/* Categorías individuales */}
+            {sortedCategories.map((category: Category) => (
+              <div key={category.id} className="flex items-center space-x-2">
+                <RadioGroupItem value={category.id} id={category.id} />
+                <label htmlFor={category.id} className="text-sm text-gray-700 cursor-pointer">
+                  {category.name}
+                </label>
+              </div>
+            ))}
+          </div>
+        </RadioGroup>
       </div>
 
       {/* Price Range */}

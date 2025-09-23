@@ -3,12 +3,14 @@
 import { useState, useEffect, Suspense } from "react"
 import { motion } from "framer-motion"
 import { useSearchParams } from "next/navigation"
+import { useMainStore } from "@/stores/mainStore"
 import ProductList from "./_components/ProductList"
 import ProductListSkeleton from "./_components/ProductListSkeleton"
 
 function ProductsContent() {
   const searchParams = useSearchParams()
   const [isClient, setIsClient] = useState(false)
+  const { categories } = useMainStore()
 
   useEffect(() => {
     setIsClient(true)
@@ -34,7 +36,7 @@ function ProductsContent() {
 
   // Extract filter parameters from URL
   const searchTerm = searchParams.get("search") || ""
-  const categories = searchParams.getAll("category")
+  const categoriesParam = searchParams.getAll("category")
   const page = Number.parseInt(searchParams.get("page") || "1", 10)
   const sortBy = searchParams.get("sort") || "featured"
 
@@ -53,6 +55,13 @@ function ProductsContent() {
     }
   })
 
+  // Get the selected category name for the title
+  const selectedCategory = categoriesParam.length > 0 
+    ? categories.find(cat => cat.id === categoriesParam[0])
+    : null
+
+  const pageTitle = selectedCategory ? selectedCategory.name : "Nuestros Productos"
+
   return (
     <main className="min-h-screen bg-white">
       {/* Sección de encabezado con efecto de fade-in */}
@@ -69,7 +78,7 @@ function ProductsContent() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.8 }}
           >
-            Nuestros Productos
+            {pageTitle}
           </motion.h1>
           <motion.p
             className="text-white/90 text-lg"
@@ -77,7 +86,10 @@ function ProductsContent() {
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.1 }}
           >
-            Descubre nuestra línea completa de productos de limpieza industrial
+            {selectedCategory 
+              ? `Productos de la categoría ${selectedCategory.name.toLowerCase()}`
+              : "Descubre nuestra línea completa de productos de limpieza industrial"
+            }
           </motion.p>
         </div>
       </motion.div>
@@ -97,7 +109,7 @@ function ProductsContent() {
           >
             <ProductList
               initialSearchTerm={searchTerm}
-              initialCategories={categories}
+              initialCategories={categoriesParam}
               initialPage={page}
               initialSortBy={sortBy}
               initialMinPrice={minPrice}
