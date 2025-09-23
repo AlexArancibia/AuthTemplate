@@ -172,11 +172,11 @@ function ProductListContent({
         return false
       }
 
-      // Filter by category
+      // Filter by category (single category selection)
       if (
         filters.categories.length > 0 &&
         product.categories &&
-        !product.categories.some((cat: Category) => filters.categories.includes(cat.id))
+        !product.categories.some((cat: Category) => cat.id === filters.categories[0])
       ) {
         return false
       }
