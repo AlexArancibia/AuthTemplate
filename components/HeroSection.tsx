@@ -19,7 +19,7 @@ export function HeroSection() {
       try {
         console.log("[HeroSection] Cargando hero sections...")
         fetchAttempted.current = true
-        await fetchHeroSections()
+        await fetchHeroSections({ limit: 50 })
         console.log("[HeroSection] Hero sections cargadas correctamente:", heroSections?.length || 0)
         setError(null)
       } catch (err) {

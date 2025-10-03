@@ -109,8 +109,12 @@ export function Footer() {
   const serviceClientLinks = [
     { name: "Preguntas Frecuentes", href: "/preguntas-frecuentes", icon: HelpCircle },
     { name: "Formas de Pago", href: "/formas-pago", icon: CreditCard },
-    { name: "Política de privacidad", href: "/politica-de-privacidad", icon: Shield },
     { name: "Cambios y Devoluciones", href: "/cambios-devoluciones", icon: RotateCcw },
+  ]
+
+  const legalLinksVisible = [
+    { name: "Términos y Condiciones", href: "/terminos-y-condiciones", icon: FileText },
+    { name: "Política de Privacidad", href: "/politica-de-privacidad", icon: Shield },
     { name: "Libro de Reclamaciones", href: "/libro-de-reclamaciones", icon: BookOpen },
   ]
 
@@ -119,12 +123,6 @@ export function Footer() {
     { name: "Nuestros Productos", href: "/productos", icon: Star },
     { name: "Testimonios", href: "/#testimonios", icon: Megaphone },
     { name: "Noticias", href: "/nosotros", icon: BookOpen },
-  ]
-
-  const legalLinks = [
-    { name: "Términos y Condiciones", href: "/terminos-y-condiciones", icon: FileText },
-    { name: "Política de Privacidad", href: "/politica-de-privacidad", icon: Shield },
-    { name: "Libro de Reclamaciones", href: "/libro-de-reclamaciones", icon: BookOpen },
   ]
 
   const socialLinks = [
@@ -193,11 +191,32 @@ export function Footer() {
            
           </motion.div>
 
-          {/* Enlaces de navegación */}
+          {/* Enlaces de servicio al cliente */}
           <motion.div variants={itemVariants}>
             <h3 className="text-lg font-semibold mb-4">Servicio al Cliente</h3>
             <ul className="space-y-2">
               {serviceClientLinks.map((link) => {
+                const IconComponent = link.icon
+                return (
+                  <li key={link.name}>
+                    <Link
+                      href={link.href}
+                      className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors text-sm group"
+                    >
+                      {IconComponent && (
+                        <IconComponent className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                      )}
+                      <span>{link.name}</span>
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+
+            {/* Enlaces legales importantes */}
+            <h3 className="text-lg font-semibold mb-4 mt-8">Legal</h3>
+            <ul className="space-y-2">
+              {legalLinksVisible.map((link) => {
                 const IconComponent = link.icon
                 return (
                   <li key={link.name}>

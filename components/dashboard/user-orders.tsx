@@ -19,9 +19,10 @@ interface UserOrdersProps {
 }
 
 export function UserOrders({ userId, userEmail }: UserOrdersProps) {
-  const { orders, fetchOrders, loading: ordersLoading, error: ordersError } = useMainStore()
+  const { orders, fetchOrders, loading: ordersLoading, error: ordersError, paginationMeta } = useMainStore()
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
 
   // Simple fetch control
   const hasFetched = useRef(false)
@@ -34,11 +35,18 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
         return
       }
 
-      console.log("[USER_ORDERS] Fetching all orders")
+      console.log("[USER_ORDERS] Fetching orders with pagination")
       hasFetched.current = true
 
       try {
-        await fetchOrders()
+        // Fetch con email del usuario como filtro y paginación
+        await fetchOrders({ 
+          customerEmail: userEmail,
+          page: currentPage,
+          limit: 10,
+          sortBy: 'createdAt',
+          sortOrder: 'desc'
+        })
         console.log("[USER_ORDERS] Orders loaded successfully")
       } catch (error) {
         console.error("[USER_ORDERS] Error fetching orders:", error)
@@ -47,7 +55,7 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
     }
 
     loadOrders()
-  }, [fetchOrders, ordersLoading])
+  }, [fetchOrders, ordersLoading, userEmail, currentPage])
 
   // Debug logs
   console.log("[USER_ORDERS] orders type:", typeof orders)
@@ -55,19 +63,11 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
   console.log("[USER_ORDERS] orders.data exists:", orders && "data" in orders)
   console.log("[USER_ORDERS] userId:", userId)
 
-  // Get the orders array from the response structure
-  const ordersArray =
-    orders && typeof orders === "object" && "data" in orders && Array.isArray(orders.data) ? orders.data : []
-
-  console.log("[USER_ORDERS] ordersArray length:", ordersArray.length)
-
-  // DEBUG: Show all orders without filtering by user
-  // Filtrar órdenes por email del usuario
-  const userOrders = ordersArray.filter(
-    (order) => order.customerInfo && order.customerInfo.email && order.customerInfo.email === userEmail,
-  )
-  console.log("[USER_ORDERS] Filtered orders by email:", userEmail)
-  console.log("[USER_ORDERS] Total filtered orders:", userOrders.length)
+  // Los orders ya vienen filtrados por el backend usando customerEmail
+  const userOrders = Array.isArray(orders) ? orders : []
+  
+  console.log("[USER_ORDERS] User orders length:", userOrders.length)
+  console.log("[USER_ORDERS] Pagination meta:", paginationMeta.orders)
 
   const getStatusBadge = (order: any) => {
     // Financial status
@@ -162,7 +162,10 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
       <div className="text-center py-8">
         <AlertCircle className="h-10 w-10 text-red-500 mx-auto mb-4" />
         <p className="text-muted-foreground mb-4">{ordersError}</p>
-        <Button variant="outline" className="mt-4" onClick={() => fetchOrders()}>
+        <Button variant="outline" className="mt-4" onClick={() => {
+          hasFetched.current = false
+          fetchOrders({ customerEmail: userEmail, page: currentPage, limit: 10 })
+        }}>
           Intentar de nuevo
         </Button>
       </div>
@@ -177,7 +180,10 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
         <ShoppingBag className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
         <p className="text-muted-foreground mb-2">No hay pedidos disponibles</p>
  
-        <Button variant="outline" className="mt-4" onClick={() => fetchOrders()}>
+        <Button variant="outline" className="mt-4" onClick={() => {
+          hasFetched.current = false
+          fetchOrders({ customerEmail: userEmail, page: currentPage, limit: 10 })
+        }}>
           Recargar pedidos
         </Button>
       </div>
@@ -229,6 +235,39 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
           </CardContent>
         </Card>
       ))}
+
+      {/* Paginación */}
+      {paginationMeta.orders && paginationMeta.orders.totalPages > 1 && (
+        <div className="flex justify-center items-center gap-4 mt-6">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setCurrentPage(prev => prev - 1)
+              hasFetched.current = false
+            }}
+            disabled={!paginationMeta.orders.hasPrev || ordersLoading}
+          >
+            Anterior
+          </Button>
+          
+          <span className="text-sm text-muted-foreground">
+            Página {paginationMeta.orders.page} de {paginationMeta.orders.totalPages}
+          </span>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setCurrentPage(prev => prev + 1)
+              hasFetched.current = false
+            }}
+            disabled={!paginationMeta.orders.hasNext || ordersLoading}
+          >
+            Siguiente
+          </Button>
+        </div>
+      )}
 
       {/* Order Details Dialog */}
       {selectedOrder && (

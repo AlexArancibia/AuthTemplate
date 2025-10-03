@@ -1,20 +1,26 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useMainStore } from "@/stores/mainStore"
 import { Skeleton } from "@/components/ui/skeleton"
 import { PostCard } from "./_components/PostCard"
 import { FeaturedContent } from "./_components/FeaturedPost"
+import { Button } from "@/components/ui/button"
 
 export default function BlogPage() {
-  const { contents, fetchContents, loading } = useMainStore()
+  const { contents, fetchContents, loading, paginationMeta } = useMainStore()
+  const [currentPage, setCurrentPage] = useState(1)
 
- 
+  useEffect(() => {
+    fetchContents({ 
+      page: currentPage, 
+      limit: 12,
+      sortBy: 'createdAt',
+      sortOrder: 'desc'
+    })
+  }, [currentPage, fetchContents])
 
-  const filteredContents = contents
-    .filter(content => content.type !== "PAGE")
-    .reverse() // Invierte el orden de los posts
-
+  const filteredContents = contents.filter(content => content.type !== "PAGE")
   const featuredPost = filteredContents[0]
 
   if (loading) {
@@ -34,6 +40,31 @@ export default function BlogPage() {
               <PostCard key={content.id} content={content} index={index} />
             ))}
           </div>
+
+          {/* Paginación */}
+          {paginationMeta.contents && paginationMeta.contents.totalPages > 1 && (
+            <div className="flex justify-center items-center gap-4 mt-12">
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage(prev => prev - 1)}
+                disabled={!paginationMeta.contents.hasPrev || loading}
+              >
+                Anterior
+              </Button>
+              
+              <span className="text-sm text-muted-foreground">
+                Página {paginationMeta.contents.page} de {paginationMeta.contents.totalPages}
+              </span>
+              
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage(prev => prev + 1)}
+                disabled={!paginationMeta.contents.hasNext || loading}
+              >
+                Siguiente
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </main>

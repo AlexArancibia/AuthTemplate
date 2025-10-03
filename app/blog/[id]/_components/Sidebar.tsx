@@ -11,8 +11,8 @@ export function Sidebar() {
   const { fetchContents, fetchCategories, contents, categories, loading } = useMainStore()
 
   useEffect(() => {
-    fetchContents()
-    fetchCategories()
+    fetchContents({ limit: 50 })
+    fetchCategories({ limit: 50 })
   }, [fetchContents, fetchCategories])
 
   if (loading) {

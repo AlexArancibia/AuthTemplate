@@ -18,6 +18,22 @@ import type { HeroSection } from "@/types/heroSection"
 import type { CardSection } from "@/types/card"
 import type { TeamMember, TeamSection } from "@/types/team"
 import type { FrequentlyBoughtTogether } from "@/types/fbt"
+import type { 
+  PaginatedResponse, 
+  PaginationMeta,
+  SearchCategoryParams, 
+  SearchProductParams,
+  SearchOrderParams,
+  SearchCouponParams,
+  SearchContentParams,
+  SearchCollectionParams,
+  SearchCurrencyParams,
+  SearchExchangeRateParams,
+  SearchHeroSectionParams,
+  SearchFbtParams,
+  SearchShippingMethodParams,
+  SearchPaymentTransactionParams
+} from "@/types/pagination"
 
 // Definir duración del caché (5 minutos)
 const CACHE_DURATION = 5 * 60 * 1000
@@ -31,6 +47,19 @@ const SHOP_SETTINGS_TIMESTAMP_COOKIE = "shop_settings_timestamp"
 
 // Obtener el storeId del entorno
 const STORE_ID = process.env.NEXT_PUBLIC_STORE_ID
+
+// Helper function para construir query params
+const buildQueryParams = (params: any = {}) => {
+  const queryParams = new URLSearchParams()
+  
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      queryParams.append(key, String(value))
+    }
+  })
+  
+  return queryParams.toString()
+}
 
 // Definir la interfaz MainStore
 interface MainStore {
@@ -57,6 +86,25 @@ interface MainStore {
   shopSettings: ShopSettings[]
   loading: boolean
   error: string | null
+  
+  // Metadata de paginación para cada recurso
+  paginationMeta: {
+    categories: PaginationMeta | null
+    products: PaginationMeta | null
+    productVariants: PaginationMeta | null
+    collections: PaginationMeta | null
+    orders: PaginationMeta | null
+    coupons: PaginationMeta | null
+    shippingMethods: PaginationMeta | null
+    paymentTransactions: PaginationMeta | null
+    currencies: PaginationMeta | null
+    exchangeRates: PaginationMeta | null
+    contents: PaginationMeta | null
+    heroSections: PaginationMeta | null
+    frequentlyBoughtTogether: PaginationMeta | null
+    users: PaginationMeta | null
+  }
+  
   lastFetch: {
     categories: number | null
     products: number | null
@@ -81,27 +129,28 @@ interface MainStore {
 
   setEndpoint: (endpoint: string) => void
 
-  fetchCategories: () => Promise<Category[]>
-  fetchProducts: () => Promise<Product[]>
-  fetchProductVariants: () => Promise<ProductVariant[]>
-  fetchCollections: () => Promise<Collection[]>
-  fetchHeroSections: () => Promise<HeroSection[]>
+  // Métodos actualizados con paginación
+  fetchCategories: (params?: SearchCategoryParams, forceRefresh?: boolean) => Promise<PaginatedResponse<Category>>
+  fetchProducts: (params?: SearchProductParams, forceRefresh?: boolean) => Promise<PaginatedResponse<Product>>
+  fetchProductVariants: (params?: SearchProductParams, forceRefresh?: boolean) => Promise<PaginatedResponse<ProductVariant>>
+  fetchCollections: (params?: SearchCollectionParams, forceRefresh?: boolean) => Promise<PaginatedResponse<Collection>>
+  fetchHeroSections: (params?: SearchHeroSectionParams, forceRefresh?: boolean) => Promise<PaginatedResponse<HeroSection>>
   fetchCardSections: () => Promise<CardSection[]>
   fetchTeamSections: () => Promise<TeamSection[]>
   fetchTeamMembers: (teamSectionId: string) => Promise<TeamMember[]>
-  fetchOrders: () => Promise<Order[]>
-  fetchCoupons: () => Promise<Coupon[]>
+  fetchOrders: (params?: SearchOrderParams, forceRefresh?: boolean) => Promise<PaginatedResponse<Order>>
+  fetchCoupons: (params?: SearchCouponParams, forceRefresh?: boolean) => Promise<PaginatedResponse<Coupon>>
   setCouponCode: (code: string) => Promise<void>
   clearCoupon: () =>  Promise<void>
-  fetchShippingMethods: () => Promise<ShippingMethod[]>
+  fetchShippingMethods: (params?: SearchShippingMethodParams, forceRefresh?: boolean) => Promise<PaginatedResponse<ShippingMethod>>
   fetchPaymentProviders: () => Promise<PaymentProvider[]>
-  fetchPaymentTransactions: () => Promise<PaymentTransaction[]>
-  fetchContents: () => Promise<Content[]>
+  fetchPaymentTransactions: (params?: SearchPaymentTransactionParams, forceRefresh?: boolean) => Promise<PaginatedResponse<PaymentTransaction>>
+  fetchContents: (params?: SearchContentParams, forceRefresh?: boolean) => Promise<PaginatedResponse<Content>>
   fetchUsers: () => Promise<User[]>
   fetchShopSettings: () => Promise<ShopSettings>
-  fetchCurrencies: () => Promise<Currency[]>
-  fetchExchangeRates: () => Promise<ExchangeRate[]>
-  fetchFrequentlyBoughtTogether: () => Promise<FrequentlyBoughtTogether[]>
+  fetchCurrencies: (params?: SearchCurrencyParams, forceRefresh?: boolean) => Promise<PaginatedResponse<Currency>>
+  fetchExchangeRates: (params?: SearchExchangeRateParams, forceRefresh?: boolean) => Promise<PaginatedResponse<ExchangeRate>>
+  fetchFrequentlyBoughtTogether: (params?: SearchFbtParams, forceRefresh?: boolean) => Promise<PaginatedResponse<FrequentlyBoughtTogether>>
 
   // Métodos adicionales para FBT
   fetchFrequentlyBoughtTogetherById: (id: string) => Promise<FrequentlyBoughtTogether>
@@ -154,6 +203,25 @@ export const useMainStore = create<MainStore>((set, get) => ({
   frequentlyBoughtTogether: [],
   loading: false,
   error: null,
+  
+  // Inicializar metadata de paginación
+  paginationMeta: {
+    categories: null,
+    products: null,
+    productVariants: null,
+    collections: null,
+    orders: null,
+    coupons: null,
+    shippingMethods: null,
+    paymentTransactions: null,
+    currencies: null,
+    exchangeRates: null,
+    contents: null,
+    heroSections: null,
+    frequentlyBoughtTogether: null,
+    users: null,
+  },
+  
   lastFetch: {
     categories: null,
     products: null,
@@ -183,9 +251,9 @@ export const useMainStore = create<MainStore>((set, get) => ({
     set({ endpoint })
   },
 
-  // Método fetchCategories mejorado con caché
-  fetchCategories: async () => {
-    const { categories, lastFetch } = get()
+  // Método fetchCategories mejorado con caché y paginación
+  fetchCategories: async (params: SearchCategoryParams = {}, forceRefresh = false) => {
+    const { categories, lastFetch, paginationMeta } = get()
     const now = Date.now()
 
     if (!STORE_ID) {
@@ -193,15 +261,38 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
 
     // Verificar si hay categorías en caché y si el caché aún es válido
-    if (categories.length > 0 && lastFetch.categories && now - lastFetch.categories < CACHE_DURATION) {
-      return categories
+    // Solo usar caché si no hay parámetros de búsqueda o paginación diferentes
+    const isDefaultRequest = !params.page && !params.query && !params.parentId
+    if (
+      !forceRefresh &&
+      isDefaultRequest &&
+      categories.length > 0 && 
+      lastFetch.categories && 
+      now - lastFetch.categories < CACHE_DURATION
+    ) {
+      return {
+        data: categories,
+        meta: paginationMeta.categories || {
+          total: categories.length,
+          page: 1,
+          limit: categories.length,
+          totalPages: 1,
+          hasNext: false,
+          hasPrev: false
+        }
+      }
     }
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<Category[]>(`/categories?storeId=${STORE_ID}`)
+      // Construir parámetros de consulta (sin storeId, va en el path)
+      const queryParams = buildQueryParams(params)
+      
+      const response = await apiClient.get<PaginatedResponse<Category>>(`/categories/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
+      
       set({
-        categories: response.data,
+        categories: response.data.data,
+        paginationMeta: { ...get().paginationMeta, categories: response.data.meta },
         loading: false,
         lastFetch: { ...get().lastFetch, categories: now },
       })
@@ -212,9 +303,9 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchProducts mejorado con caché
-  fetchProducts: async () => {
-    const { products, lastFetch } = get()
+  // Método fetchProducts mejorado con caché y paginación
+  fetchProducts: async (params: SearchProductParams = {}, forceRefresh = false) => {
+    const { products, lastFetch, paginationMeta } = get()
     const now = Date.now()
 
     if (!STORE_ID) {
@@ -222,15 +313,35 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
 
     // Verificar si hay productos en caché y si el caché aún es válido
-    if (products.length > 0 && lastFetch.products && now - lastFetch.products < CACHE_DURATION) {
-      return products
+    const isDefaultRequest = !params.page && !params.query && !params.categoryId && !params.collectionId
+    if (
+      !forceRefresh &&
+      isDefaultRequest &&
+      products.length > 0 && 
+      lastFetch.products && 
+      now - lastFetch.products < CACHE_DURATION
+    ) {
+      return {
+        data: products,
+        meta: paginationMeta.products || {
+          total: products.length,
+          page: 1,
+          limit: products.length,
+          totalPages: 1,
+          hasNext: false,
+          hasPrev: false
+        }
+      }
     }
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<Product[]>(`/products/store/${STORE_ID}`)
+      const queryParams = buildQueryParams(params)
+      const response = await apiClient.get<PaginatedResponse<Product>>(`/products/store/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
+      
       set({
-        products: response.data,
+        products: response.data.data,
+        paginationMeta: { ...get().paginationMeta, products: response.data.meta },
         loading: false,
         lastFetch: { ...get().lastFetch, products: now },
       })
@@ -241,9 +352,9 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchProductVariants mejorado con caché
-  fetchProductVariants: async () => {
-    const { productVariants, lastFetch } = get()
+  // Método fetchProductVariants mejorado con caché y paginación
+  fetchProductVariants: async (params: SearchProductParams = {}, forceRefresh = false) => {
+    const { productVariants, lastFetch, paginationMeta } = get()
     const now = Date.now()
 
     if (!STORE_ID) {
@@ -251,15 +362,35 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
 
     // Verificar si hay datos en caché y si el caché aún es válido
-    if (productVariants.length > 0 && lastFetch.productVariants && now - lastFetch.productVariants < CACHE_DURATION) {
-      return productVariants
+    const isDefaultRequest = !params.page && !params.query
+    if (
+      !forceRefresh &&
+      isDefaultRequest &&
+      productVariants.length > 0 && 
+      lastFetch.productVariants && 
+      now - lastFetch.productVariants < CACHE_DURATION
+    ) {
+      return {
+        data: productVariants,
+        meta: paginationMeta.productVariants || {
+          total: productVariants.length,
+          page: 1,
+          limit: productVariants.length,
+          totalPages: 1,
+          hasNext: false,
+          hasPrev: false
+        }
+      }
     }
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<ProductVariant[]>(`/product-variants/store/${STORE_ID}`)
+      const queryParams = buildQueryParams(params)
+      const response = await apiClient.get<PaginatedResponse<ProductVariant>>(`/product-variants/store/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
+      
       set({
-        productVariants: response.data,
+        productVariants: response.data.data,
+        paginationMeta: { ...get().paginationMeta, productVariants: response.data.meta },
         loading: false,
         lastFetch: { ...get().lastFetch, productVariants: now },
       })
@@ -270,9 +401,9 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchCollections mejorado con caché
-  fetchCollections: async () => {
-    const { collections, lastFetch } = get()
+  // Método fetchCollections mejorado con caché y paginación
+  fetchCollections: async (params: SearchCollectionParams = {}, forceRefresh = false) => {
+    const { collections, lastFetch, paginationMeta } = get()
     const now = Date.now()
 
     if (!STORE_ID) {
@@ -280,15 +411,35 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
 
     // Verificar si hay colecciones en caché y si el caché aún es válido
-    if (collections.length > 0 && lastFetch.collections && now - lastFetch.collections < CACHE_DURATION) {
-      return collections
+    const isDefaultRequest = !params.page && !params.query
+    if (
+      !forceRefresh &&
+      isDefaultRequest &&
+      collections.length > 0 && 
+      lastFetch.collections && 
+      now - lastFetch.collections < CACHE_DURATION
+    ) {
+      return {
+        data: collections,
+        meta: paginationMeta.collections || {
+          total: collections.length,
+          page: 1,
+          limit: collections.length,
+          totalPages: 1,
+          hasNext: false,
+          hasPrev: false
+        }
+      }
     }
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<Collection[]>(`/categories?storeId=${STORE_ID}`)
+      const queryParams = buildQueryParams(params)
+      const response = await apiClient.get<PaginatedResponse<Collection>>(`/collections/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
+      
       set({
-        collections: response.data,
+        collections: response.data.data,
+        paginationMeta: { ...get().paginationMeta, collections: response.data.meta },
         loading: false,
         lastFetch: { ...get().lastFetch, collections: now },
       })
@@ -299,9 +450,9 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchHeroSections mejorado con caché
-  fetchHeroSections: async () => {
-    const { heroSections, lastFetch } = get()
+  // Método fetchHeroSections mejorado con caché y paginación
+  fetchHeroSections: async (params: SearchHeroSectionParams = {}, forceRefresh = false) => {
+    const { heroSections, lastFetch, paginationMeta } = get()
     const now = Date.now()
 
     if (!STORE_ID) {
@@ -309,15 +460,35 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
 
     // Verificar si hay secciones de héroe en caché y si el caché aún es válido
-    if (heroSections.length > 0 && lastFetch.heroSections && now - lastFetch.heroSections < CACHE_DURATION) {
-      return heroSections
+    const isDefaultRequest = !params.page && !params.includeInactive
+    if (
+      !forceRefresh &&
+      isDefaultRequest &&
+      heroSections.length > 0 && 
+      lastFetch.heroSections && 
+      now - lastFetch.heroSections < CACHE_DURATION
+    ) {
+      return {
+        data: heroSections,
+        meta: paginationMeta.heroSections || {
+          total: heroSections.length,
+          page: 1,
+          limit: heroSections.length,
+          totalPages: 1,
+          hasNext: false,
+          hasPrev: false
+        }
+      }
     }
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<HeroSection[]>(`/hero-sections?storeId=${STORE_ID}`)
+      const queryParams = buildQueryParams(params)
+      const response = await apiClient.get<PaginatedResponse<HeroSection>>(`/hero-sections/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
+      
       set({
-        heroSections: response.data,
+        heroSections: response.data.data,
+        paginationMeta: { ...get().paginationMeta, heroSections: response.data.meta },
         loading: false,
         lastFetch: { ...get().lastFetch, heroSections: now },
       })
@@ -344,7 +515,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<CardSection[]>(`/card-section/store/${STORE_ID}`)
+      const response = await apiClient.get<CardSection[]>(`/card-section/${STORE_ID}`)
       set({
         cardSections: response.data,
         loading: false,
@@ -373,7 +544,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<TeamSection[]>(`/team-sections/store/${STORE_ID}`)
+      const response = await apiClient.get<TeamSection[]>(`/team-section/store/${STORE_ID}`)
       set({
         teamSections: response.data,
         loading: false,
@@ -422,9 +593,9 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchOrders mejorado con caché
-  fetchOrders: async () => {
-    const { orders, lastFetch } = get()
+  // Método fetchOrders mejorado con caché y paginación
+  fetchOrders: async (params: SearchOrderParams = {}, forceRefresh = false) => {
+    const { orders, lastFetch, paginationMeta } = get()
     const now = Date.now()
 
     if (!STORE_ID) {
@@ -432,15 +603,35 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
 
     // Verificar si hay órdenes en caché y si el caché aún es válido
-    if (orders.length > 0 && lastFetch.orders && now - lastFetch.orders < CACHE_DURATION) {
-      return orders
+    const isDefaultRequest = !params.page && !params.query && !params.status && !params.customerEmail
+    if (
+      !forceRefresh &&
+      isDefaultRequest &&
+      orders.length > 0 && 
+      lastFetch.orders && 
+      now - lastFetch.orders < CACHE_DURATION
+    ) {
+      return {
+        data: orders,
+        meta: paginationMeta.orders || {
+          total: orders.length,
+          page: 1,
+          limit: orders.length,
+          totalPages: 1,
+          hasNext: false,
+          hasPrev: false
+        }
+      }
     }
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<Order[]>(`/orders/store/${STORE_ID}`)
+      const queryParams = buildQueryParams(params)
+      const response = await apiClient.get<PaginatedResponse<Order>>(`/orders/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
+      
       set({
-        orders: response.data,
+        orders: response.data.data,
+        paginationMeta: { ...get().paginationMeta, orders: response.data.meta },
         loading: false,
         lastFetch: { ...get().lastFetch, orders: now },
       })
@@ -451,9 +642,9 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchCoupons mejorado con caché
-  fetchCoupons: async () => {
-    const { coupons, lastFetch } = get()
+  // Método fetchCoupons mejorado con caché y paginación
+  fetchCoupons: async (params: SearchCouponParams = {}, forceRefresh = false) => {
+    const { coupons, lastFetch, paginationMeta } = get()
     const now = Date.now()
 
     if (!STORE_ID) {
@@ -461,15 +652,35 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
 
     // Verificar si hay cupones en caché y si el caché aún es válido
-    if (coupons.length > 0 && lastFetch.coupons && now - lastFetch.coupons < CACHE_DURATION) {
-      return coupons
+    const isDefaultRequest = !params.page && !params.query && !params.type && params.isActive === undefined
+    if (
+      !forceRefresh &&
+      isDefaultRequest &&
+      coupons.length > 0 && 
+      lastFetch.coupons && 
+      now - lastFetch.coupons < CACHE_DURATION
+    ) {
+      return {
+        data: coupons,
+        meta: paginationMeta.coupons || {
+          total: coupons.length,
+          page: 1,
+          limit: coupons.length,
+          totalPages: 1,
+          hasNext: false,
+          hasPrev: false
+        }
+      }
     }
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<Coupon[]>(`/coupons?storeId=${STORE_ID}`)
+      const queryParams = buildQueryParams(params)
+      const response = await apiClient.get<PaginatedResponse<Coupon>>(`/coupons/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
+      
       set({
-        coupons: response.data,
+        coupons: response.data.data,
+        paginationMeta: { ...get().paginationMeta, coupons: response.data.meta },
         loading: false,
         lastFetch: { ...get().lastFetch, coupons: now },
       })
@@ -483,9 +694,9 @@ export const useMainStore = create<MainStore>((set, get) => ({
   setCouponCode: async (code: string) => set({ couponCode: code }),
   clearCoupon: async () => set({ couponCode: "" }),
 
-  // Método fetchShippingMethods mejorado con caché
-  fetchShippingMethods: async () => {
-    const { shippingMethods, lastFetch } = get()
+  // Método fetchShippingMethods mejorado con caché y paginación
+  fetchShippingMethods: async (params: SearchShippingMethodParams = {}, forceRefresh = false) => {
+    const { shippingMethods, lastFetch, paginationMeta } = get()
     const now = Date.now()
 
     if (!STORE_ID) {
@@ -493,15 +704,35 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
 
     // Verificar si hay métodos de envío en caché y si el caché aún es válido
-    if (shippingMethods.length > 0 && lastFetch.shippingMethods && now - lastFetch.shippingMethods < CACHE_DURATION) {
-      return shippingMethods
+    const isDefaultRequest = !params.page && !params.query
+    if (
+      !forceRefresh &&
+      isDefaultRequest &&
+      shippingMethods.length > 0 && 
+      lastFetch.shippingMethods && 
+      now - lastFetch.shippingMethods < CACHE_DURATION
+    ) {
+      return {
+        data: shippingMethods,
+        meta: paginationMeta.shippingMethods || {
+          total: shippingMethods.length,
+          page: 1,
+          limit: shippingMethods.length,
+          totalPages: 1,
+          hasNext: false,
+          hasPrev: false
+        }
+      }
     }
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<ShippingMethod[]>(`/shipping-methods/store/${STORE_ID}`)
+      const queryParams = buildQueryParams(params)
+      const response = await apiClient.get<PaginatedResponse<ShippingMethod>>(`/shipping-methods/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
+      
       set({
-        shippingMethods: response.data,
+        shippingMethods: response.data.data,
+        paginationMeta: { ...get().paginationMeta, shippingMethods: response.data.meta },
         loading: false,
         lastFetch: { ...get().lastFetch, shippingMethods: now },
       })
@@ -545,31 +776,47 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchPaymentTransactions mejorado con caché
-  fetchPaymentTransactions: async () => {
-    const { paymentTransactions, lastFetch } = get()
+  // Método fetchPaymentTransactions mejorado con caché y paginación
+  fetchPaymentTransactions: async (params: SearchPaymentTransactionParams = {}, forceRefresh = false) => {
+    const { paymentTransactions, lastFetch, paginationMeta } = get()
     const now = Date.now()
 
     if (!STORE_ID) {
       throw new Error("No store ID provided in environment variables")
     }
 
-    // No hay un campo específico para lastFetch.paymentTransactions, así que usamos paymentProviders como referencia
+    // Verificar caché
+    const isDefaultRequest = !params.page && !params.status
     if (
+      !forceRefresh &&
+      isDefaultRequest &&
       paymentTransactions.length > 0 &&
       lastFetch.paymentProviders &&
       now - lastFetch.paymentProviders < CACHE_DURATION
     ) {
-      return paymentTransactions
+      return {
+        data: paymentTransactions,
+        meta: paginationMeta.paymentTransactions || {
+          total: paymentTransactions.length,
+          page: 1,
+          limit: paymentTransactions.length,
+          totalPages: 1,
+          hasNext: false,
+          hasPrev: false
+        }
+      }
     }
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<PaymentTransaction[]>(`/payment-transactions/store/${STORE_ID}`)
+      const queryParams = buildQueryParams(params)
+      const response = await apiClient.get<PaginatedResponse<PaymentTransaction>>(`/payment-transactions/store/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
+      
       set({
-        paymentTransactions: response.data,
+        paymentTransactions: response.data.data,
+        paginationMeta: { ...get().paginationMeta, paymentTransactions: response.data.meta },
         loading: false,
-        lastFetch: { ...get().lastFetch, paymentProviders: now }, // Actualizamos usando el mismo campo
+        lastFetch: { ...get().lastFetch, paymentProviders: now },
       })
       return response.data
     } catch (error) {
@@ -578,9 +825,9 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchContents mejorado con caché
-  fetchContents: async () => {
-    const { contents, lastFetch } = get()
+  // Método fetchContents mejorado con caché y paginación
+  fetchContents: async (params: SearchContentParams = {}, forceRefresh = false) => {
+    const { contents, lastFetch, paginationMeta } = get()
     const now = Date.now()
 
     if (!STORE_ID) {
@@ -588,15 +835,35 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
 
     // Verificar si hay contenidos en caché y si el caché aún es válido
-    if (contents.length > 0 && lastFetch.contents && now - lastFetch.contents < CACHE_DURATION) {
-      return contents
+    const isDefaultRequest = !params.page && !params.query && !params.type && params.isPublished === undefined
+    if (
+      !forceRefresh &&
+      isDefaultRequest &&
+      contents.length > 0 && 
+      lastFetch.contents && 
+      now - lastFetch.contents < CACHE_DURATION
+    ) {
+      return {
+        data: contents,
+        meta: paginationMeta.contents || {
+          total: contents.length,
+          page: 1,
+          limit: contents.length,
+          totalPages: 1,
+          hasNext: false,
+          hasPrev: false
+        }
+      }
     }
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<Content[]>(`/contents?store=${STORE_ID}`)
+      const queryParams = buildQueryParams(params)
+      const response = await apiClient.get<PaginatedResponse<Content>>(`/contents/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
+      
       set({
-        contents: response.data,
+        contents: response.data.data,
+        paginationMeta: { ...get().paginationMeta, contents: response.data.meta },
         loading: false,
         lastFetch: { ...get().lastFetch, contents: now },
       })
@@ -721,22 +988,41 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchCurrencies
-  fetchCurrencies: async () => {
-    const { currencies, lastFetch } = get()
+  // Método fetchCurrencies con paginación
+  fetchCurrencies: async (params: SearchCurrencyParams = {}, forceRefresh = false) => {
+    const { currencies, lastFetch, paginationMeta } = get()
     const now = Date.now()
 
     // Verificar si hay datos en caché y si el caché aún es válido
-    if (currencies.length > 0 && lastFetch.currencies && now - lastFetch.currencies < CACHE_DURATION) {
-      return currencies
+    const isDefaultRequest = !params.page && !params.query && params.includeInactive === undefined
+    if (
+      !forceRefresh &&
+      isDefaultRequest &&
+      currencies.length > 0 && 
+      lastFetch.currencies && 
+      now - lastFetch.currencies < CACHE_DURATION
+    ) {
+      return {
+        data: currencies,
+        meta: paginationMeta.currencies || {
+          total: currencies.length,
+          page: 1,
+          limit: currencies.length,
+          totalPages: 1,
+          hasNext: false,
+          hasPrev: false
+        }
+      }
     }
 
     set({ loading: true, error: null })
     try {
-      // Nota: Las monedas generalmente son globales, pero podemos filtrar por las aceptadas por la tienda
-      const response = await apiClient.get<Currency[]>(`/currencies`)
+      const queryParams = buildQueryParams(params)
+      const response = await apiClient.get<PaginatedResponse<Currency>>(`/currencies${queryParams ? `?${queryParams}` : ''}`)
+      
       set({
-        currencies: response.data,
+        currencies: response.data.data,
+        paginationMeta: { ...get().paginationMeta, currencies: response.data.meta },
         loading: false,
         lastFetch: { ...get().lastFetch, currencies: now },
       })
@@ -747,22 +1033,41 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchExchangeRates
-  fetchExchangeRates: async () => {
-    const { exchangeRates, lastFetch } = get()
+  // Método fetchExchangeRates con paginación
+  fetchExchangeRates: async (params: SearchExchangeRateParams = {}, forceRefresh = false) => {
+    const { exchangeRates, lastFetch, paginationMeta } = get()
     const now = Date.now()
 
     // Verificar si hay datos en caché y si el caché aún es válido
-    if (exchangeRates.length > 0 && lastFetch.exchangeRates && now - lastFetch.exchangeRates < CACHE_DURATION) {
-      return exchangeRates
+    const isDefaultRequest = !params.page && !params.fromCurrencyId && !params.toCurrencyId
+    if (
+      !forceRefresh &&
+      isDefaultRequest &&
+      exchangeRates.length > 0 && 
+      lastFetch.exchangeRates && 
+      now - lastFetch.exchangeRates < CACHE_DURATION
+    ) {
+      return {
+        data: exchangeRates,
+        meta: paginationMeta.exchangeRates || {
+          total: exchangeRates.length,
+          page: 1,
+          limit: exchangeRates.length,
+          totalPages: 1,
+          hasNext: false,
+          hasPrev: false
+        }
+      }
     }
 
     set({ loading: true, error: null })
     try {
-      // Nota: Las tasas de cambio generalmente son globales
-      const response = await apiClient.get<ExchangeRate[]>(`/exchange-rates`)
+      const queryParams = buildQueryParams(params)
+      const response = await apiClient.get<PaginatedResponse<ExchangeRate>>(`/exchange-rates${queryParams ? `?${queryParams}` : ''}`)
+      
       set({
-        exchangeRates: response.data,
+        exchangeRates: response.data.data,
+        paginationMeta: { ...get().paginationMeta, exchangeRates: response.data.meta },
         loading: false,
         lastFetch: { ...get().lastFetch, exchangeRates: now },
       })
@@ -773,9 +1078,9 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchFrequentlyBoughtTogether implementado correctamente para incluir el filtro por tienda
-  fetchFrequentlyBoughtTogether: async () => {
-    const { frequentlyBoughtTogether, lastFetch } = get()
+  // Método fetchFrequentlyBoughtTogether con paginación
+  fetchFrequentlyBoughtTogether: async (params: SearchFbtParams = {}, forceRefresh = false) => {
+    const { frequentlyBoughtTogether, lastFetch, paginationMeta } = get()
     const now = Date.now()
 
     if (!STORE_ID) {
@@ -783,19 +1088,35 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
 
     // Verificar si hay datos en caché y si el caché aún es válido
+    const isDefaultRequest = !params.page && !params.query
     if (
+      !forceRefresh &&
+      isDefaultRequest &&
       frequentlyBoughtTogether.length > 0 &&
       lastFetch.frequentlyBoughtTogether &&
       now - lastFetch.frequentlyBoughtTogether < CACHE_DURATION
     ) {
-      return frequentlyBoughtTogether
+      return {
+        data: frequentlyBoughtTogether,
+        meta: paginationMeta.frequentlyBoughtTogether || {
+          total: frequentlyBoughtTogether.length,
+          page: 1,
+          limit: frequentlyBoughtTogether.length,
+          totalPages: 1,
+          hasNext: false,
+          hasPrev: false
+        }
+      }
     }
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<FrequentlyBoughtTogether[]>(`/frequently-bought-together/store/${STORE_ID}`)
+      const queryParams = buildQueryParams(params)
+      const response = await apiClient.get<PaginatedResponse<FrequentlyBoughtTogether>>(`/frequently-bought-together/store/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
+      
       set({
-        frequentlyBoughtTogether: response.data,
+        frequentlyBoughtTogether: response.data.data,
+        paginationMeta: { ...get().paginationMeta, frequentlyBoughtTogether: response.data.meta },
         loading: false,
         lastFetch: { ...get().lastFetch, frequentlyBoughtTogether: now },
       })
@@ -961,67 +1282,76 @@ export const useMainStore = create<MainStore>((set, get) => ({
         throw new Error("No store ID provided in environment variables")
       }
 
+      // Usar los métodos fetch existentes con límites altos para obtener todos los datos
+      // Esto aprovecha el sistema de paginación pero obtiene grandes cantidades
       const [
         categoriesResponse,
         productsResponse,
         productVariantsResponse,
         collectionsResponse,
         ordersResponse,
-        customersResponse,
         couponsResponse,
         shippingMethodsResponse,
-        paymentProvidersResponse,
         contentsResponse,
-        usersResponse,
-        shopSettingsResponse,
         currenciesResponse,
         exchangeRatesResponse,
         heroSectionsResponse,
-        cardSectionsResponse,
-        teamSectionsResponse,
         frequentlyBoughtTogetherResponse,
       ] = await Promise.all([
-        apiClient.get(`/categories/store/${STORE_ID}`),
-        apiClient.get(`/products/store/${STORE_ID}`),
-        apiClient.get(`/product-variants/store/${STORE_ID}`),
-        apiClient.get(`/collections/store/${STORE_ID}`),
-        apiClient.get(`/orders/store/${STORE_ID}`),
-        apiClient.get(`/customers/store/${STORE_ID}`),
-        apiClient.get(`/coupons/store/${STORE_ID}`),
-        apiClient.get(`/shipping-methods/store/${STORE_ID}`),
+        get().fetchCategories({ limit: 1000 }, true),
+        get().fetchProducts({ limit: 1000 }, true),
+        get().fetchProductVariants({ limit: 1000 }, true),
+        get().fetchCollections({ limit: 1000 }, true),
+        get().fetchOrders({ limit: 1000 }, true),
+        get().fetchCoupons({ limit: 1000 }, true),
+        get().fetchShippingMethods({ limit: 1000 }, true),
+        get().fetchContents({ limit: 1000 }, true),
+        get().fetchCurrencies({ limit: 1000 }, true),
+        get().fetchExchangeRates({ limit: 1000 }, true),
+        get().fetchHeroSections({ limit: 1000 }, true),
+        get().fetchFrequentlyBoughtTogether({ limit: 1000 }, true),
+      ])
+
+      // Para endpoints que no tienen paginación, hacer fetch directo
+      const [
+        cardSectionsResponse,
+        teamSectionsResponse,
+        paymentProvidersResponse,
+        usersResponse,
+        shopSettingsResponse,
+      ] = await Promise.all([
+        apiClient.get(`/card-section/${STORE_ID}`),
+        apiClient.get(`/team-section/store/${STORE_ID}`),
         apiClient.get(`/payment-providers/store/${STORE_ID}`),
-        apiClient.get(`/contents/store/${STORE_ID}`),
         apiClient.get(`/auth/store/${STORE_ID}`),
         apiClient.get(`/shop-settings/store/${STORE_ID}`),
-        apiClient.get(`/currencies`),
-        apiClient.get(`/exchange-rates`),
-        apiClient.get(`/hero-sections/store/${STORE_ID}`),
-        apiClient.get(`/card-section/store/${STORE_ID}`),
-        apiClient.get(`/team-sections/store/${STORE_ID}`),
-        apiClient.get(`/frequently-bought-together/store/${STORE_ID}`),
       ])
 
       const now = Date.now()
       set({
+        // Los datos paginados vienen en .data
         categories: categoriesResponse.data,
         products: productsResponse.data,
         productVariants: productVariantsResponse.data,
         collections: collectionsResponse.data,
         heroSections: heroSectionsResponse.data,
-        cardSections: cardSectionsResponse.data,
-        teamSections: teamSectionsResponse.data,
         orders: ordersResponse.data,
         coupons: couponsResponse.data,
         shippingMethods: shippingMethodsResponse.data,
-        paymentProviders: paymentProvidersResponse.data,
         contents: contentsResponse.data,
+        currencies: currenciesResponse.data,
+        exchangeRates: exchangeRatesResponse.data,
+        frequentlyBoughtTogether: frequentlyBoughtTogetherResponse.data,
+        
+        // Datos no paginados
+        cardSections: cardSectionsResponse.data,
+        teamSections: teamSectionsResponse.data,
+        paymentProviders: paymentProvidersResponse.data,
         users: usersResponse.data,
         shopSettings: Array.isArray(shopSettingsResponse.data)
           ? shopSettingsResponse.data
           : [shopSettingsResponse.data],
-        currencies: currenciesResponse.data,
-        exchangeRates: exchangeRatesResponse.data,
-        frequentlyBoughtTogether: frequentlyBoughtTogetherResponse.data,
+        
         loading: false,
         lastFetch: {
           categories: now,
@@ -1031,7 +1361,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
           orders: now,
           customers: now,
           coupons: now,
-          couponCode:now,
+          couponCode: now,
           heroSections: now,
           cardSections: now,
           teamMembers: now,

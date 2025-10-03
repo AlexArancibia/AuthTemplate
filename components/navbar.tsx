@@ -157,16 +157,16 @@ const {
       hasFetched.current = true
 
       try {
-        // Realizar todos los fetch en paralelo
+        // Realizar todos los fetch en paralelo con límites altos para carga inicial
         await Promise.all([
           fetchShopSettings(),
-          fetchProducts(),
-          fetchShippingMethods(),
-          fetchCategories(),
-          fetchContents(),
-          fetchCollections(),
+          fetchProducts({ limit: 100 }),
+          fetchShippingMethods({ limit: 100 }),
+          fetchCategories({ limit: 100 }),
+          fetchContents({ limit: 100 }),
+          fetchCollections({ limit: 100 }),
           fetchCardSections(),
-          fetchCoupons(),
+          fetchCoupons({ limit: 100 }),
           fetchPaymentProviders(),
         ])
 

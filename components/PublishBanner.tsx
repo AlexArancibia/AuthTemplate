@@ -28,15 +28,13 @@ export function PublishBanner() {
           >
             <div className="relative z-10 p-6 sm:p-10 md:p-16 flex flex-col justify-center h-full w-full md:w-1/2">
               <h2
-                className="font-adi-bold  text-white mb-4 sm:mb-6 uppercase tracking-wider font-black text-[clamp(2rem,4vw,3.5rem)]"
-                style={{ fontFamily: "Inter, system-ui, sans-serif" }}
+                className="font-druk font-extrabold text-white mb-4 sm:mb-6 uppercase tracking-wider text-[clamp(2rem,4vw,3.5rem)]"
               >
                 DESCUBRE EL EQUIPO PERFECTO PARA TI
               </h2>
 
               <p
-                className="font-lato-thin  text-gray-200 mb-6 sm:mb-8 max-w-md font-normal text-base sm:text-lg md:text-xl"
-                style={{ fontFamily: "Inter, system-ui, sans-serif" }}
+                className="font-lato font-light text-gray-200 mb-6 sm:mb-8 max-w-md text-sm sm:text-base md:text-lg"
               >
                 ¿No sabes qué elegir? Contáctanos para recibir recomendaciones personalizadas. ¡Estamos aquí para ayudarte!
               </p>
@@ -44,8 +42,7 @@ export function PublishBanner() {
               <Button
                 onClick={handleWhatsAppClick}
                 aria-label="Contactar un asesor por WhatsApp"
-                className="font-lato-thin  bg-white text-gray-900 hover:bg-gray-100 px-6 sm:px-8 py-3 text-base sm:text-lg font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 w-fit"
-                style={{ fontFamily: "Inter, system-ui, sans-serif" }}
+                className="bg-white text-neutral-800 hover:bg-white hover:text-neutral-800 px-7 py-5 rounded-xl text-xs font-light uppercase tracking-[0.2em] shadow-[0_0_10px_rgba(0,0,0,0.05)] hover:shadow-[0_0_12px_rgba(0,0,0,0.08)] transition-all duration-300 transform hover:scale-105 w-fit"
               >
                 CONTACTA UN ASESOR ➚
               </Button>
