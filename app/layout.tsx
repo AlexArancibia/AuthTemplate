@@ -128,7 +128,7 @@ export default async function RootLayout({
       </head>
       <body className={poppins.className}>
         <Toaster position="top-center" richColors />
-        <Navbar user={session?.user} />
+        <Navbar />
         <main className="min-h-[80vh]">{children}</main>
         <PreFooterContact />
         <Footer />
