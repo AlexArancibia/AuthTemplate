@@ -18,6 +18,7 @@ import { PaymentProvider } from "@/types/payments"
 import { ShippingMethod } from "@/types/shippingMethod"
 import Image from "next/image"
 import { loadCulqiScript, openCulqiCheckout, setCulqiCallback } from "@/components/checkout/cuqui-checkout";
+import { useMainStore } from "@/stores/mainStore";
 
 export function watchCulqiClose(onClose: () => void) {
   const observer = new MutationObserver(() => {
@@ -65,6 +66,9 @@ export function ShippingPaymentStep({
   orderId,
   selectedCurrencyId
 }: ShippingPaymentStepProps) {
+  const { shopSettings } = useMainStore();
+  const shopLogo = shopSettings && shopSettings.length > 0 && shopSettings[0].logo ? shopSettings[0].logo : "";
+
   const selectedProvider = paymentProviders
   .filter((p) => p.currencyId === selectedCurrencyId)
   .find((p) => p.id === formData.paymentMethod)
@@ -129,9 +133,10 @@ export function ShippingPaymentStep({
         }
       );
 
-      await openCulqiCheckout(amount, "Pago de productos:\n" + resumeItems);
+      await openCulqiCheckout(amount, "Pago de productos:\n" + resumeItems, shopLogo);
     } catch (err) {
       setIsOpeningCulqi(false);
+      console.error("Error al iniciar Culqi:", err);
       toast.error("No se pudo iniciar el pago con Culqi");    }
   };
 
