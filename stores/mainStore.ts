@@ -1213,7 +1213,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
         storeId: STORE_ID,
       }
 
-      const response = await apiClient.post<Order>("/orders", orderData)
+      const response = await apiClient.post<Order>(`/orders/${STORE_ID}` , orderData)
       set((state) => ({
         orders: [...state.orders, response.data],
         loading: false,
