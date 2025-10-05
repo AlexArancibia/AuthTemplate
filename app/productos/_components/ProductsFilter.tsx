@@ -319,7 +319,7 @@ const filteredProducts = products
       searchTerm: "",
       categories: [],
       variants: {},
-      priceRange: [minPrice, maxPrice],
+      priceRange: [minPrice, maxPrice] as [number, number],
       brand: null,
     }
     onFilterChange(resetFiltersData)
