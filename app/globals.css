@@ -6,7 +6,7 @@ html { scroll-behavior: smooth; }
 
 @layer components{
   .container-section {
-    @apply px-6 lg:px-8 xl:px-16;
+    @apply px-4 sm:px-6 lg:px-8 xl:px-16;
   }
   
   .content-section {

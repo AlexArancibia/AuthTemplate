@@ -115,7 +115,7 @@ function CardSectionRenderer({ cardSection }: { cardSection: CardSection }) {
               initial={{ opacity: 0, y: 20 }}
               animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
               transition={{ duration: 0.5 }}
-              className="font-druk text-secondary tracking-tight font-bold text-lg uppercase md:text-3xl"
+              className="font-druk text-secondary tracking-tight font-bold text-xl sm:text-2xl md:text-3xl lg:text-4xl uppercase"
             >
               {cardSection.title}
             </motion.h2>

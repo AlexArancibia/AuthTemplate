@@ -23,10 +23,10 @@ export function PublishBanner() {
                 url('/gradient-4k.webp')
               `,
               backgroundPosition: "center 35%",
-              minHeight: "360px",
+              minHeight: "280px",
             }}
           >
-            <div className="relative z-10 p-6 sm:p-10 md:p-16 flex flex-col justify-center h-full w-full md:w-1/2">
+            <div className="relative z-10 p-4 sm:p-6 md:p-10 lg:p-16 flex flex-col justify-center h-full w-full lg:w-1/2">
               <h2
                 className="font-druk font-extrabold text-white mb-4 sm:mb-6 uppercase tracking-wider text-[clamp(2rem,4vw,3.5rem)]"
               >
@@ -42,7 +42,7 @@ export function PublishBanner() {
               <Button
                 onClick={handleWhatsAppClick}
                 aria-label="Contactar un asesor por WhatsApp"
-                className="bg-white text-neutral-800 hover:bg-white hover:text-neutral-800 px-7 py-5 rounded-xl text-xs font-light uppercase tracking-[0.2em] shadow-[0_0_10px_rgba(0,0,0,0.05)] hover:shadow-[0_0_12px_rgba(0,0,0,0.08)] transition-all duration-300 transform hover:scale-105 w-fit"
+                className="bg-white text-neutral-800 hover:bg-white hover:text-neutral-800 px-4 py-3 sm:px-7 sm:py-5 rounded-xl text-xs font-light uppercase tracking-[0.2em] shadow-[0_0_10px_rgba(0,0,0,0.05)] hover:shadow-[0_0_12px_rgba(0,0,0,0.08)] transition-all duration-300 transform hover:scale-105 w-fit"
               >
                 CONTACTA UN ASESOR ➚
               </Button>

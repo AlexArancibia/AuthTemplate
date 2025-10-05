@@ -630,7 +630,7 @@ const {
                   <Menu className="h-5 w-5" aria-hidden="true" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[280px] bg-background p-4">
+              <SheetContent side="right" className="w-[300px] sm:w-[320px] bg-background p-4">
                 <SheetHeader className="pb-2">
                   <SheetTitle className="text-lg">Menú</SheetTitle>
                 </SheetHeader>

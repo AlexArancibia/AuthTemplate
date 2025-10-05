@@ -92,10 +92,10 @@ export function BrandsCarousel() {
     <section className="w-full flex flex-col items-center justify-center py-0 bg-transparent">
       <div className="container-section">
         <div className="content-section">
-            <div className="w-full max-w-[100rem] mx-auto bg-white rounded-xl p-8">
+            <div className="w-full max-w-[100rem] mx-auto bg-white rounded-xl p-4 sm:p-6 lg:p-8">
             <div
               ref={carouselRef}
-              className="flex gap-8 overflow-x-auto scrollbar-hide select-none"
+              className="flex gap-4 sm:gap-6 lg:gap-8 overflow-x-auto scrollbar-hide select-none"
               style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
               onMouseDown={handleMouseDown}
               onMouseLeave={handleMouseLeave}
@@ -105,11 +105,11 @@ export function BrandsCarousel() {
               {logosLoop.map((brand, index) => (
                 <div
                   key={`${brand.name}-${index}`}
-                  className="flex-shrink-0 flex items-center justify-center min-w-[300px] cursor-grab active:cursor-grabbing"
+                  className="flex-shrink-0 flex items-center justify-center min-w-[200px] sm:min-w-[250px] lg:min-w-[300px] cursor-grab active:cursor-grabbing"
                   style={{ userSelect: "none" }}
                 >
                   <div className="text-center">
-                    <div className="w-32 h-32 sm:w-36 sm:h-36 md:w-40 md:h-40 mx-auto mb-4 flex items-center justify-center">
+                    <div className="w-24 h-24 sm:w-32 sm:h-32 md:w-36 md:h-36 lg:w-40 lg:h-40 mx-auto mb-2 sm:mb-4 flex items-center justify-center">
                       <Image
                         src={brand.logo}
                         alt={brand.name}

@@ -314,9 +314,19 @@ const filteredProducts = products
     // Limpiar la referencia
     lastFiltersRef.current = ""
 
+    // Notificar al componente padre sobre el cambio de filtros
+    const resetFiltersData = {
+      searchTerm: "",
+      categories: [],
+      variants: {},
+      priceRange: [minPrice, maxPrice],
+      brand: null,
+    }
+    onFilterChange(resetFiltersData)
+
     // Actualizar URL
     router.replace(pathname, { scroll: false })
-  }, [minPrice, maxPrice, pathname, router])
+  }, [minPrice, maxPrice, pathname, router, onFilterChange])
 
   return (
     <div className="font-lato-bold w-72 bg-white space-y-6">

@@ -208,7 +208,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
       {/* Contenido */}
       <div className={contentContainerClasses}>
         <div className="container mx-auto px-2 md:px-4 h-full flex">
-          <div className={`${contentAlignClasses} items-start lg:items-center pt-8 lg:pt-0 lg:pb-16`}>
+          <div className={`${contentAlignClasses} items-start lg:items-center pt-24 sm:pt-28 md:pt-32 lg:pt-0 lg:pb-16`}>
             <motion.div
               className={contentDivClasses}
               initial={{ opacity: 0, y: 20 }}
@@ -216,13 +216,13 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
               transition={{ duration: 0.6, delay: animationDelay }}
             >
               <div className="w-full flex justify-start">
-                <div className="inline-block px-5 py-1 mb-6 rounded-full bg-gradient-to-r from-blue-400 to-fuchsia-500 text-white text-base md:text-lg font-druk font-extrabold uppercase tracking-wide shadow-lg">
+                <div className="inline-block px-3 py-1 sm:px-5 sm:py-1 mb-3 sm:mb-4 lg:mb-6 rounded-full bg-gradient-to-r from-blue-400 to-fuchsia-500 text-white text-sm sm:text-base md:text-lg font-druk font-extrabold uppercase tracking-wide shadow-lg">
                   DESDE 2010
                 </div>
               </div>
               {title && (
                 <motion.h1
-                  className={`font-druk font-extrabold uppercase text-[6em] lg:text-[3.5em] mt-[120px] lg:mt-0 ${styles.titleColor || ""} `}
+                  className={`font-druk font-extrabold uppercase text-[2.5rem] sm:text-[3.5rem] md:text-[4.5rem] lg:text-[3.5em] mt-4 sm:mt-6 lg:mt-0 ${styles.titleColor || ""} `}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: animationDelay }}
@@ -256,7 +256,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
                   <Button
                     variant={(styles.buttonVariant || "default") as any}
                     size={(styles.buttonSize || "default") as any}
-                    className="px-7 py-5 rounded-xl bg-white text-neutral-800 text-xs font-light uppercase tracking-[0.2em] shadow-[0_0_10px_rgba(0,0,0,0.05)] hover:bg-white hover:text-neutral-800 hover:shadow-[0_0_12px_rgba(0,0,0,0.08)] transition-all duration-200"
+                    className="px-4 py-3 sm:px-7 sm:py-5 rounded-xl bg-white text-neutral-800 text-xs font-light uppercase tracking-[0.2em] shadow-[0_0_10px_rgba(0,0,0,0.05)] hover:bg-white hover:text-neutral-800 hover:shadow-[0_0_12px_rgba(0,0,0,0.08)] transition-all duration-200"
                   >
                     <Link href={buttonLink}>{buttonText}</Link>
                   </Button>

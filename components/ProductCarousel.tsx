@@ -74,13 +74,13 @@ function CategorySection({
       <div className="mx-auto px-4 sm:px-6 lg:px-8">
         {/* Título principal centrado */}
         <div className="text-center mb-8">
-          <h2 className="font-druk text-4xl lg:text-2xl font-archivo-black text-gray-900 mb-4">
+          <h2 className="font-druk text-xl sm:text-2xl md:text-3xl lg:text-4xl font-archivo-black text-gray-900 mb-4">
             {title}
           </h2>
         </div>
 
         {/* Navegación de categorías centrada - Solo texto */}
-        <div className="flex flex-wrap justify-center gap-x-24 gap-y-6 mb-12">
+        <div className="flex flex-wrap justify-center gap-x-8 sm:gap-x-16 lg:gap-x-24 gap-y-4 sm:gap-y-6 mb-8 sm:mb-12">
           {orderedCategories.map((category) => {
             const words = category.split(" ")
             const cleanCategory = words.slice(1).join(" ")
@@ -115,9 +115,9 @@ function CategorySection({
             <ChevronLeft className="w-10 h-10 text-gray-700" />
           </button>
           <div className="overflow-hidden flex-1" ref={emblaRef}>
-            <div className="flex gap-6">
+            <div className="flex gap-4 sm:gap-6">
               {filteredProducts.slice(0, 10).map((product) => (
-                <div key={product.id} className="flex-none w-[446px] sm:w-[498px] lg:w-[446px]">
+                <div key={product.id} className="flex-none w-[280px] sm:w-[320px] md:w-[380px] lg:w-[446px]">
                   <ProductCard
                     product={product}
                     selectedCurrencyId={selectedCurrencyId}
@@ -200,9 +200,9 @@ export function ProductCarousel({ collectionName, selectedCurrencyId, acceptedCu
                 <ChevronLeft className="w-10 h-10 text-gray-700" />
               </button>
               <div className="overflow-hidden flex-1">
-                <div className="flex gap-6">
+                <div className="flex gap-4 sm:gap-6">
                   {specificProducts.slice(0, 10).map((product) => (
-                    <div key={product.id} className="flex-[0_0_280px] min-w-0 sm:flex-[0_0_320px] lg:flex-[0_0_280px]">
+                    <div key={product.id} className="flex-[0_0_280px] min-w-0 sm:flex-[0_0_320px] md:flex-[0_0_380px] lg:flex-[0_0_446px]">
                       <ProductCard
                         product={product}
                         selectedCurrencyId={selectedCurrencyId}
