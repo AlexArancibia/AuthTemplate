@@ -7,7 +7,6 @@ import type { Product } from "@/types/product"
 import { useMainStore } from "@/stores/mainStore"
 import { useMemo } from "react"
 import { Button } from "@/components/ui/button"
-import { WashingTestButton } from "./WashingTestButton"
 import { DeliveryButton } from "./DeliveryButton"
 import { getPriceAndSymbol } from "@/utils/getPriceAndSymbol"
 import type { CurrencyOption } from "@/stores/currency"
@@ -44,37 +43,38 @@ export function ProductSidebar({ product, selectedCurrencyId, acceptedCurrencies
     <div className="space-y-6">
       {/* Destacados */}
       <div className="space-y-3">
-        <WashingTestButton />
         <DeliveryButton />
       </div>
 
-      {/* Métodos de envío */}
-      <div className="border rounded-lg p-4 shadow-md bg-gray-50/90 shadow-slate-200/30">
-        <h3 className="font-normal text-base mb-3 flex items-center gap-2">
-          <Truck className="w-5 h-5" />
-          Métodos de envío
-        </h3>
-        <ul className="space-y-2">
-          {shippingMethods.map((method) => {
-            const matchingPrice = method.prices.find(
-              (price) => price.currencyId === currencyOption?.id
-            )
+      {/* Métodos de envío - Solo mostrar si hay métodos disponibles */}
+      {shippingMethods.length > 0 && (
+        <div className="border rounded-lg p-4 shadow-md bg-gray-50/90 shadow-slate-200/30">
+          <h3 className="font-normal text-base mb-3 flex items-center gap-2">
+            <Truck className="w-5 h-5" />
+            Métodos de envío
+          </h3>
+          <ul className="space-y-2">
+            {shippingMethods.map((method) => {
+              const matchingPrice = method.prices.find(
+                (price) => price.currencyId === currencyOption?.id
+              )
 
-            if (!matchingPrice) return null // ⛔ No hay precio en esta moneda → no mostrar
+              if (!matchingPrice) return null // ⛔ No hay precio en esta moneda → no mostrar
 
-            return (
-              <li key={method.id} className="flex justify-between text-sm text-gray-600">
-                <span>{method.name}</span>
-                <span className="font-medium">
-                  {matchingPrice.price === 0
-                    ? "Gratis"
-                    : `${currencyOption?.symbol}${Number(matchingPrice.price).toFixed(2)}`}
-                </span>
-              </li>
-            )
-          })}
-        </ul>
-      </div>
+              return (
+                <li key={method.id} className="flex justify-between text-sm text-gray-600">
+                  <span>{method.name}</span>
+                  <span className="font-medium">
+                    {matchingPrice.price === 0
+                      ? "Gratis"
+                      : `${currencyOption?.symbol}${Number(matchingPrice.price).toFixed(2)}`}
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )}
 
       {/* Métodos de pago */}
       <div className="border rounded-lg p-4 shadow-md bg-gray-50/90 shadow-slate-200/30">
@@ -132,7 +132,7 @@ export function ProductSidebar({ product, selectedCurrencyId, acceptedCurrencies
                     <Image
                       src={
                         latestProduct.imageUrls?.[0] ||
-                        "/placeholder.svg?height=64&width=64&query=product"
+                        "/placeholder.png"
                       }
                       alt={latestProduct.title}
                       fill
