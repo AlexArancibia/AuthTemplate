@@ -20,12 +20,30 @@ interface UserOrdersProps {
 }
 
 export function UserOrders({ userId, userEmail }: UserOrdersProps) {
-  const { orders, fetchOrders, loading: ordersLoading, error: ordersError } = useMainStore()
+  // Optimización: Usar selectores específicos para evitar re-renders innecesarios
+  const orders = useMainStore(state => state.orders)
+  const fetchOrders = useMainStore(state => state.fetchOrders)
+  const ordersLoading = useMainStore(state => state.loading)
+  const ordersError = useMainStore(state => state.error)
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   // Simple fetch control
   const hasFetched = useRef(false)
+
+  // TODO: IMPLEMENTAR EN EL BACKEND
+  // ================================
+  // Actualmente el backend NO soporta filtrado por customerEmail en el endpoint de órdenes.
+  // Se necesita agregar un query parameter "customerEmail" al endpoint GET /orders/:storeId
+  // para que el filtrado se haga del lado del servidor.
+  // 
+  // Endpoint deseado: GET /orders/:storeId?customerEmail={email}
+  // 
+  // LIMITACIÓN ACTUAL:
+  // - Se cargan TODAS las órdenes de la tienda
+  // - Se filtran por email del usuario en el CLIENTE
+  // - Esto no escala bien si hay muchas órdenes
+  // ================================
 
   useEffect(() => {
     const loadOrders = async () => {
@@ -62,8 +80,8 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
 
   console.log("[USER_ORDERS] ordersArray length:", ordersArray.length)
 
-  // DEBUG: Show all orders without filtering by user
-  // Filtrar órdenes por email del usuario
+  // Filtrar órdenes por email del usuario (del lado del cliente)
+  // TODO: Cuando el backend soporte customerEmail, esto se hará en el servidor
   const userOrders = ordersArray.filter(
     (order) => order.customerInfo && order.customerInfo.email && order.customerInfo.email === userEmail,
   )
@@ -187,8 +205,6 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
 
   return (
     <div className="space-y-4">
- 
-
       {userOrders.map((order: Order) => (
         <Card key={order.id} className="overflow-hidden">
           <CardContent className="p-0">

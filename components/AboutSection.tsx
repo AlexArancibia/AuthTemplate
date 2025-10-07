@@ -34,7 +34,9 @@ export function AboutSection({ contentId = "cnt_363018db-f61b" }: AboutSectionPr
     const loadContent = async () => {
       try {
         setIsLoading(true)
-        const contentData = contents.find((c) => c.id === contentId)
+        // Ensure contents is an array before using find
+        const contentsArray = Array.isArray(contents) ? contents : []
+        const contentData = contentsArray.find((c) => c.id === contentId)
 
         if (!contentData) {
           setError("Contenido no encontrado")

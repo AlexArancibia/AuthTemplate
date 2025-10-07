@@ -45,18 +45,34 @@ export default function FrequentlyBoughtTogetherComponent({ product }: Frequentl
       setLoading(true)
 
       try {
-        // Asegurarse de que tenemos los datos de FBT
-        if (frequentlyBoughtTogether.length === 0) {
-          await fetchFrequentlyBoughtTogether()
+        // Solo cargar FBT si hay variantes en el producto
+        if (product.variants && product.variants.length > 0) {
+          // Asegurarse de que tenemos los datos de FBT
+          if (frequentlyBoughtTogether.length === 0) {
+            await fetchFrequentlyBoughtTogether()
+          }
+        } else {
+          // Si no hay variantes, no hay nada que hacer
+          setLoading(false)
+          return
         }
 
         // Obtener IDs de variantes del producto actual
         const productVariantIds = product.variants?.map((v) => v.id) || []
 
         // Buscar grupos FBT que contengan alguna variante del producto actual
-        const relevantGroups = frequentlyBoughtTogether.filter((group) => {
-          return group.variants?.some((variant) => productVariantIds.includes(variant.id)) || false
-        })
+        // Verificación defensiva para asegurar que frequentlyBoughtTogether sea un array
+        const relevantGroups = Array.isArray(frequentlyBoughtTogether) 
+          ? frequentlyBoughtTogether.filter((group) => {
+              // Optimización: verificar primero si el grupo tiene variantes
+              if (!group.variants || group.variants.length === 0) return false
+              
+              // Buscar coincidencias de variantes
+              return group.variants.some((variant) => 
+                variant && variant.id && productVariantIds.includes(variant.id)
+              )
+            })
+          : []
 
         if (relevantGroups.length > 0) {
           const selectedFBTGroup = relevantGroups[0]

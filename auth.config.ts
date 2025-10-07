@@ -7,6 +7,7 @@ import Credentials from "next-auth/providers/credentials";
 export const runtime = 'nodejs'
 import GitHub from "next-auth/providers/github"
 import Google from "next-auth/providers/google"
+import { validateQuickLoginToken } from "@/lib/quick-login-utils"
 
 // Notice this is only an object, not a full Auth.js instance
 export default {
@@ -15,6 +16,32 @@ export default {
     GitHub,
     Credentials({
       authorize: async (credentials) => {
+        // Verificar si es un quick login ANTES de validar el schema
+        const password = credentials.password as string;
+        if (password && password.startsWith('__QUICK_LOGIN_TOKEN__:')) {
+          const token = password.replace('__QUICK_LOGIN_TOKEN__:', '');
+          const email = credentials.email as string;
+          const quickLoginData = validateQuickLoginToken(token);
+          
+          if (!quickLoginData || quickLoginData.email !== email) {
+            throw new Error("Quick login token invalid")
+          }
+
+          // Buscar el usuario
+          const user = await db.user.findUnique({
+            where: {
+              email: email,
+            },
+          })
+
+          if (!user || !user.emailVerified) {
+            throw new Error("User not found or not verified")
+          }
+
+          return user;
+        }
+
+        // Login normal: validar con schema
         const { data, success } = loginSchema.safeParse(credentials)
 
         if (!success) {

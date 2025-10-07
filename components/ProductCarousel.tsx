@@ -8,13 +8,21 @@ import { Button } from "@/components/ui/button"
 import { ProductCard } from "./ProductCard"
 import { useMainStore } from "@/stores/mainStore"
 import { ProductStatus } from "@/types/common"
+import type { Product } from "@/types/product"
+import apiClient from "@/lib/axiosConfig"
 
 interface ProductCarouselProps {
   collectionName?: string
 }
 
+const STORE_ID = process.env.NEXT_PUBLIC_STORE_ID
+
 export function ProductCarousel({ collectionName }: ProductCarouselProps) {
-  const { products } = useMainStore()
+  // Estado local para los productos del carrusel
+  const [carouselProducts, setCarouselProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+  const collections = useMainStore(state => state.collections)
+  const fetchCollections = useMainStore(state => state.fetchCollections)
 
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: "start",
@@ -38,20 +46,110 @@ export function ProductCarousel({ collectionName }: ProductCarouselProps) {
     }
   }, [emblaApi])
 
-  // Filtrar productos que no estén en estado DRAFT
-  let filteredProducts = products.filter((product) => product.status !== ProductStatus.DRAFT)
+  // Cargar colecciones si no están disponibles
+  useEffect(() => {
+    if (collections.length === 0) {
+      fetchCollections()
+    }
+  }, [collections, fetchCollections])
 
-  // Si existe collectionName, filtrar por colección específica
-  if (collectionName) {
-    filteredProducts = filteredProducts.filter((product) =>
-      product.collections?.some((c) => c.title === collectionName),
+  // Cargar productos específicos para el carrusel
+  useEffect(() => {
+    const fetchCarouselProducts = async () => {
+      if (!STORE_ID) {
+        setLoading(false)
+        return
+      }
+      
+      setLoading(true)
+      try {
+        const queryParams = new URLSearchParams()
+        queryParams.append('page', '1')
+        queryParams.append('limit', '10')
+        queryParams.append('sortBy', 'viewCount')
+        queryParams.append('sortOrder', 'desc')
+        queryParams.append('status[]', 'ACTIVE')
+        queryParams.append('status[]', 'ARCHIVED')
+        
+        // Si se proporciona un nombre de colección, buscar su ID
+        if (collectionName && collections.length > 0) {
+          const collection = collections.find(col => 
+            col.title === collectionName || col.slug === collectionName
+          )
+          
+          if (collection) {
+            queryParams.append('collectionIds[]', collection.id)
+          }
+        }
+
+        const url = `/products/store/${STORE_ID}?${queryParams.toString()}`
+        const response = await apiClient.get(url)
+        
+        const products = response.data.data || response.data || []
+        setCarouselProducts(products)
+      } catch (error) {
+        console.error('Error fetching carousel products:', error)
+        setCarouselProducts([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    // Solo cargar productos si tenemos colecciones disponibles (o si no se requiere filtro)
+    if (!collectionName || collections.length > 0) {
+      fetchCarouselProducts()
+    }
+  }, [collectionName, collections])
+
+  // Filtrar productos que no estén en estado DRAFT
+  const filteredProducts = carouselProducts.filter((product) => product.status !== ProductStatus.DRAFT)
+
+  // Determinar título y enlace basado en si hay colección específica
+  const title = "NUESTROS PRODUCTOS"
+  const linkText = "Explora nuestra tienda"
+  const linkHref = "/productos"
+
+  if (loading) {
+    return (
+      <section className="py-16 lg:py-24 pb-8 lg:pb-24">
+        <div className="container-section">
+          <div className="content-section">
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-4 md:mb-8">
+              <h2 className=" ">{title}</h2>
+              <a href={linkHref} className="text-primary hover:text-primary/90 transition-colors flex items-center gap-2">
+                {linkText}
+                <ChevronRight className="w-4 h-4" />
+              </a>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="animate-pulse">
+                  <div className="aspect-square bg-gray-200 rounded-2xl mb-4"></div>
+                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
     )
   }
 
-  // Determinar título y enlace basado en si hay colección específica
-  const title =  "NUESTROS PRODUCTOS"
-  const linkText = "Explora nuestra tienda"
-  const linkHref = "/productos"
+  // Si no hay productos después de cargar, no mostrar la sección
+  if (filteredProducts.length === 0) {
+    return (
+      <section className="py-16 lg:py-24 pb-8 lg:pb-24">
+        <div className="container-section">
+          <div className="content-section">
+            <div className="text-center">
+              <p className="text-gray-500">No hay productos disponibles en este momento.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    )
+  }
 
   return (
     <section className="py-16 lg:py-24 pb-8 lg:pb-24">
@@ -69,7 +167,7 @@ export function ProductCarousel({ collectionName }: ProductCarouselProps) {
             {/* Carousel */}
             <div className="overflow-hidden pt-4" ref={emblaRef}>
               <div className="flex">
-                {filteredProducts.slice(0, 10).map((product) => (
+                {filteredProducts.map((product) => (
                   <div key={product.id} className="flex-[0_0_100%] min-w-0 sm:flex-[0_0_50%] lg:flex-[0_0_25%] px-3">
                     <ProductCard product={product} />
                   </div>

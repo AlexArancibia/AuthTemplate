@@ -44,7 +44,10 @@ function matchesMetadata(
 }
 
 export default function CatalogSection({ id = "cs_9235fb0d-a4d0", metadata }: CatalogSectionProps = {}) {
-  const { cardSections, loading, error } = useMainStore()
+  // Optimización: Usar selectores específicos para evitar re-renders innecesarios
+  const cardSections = useMainStore(state => state.cardSections)
+  const loading = useMainStore(state => state.loading)
+  const error = useMainStore(state => state.error)
   const [activeCards, setActiveCards] = useState<Record<string, boolean>>({})
   const [isMobile, setIsMobile] = useState(false)
 

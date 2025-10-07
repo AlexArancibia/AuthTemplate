@@ -17,11 +17,11 @@ export default function BlogPost({ params }: { params: Promise<{ id: string }> }
   useEffect(() => {
     const loadContent = async () => {
       if (contents) {
-      const content = contents.find((c) => c.slug === resolvedParams.id)
-      setCurrentContent(content || null)
+        // Ensure contents is an array before using find
+        const contentsArray = Array.isArray(contents) ? contents : []
+        const content = contentsArray.find((c) => c.slug === resolvedParams.id)
+        setCurrentContent(content || null)
       }
- 
-      
     }
     loadContent()
   }, [contents, resolvedParams.id])

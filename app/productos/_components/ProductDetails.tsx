@@ -27,7 +27,7 @@ interface ProductDetailsProps {
 }
 
 export default function ProductDetails({ slug }: ProductDetailsProps) {
-  const { products, shopSettings } = useMainStore()
+  const { products, shopSettings, fetchProducts, fetchProductBySlug } = useMainStore()
   const { addItem } = useCartStore()
   const [product, setProduct] = useState<Product | null>(null)
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
@@ -100,18 +100,42 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
   useEffect(() => {
     const loadProduct = async () => {
       setIsLoading(true)
-      const foundProduct = products.find((p) => p.slug === slug)
+      let foundProduct = products.find((p) => p.slug === slug)
+
+      if (!foundProduct) {
+        try {
+          // Intentar con endpoint por slug
+          const bySlug = await fetchProductBySlug(slug)
+          if (bySlug) {
+            foundProduct = bySlug
+          } else {
+            // Fallback: buscar con listado filtrado por query
+            const res = await fetchProducts({
+              page: 1,
+              limit: 20,
+              query: slug,
+              status: ["DRAFT", "ACTIVE", "ARCHIVED"],
+            })
+            const fetched = Array.isArray(res?.data) ? res.data : []
+            foundProduct = fetched.find((p) => p.slug === slug)
+          }
+        } catch (e) {
+          // ignore fetch errors here; UI will show fallback
+        }
+      }
+
       if (foundProduct) {
         setProduct(foundProduct)
-        // Make sure we have variants before setting the selected variant
         if (foundProduct.variants && foundProduct.variants.length > 0) {
           setSelectedVariant(foundProduct.variants[0])
+        } else {
+          setSelectedVariant(null)
         }
       }
       setIsLoading(false)
     }
     loadProduct()
-  }, [slug, products])
+  }, [slug, products, fetchProducts, fetchProductBySlug])
 
   const variantOptions = useMemo(() => {
     if (!product || !product.variants) return {}
@@ -169,8 +193,16 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
     return <ProductDetailsSkeleton />
   }
 
-  if (!product || !selectedVariant) {
-    return null
+  if (!product) {
+    return (
+      <div className="container mx-auto px-4 py-16">
+        <p className="text-center text-muted-foreground">Producto no encontrado.</p>
+      </div>
+    )
+  }
+
+  if (!selectedVariant) {
+    return <ProductDetailsSkeleton />
   }
 
   const decreaseQuantity = () => setQuantity((prev) => Math.max(1, prev - 1))
@@ -565,13 +597,16 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
               </motion.div>
             </div>
 
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.6, duration: 0.5 }}
-            >
-              <FrequentlyBoughtTogetherComponent product={product} />
-            </motion.div>
+            {/* Frequently Bought Together - Solo mostrar si el producto tiene variantes */}
+            {product.variants && product.variants.length > 0 && (
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.6, duration: 0.5 }}
+              >
+                <FrequentlyBoughtTogetherComponent product={product} />
+              </motion.div>
+            )}
 
             {/* Product Description Tabs - New Section */}
             <motion.div

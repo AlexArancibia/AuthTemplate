@@ -7,11 +7,16 @@ import { PostCard } from "./_components/PostCard"
 import { FeaturedContent } from "./_components/FeaturedPost"
 
 export default function BlogPage() {
-  const { contents, fetchContents, loading } = useMainStore()
+  // Optimización: Usar selectores específicos para evitar re-renders innecesarios
+  const contents = useMainStore(state => state.contents)
+  const fetchContents = useMainStore(state => state.fetchContents)
+  const loading = useMainStore(state => state.loading)
 
  
 
-  const filteredContents = contents
+  // Ensure contents is an array before filtering
+  const contentsArray = Array.isArray(contents) ? contents : []
+  const filteredContents = contentsArray
     .filter(content => content.type !== "PAGE")
     .reverse() // Invierte el orden de los posts
 

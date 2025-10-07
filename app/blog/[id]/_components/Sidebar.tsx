@@ -27,7 +27,8 @@ export function Sidebar() {
   }
 
   // Filtrar los contenidos para excluir los de tipo "PAGE"
-  const filteredContents = contents.filter(post => post.type !== "PAGE")
+  const contentsArray = Array.isArray(contents) ? contents : []
+  const filteredContents = contentsArray.filter(post => post.type !== "PAGE")
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-3 lg:p-8 space-y-8 sticky top-0 z-[10]">

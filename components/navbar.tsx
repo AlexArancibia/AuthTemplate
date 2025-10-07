@@ -49,27 +49,35 @@ const navItems = [
 
 export default function Navbar({ user }: NavbarProps) {
   const pathname = usePathname()
-  const {
-    fetchShopSettings,
-    fetchProducts,
-    fetchShippingMethods,
-    fetchCategories,
-    fetchContents,
-    fetchCollections,
-    fetchPaymentProviders,
-    fetchCoupons,
-    fetchCardSections,
-    shopSettings,
-    loading,
-    error,
-  } = useMainStore()
-const { 
+  
+  // Optimización: Usar selectores específicos para evitar re-renders innecesarios
+  const fetchShopSettings = useMainStore(state => state.fetchShopSettings)
+  const fetchProducts = useMainStore(state => state.fetchProducts)
+  const fetchShippingMethods = useMainStore(state => state.fetchShippingMethods)
+  const fetchCategories = useMainStore(state => state.fetchCategories)
+  const fetchContents = useMainStore(state => state.fetchContents)
+  const fetchCollections = useMainStore(state => state.fetchCollections)
+  const fetchPaymentProviders = useMainStore(state => state.fetchPaymentProviders)
+  const fetchCoupons = useMainStore(state => state.fetchCoupons)
+  const fetchCardSections = useMainStore(state => state.fetchCardSections)
+  const shopSettings = useMainStore(state => state.shopSettings)
+  const loading = useMainStore(state => state.loading)
+  const error = useMainStore(state => state.error)
+  
+  const { 
     showBar, 
     acceptAllCookies, 
     closeCookieBar
   } = useCookieConsent();
-    const isCookieConsentEnabled: boolean = shopSettings?.[0]?.cookieConsentEnabled ?? false;
-  const { items, removeItem, updateQuantity, getTotal, getItemsCount } = useCartStore()
+  const isCookieConsentEnabled: boolean = shopSettings?.[0]?.cookieConsentEnabled ?? false;
+  
+  const items = useCartStore(state => state.items)
+  const removeItem = useCartStore(state => state.removeItem)
+  const updateQuantity = useCartStore(state => state.updateQuantity)
+  const getTotal = useCartStore(state => state.getTotal)
+  const getItemsCount = useCartStore(state => state.getItemsCount)
+  const clearCart = useCartStore(state => state.clearCart)
+  const clearUserData = useMainStore(state => state.clearUserData)
   const [mounted, setMounted] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [isSearchOpen, setIsSearchOpen] = useState(false)
@@ -107,10 +115,10 @@ const {
       hasFetched.current = true
 
       try {
-        // Realizar todos los fetch en paralelo
+        // Realizar todos los fetch en paralelo (SIN productos)
         await Promise.all([
           fetchShopSettings(),
-          fetchProducts(),
+          // fetchProducts(), // ❌ Removido - Los productos se cargan bajo demanda
           fetchShippingMethods(),
           fetchCategories(),
           fetchContents(),
@@ -132,7 +140,7 @@ const {
     loadData()
   }, [
     fetchShopSettings,
-    fetchProducts,
+    // fetchProducts, // ❌ Removida dependencia
     fetchShippingMethods,
     fetchCategories,
     fetchCollections,
@@ -146,12 +154,20 @@ const {
   const handleSignOut = async () => {
     try {
       console.log("[NAVBAR] Signing out user")
+      
+      // Limpiar datos del usuario y carrito antes de cerrar sesión
+      clearCart()
+      clearUserData()
+      
       toast.success("Sesión cerrada", {
         description: "Has cerrado sesión correctamente",
       })
-      await signOut({
-        callbackUrl: "/login",
-      })
+      
+      // Hacer signOut sin redirect automático y luego redirigir manualmente
+      await signOut({ redirect: false })
+      
+      // Redirigir manualmente al login del mismo origen
+      window.location.href = `${window.location.origin}/login`
     } catch (error) {
       console.error("[NAVBAR] Error signing out:", error)
       toast.error("Error al cerrar sesión", {

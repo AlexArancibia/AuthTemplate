@@ -40,7 +40,10 @@ function matchesMetadata(
 }
 
 export function DeliveryButton({ id = "cs_89a37ac3-d83c", metadata }: DeliveryButtonProps = {}) {
-  const { cardSections, loading, error } = useMainStore()
+  // Optimización: Usar selectores específicos para evitar re-renders innecesarios
+  const cardSections = useMainStore(state => state.cardSections)
+  const loading = useMainStore(state => state.loading)
+  const error = useMainStore(state => state.error)
   const [open, setOpen] = useState(false)
 
   console.log("[DeliveryButton] Store state:", {

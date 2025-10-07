@@ -6,7 +6,7 @@ import { useMainStore } from "@/stores/mainStore"
 import { HeroCarouselBase } from "./HeroCaruselBase"
 
 export function HeroSection() {
-  const { heroSections, fetchHeroSections, loading, error: storeError } = useMainStore()
+  const { heroSections, fetchHeroSections, loading } = useMainStore()
   const [error, setError] = useState<string | null>(null)
   const fetchAttempted = useRef(false)
 
@@ -29,7 +29,8 @@ export function HeroSection() {
     }
 
     loadHeroSections()
-  }, [fetchHeroSections])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Filtrar solo las secciones con metadata.section igual a "inicio"
   const filteredSections = Array.isArray(heroSections)
@@ -56,8 +57,8 @@ export function HeroSection() {
   }
 
   // Si hay un error, mostrar un mensaje
-  if (error || storeError) {
-    console.error("[HeroSection] Error:", error || storeError)
+  if (error) {
+    console.error("[HeroSection] Error:", error)
     return (
       <div className="w-full h-[100vh] flex items-center justify-center">
  

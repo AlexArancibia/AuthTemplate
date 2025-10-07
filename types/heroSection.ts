@@ -78,7 +78,7 @@ export interface HeroSection {
   styles: HeroSectionStyles | Record<string, any>; // Tipado más específico
   metadata?: HeroSectionMetadata ;
   isActive: boolean;
-  createdAt: Date; // Cambiado a Date según Prisma
-  updatedAt: Date; // Cambiado a Date según Prisma
+  createdAt: string | Date; // Acepta string ISO o Date
+  updatedAt: string | Date; // Acepta string ISO o Date
 }
  

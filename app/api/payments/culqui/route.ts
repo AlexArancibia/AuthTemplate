@@ -1,11 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSecretKey } from "@/lib/culqui-pk";
 
+// Helper para obtener el origin correcto según el entorno
+const getAllowedOrigin = () => {
+  // En producción, usar el dominio específico. Si NEXTAUTH_URL existe, úsalo
+  if (process.env.NODE_ENV === 'production') {
+    return process.env.NEXTAUTH_URL || "https://clefast.com.pe/";
+  }
+  // En desarrollo, permitir localhost y variaciones
+  return "*";
+};
+
 export async function OPTIONS() {
   return NextResponse.json({}, {
     status: 200,
     headers: {
-      "Access-Control-Allow-Origin": "https://clefast.com.pe/",
+      "Access-Control-Allow-Origin": getAllowedOrigin(),
       "Access-Control-Allow-Methods": "POST, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type, Authorization",
     },
@@ -58,14 +68,14 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, data }, {
         headers: {
-            "Access-Control-Allow-Origin": "https://clefast.com.pe/",
+            "Access-Control-Allow-Origin": getAllowedOrigin(),
         },
     });
   } catch (error) {
     return NextResponse.json({ error: "Error procesando el pago" }, {
       status: 500,
       headers: {
-        "Access-Control-Allow-Origin": "https://clefast.com.pe/",
+        "Access-Control-Allow-Origin": getAllowedOrigin(),
       },
     });
   }
