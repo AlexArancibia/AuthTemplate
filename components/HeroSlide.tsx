@@ -48,8 +48,14 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
   const getYouTubeId = (url: string) => {
     if (!url) return null
 
+    // Agregar protocolo si no lo tiene
+    let cleanUrl = url
+    if (!url.startsWith("http")) {
+      cleanUrl = `https://${url}`
+    }
+
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/
-    const match = url.match(regExp)
+    const match = cleanUrl.match(regExp)
 
     return match && match[2].length === 11 ? match[2] : null
   }

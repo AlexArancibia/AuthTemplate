@@ -8,8 +8,9 @@ import { useEffect } from "react"
 export function BlogSection() {
   const { contents } = useMainStore()
 
- 
-  const filteredContents = contents.filter(post => post.type !== "PAGE")
+  // Ensure contents is an array before filtering
+  const contentsArray = Array.isArray(contents) ? contents : []
+  const filteredContents = contentsArray.filter(post => post.type !== "PAGE")
 
   return (
     <section className="py-16 lg:py-24 bg-gray-50">

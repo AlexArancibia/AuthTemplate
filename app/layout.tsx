@@ -50,7 +50,11 @@ export const metadata: Metadata = {
     "detergentes biodegradables",
     "Clefast Perú",
   ],
-  metadataBase: new URL("https://clefast.com.pe"),
+  metadataBase: new URL(
+    process.env.NEXTAUTH_URL || 
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+    (process.env.NODE_ENV === 'production' ? 'https://clefast.com.pe' : 'http://localhost:3000')
+  ),
   openGraph: {
     type: "website",
     locale: "es_PE",

@@ -74,6 +74,11 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
       variants: selectedVariants,
       priceRange,
     }
+    
+    console.log('🎯 ProductFilters - Updating filters:', {
+      selectedCategory,
+      categories: currentFilters.categories
+    })
 
     // Crear una clave única para comparar filtros
     const filtersKey = JSON.stringify({
@@ -324,8 +329,17 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
         </RadioGroup>
       </div>
 
-      {/* Price Range */}
-      <div>
+      {/* DESHABILITADO: Filtro por rango de precio
+          Motivo: El backend no soporta parámetros minPrice/maxPrice en SearchProductDto.
+          El precio está almacenado en ProductVariant -> VariantPrice, no en Product.
+          Se requiere:
+          1. Agregar minPrice/maxPrice al DTO del backend
+          2. Implementar lógica de filtrado por precio de variantes en el servicio
+          3. Conectar el filtro del frontend con los nuevos parámetros del backend
+          Fecha: Octubre 2025
+          Estado: Pendiente de implementación en backend
+      */}
+      {/* <div>
         <h3 className="text-lg font-medium mb-4">Precio</h3>
         <div className="space-y-4">
           <Slider
@@ -350,7 +364,7 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
             </span>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Grouped Presentations */}
       {groupedPresentations.length > 0 && (

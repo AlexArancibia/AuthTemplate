@@ -37,6 +37,12 @@ interface MainStore {
   endpoint: string
   categories: Category[]
   products: Product[]
+  productsPagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+  }
   productVariants: ProductVariant[]
   collections: Collection[]
   orders: Order[]
@@ -82,13 +88,25 @@ interface MainStore {
   setEndpoint: (endpoint: string) => void
 
   fetchCategories: () => Promise<Category[]>
-  fetchProducts: () => Promise<Product[]>
+  fetchProducts: (params?: {
+    query?: string
+    status?: string[]
+    vendor?: string
+    categoryIds?: string[]
+    collectionIds?: string[]
+    page?: number
+    limit?: number
+    sortBy?: 'createdAt' | 'updatedAt' | 'title' | 'price' | 'viewCount'
+    sortOrder?: 'asc' | 'desc'
+  }) => Promise<{ data: Product[], pagination: any }>
   fetchProductVariants: () => Promise<ProductVariant[]>
   fetchCollections: () => Promise<Collection[]>
   fetchHeroSections: () => Promise<HeroSection[]>
   fetchCardSections: () => Promise<CardSection[]>
   fetchTeamSections: () => Promise<TeamSection[]>
   fetchTeamMembers: (teamSectionId: string) => Promise<TeamMember[]>
+  // TODO: Agregar paginación y filtro por customerEmail en el futuro
+  // fetchOrders: (params?: { customerEmail?: string, page?: number, limit?: number }) => Promise<{ data: Order[], pagination: any }>
   fetchOrders: () => Promise<Order[]>
   fetchCoupons: () => Promise<Coupon[]>
   setCouponCode: (code: string) => Promise<void>
@@ -102,6 +120,7 @@ interface MainStore {
   fetchCurrencies: () => Promise<Currency[]>
   fetchExchangeRates: () => Promise<ExchangeRate[]>
   fetchFrequentlyBoughtTogether: () => Promise<FrequentlyBoughtTogether[]>
+  fetchProductBySlug: (slug: string) => Promise<Product | null>
 
   // Métodos adicionales para FBT
   fetchFrequentlyBoughtTogetherById: (id: string) => Promise<FrequentlyBoughtTogether>
@@ -117,6 +136,7 @@ interface MainStore {
   submitFormEmail: (formData: Record<string, any>) => Promise<void>
   sendEmail: (to: string, subject: string, html: string) => Promise<void>
   initializeStore: () => Promise<void>
+  clearUserData: () => void
 
   refreshData: () => Promise<void>
   getCategoryById: (id: string) => Category | undefined
@@ -133,6 +153,12 @@ export const useMainStore = create<MainStore>((set, get) => ({
   endpoint: "",
   categories: [],
   products: [],
+  productsPagination: {
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0,
+  },
   productVariants: [],
   collections: [],
   orders: [],
@@ -199,44 +225,95 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<Category[]>(`/categories?storeId=${STORE_ID}`)
+      const response = await apiClient.get(`/categories/${STORE_ID}`)
+      // Manejar respuesta paginada o array directo
+      const categoriesData = response.data.data || response.data
       set({
-        categories: response.data,
+        categories: Array.isArray(categoriesData) ? categoriesData : [],
         loading: false,
         lastFetch: { ...get().lastFetch, categories: now },
       })
-      return response.data
+      return Array.isArray(categoriesData) ? categoriesData : []
     } catch (error) {
       set({ error: "Failed to fetch categories", loading: false })
       throw error
     }
   },
 
-  // Método fetchProducts mejorado con caché
-  fetchProducts: async () => {
-    const { products, lastFetch } = get()
-    const now = Date.now()
+  // Método fetchProducts actualizado con paginación
+  fetchProducts: async (params = {}) => {
+    const {
+      query,
+      status = ['ACTIVE', 'ARCHIVED'], // Excluir DRAFT por defecto
+      vendor,
+      categoryIds,
+      collectionIds,
+      page = 1,
+      limit = 20,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+    } = params
 
     if (!STORE_ID) {
       throw new Error("No store ID provided in environment variables")
     }
 
-    // Verificar si hay productos en caché y si el caché aún es válido
-    if (products.length > 0 && lastFetch.products && now - lastFetch.products < CACHE_DURATION) {
-      return products
-    }
-
     set({ loading: true, error: null })
+    
     try {
-      const response = await apiClient.get<Product[]>(`/products/store/${STORE_ID}`)
+      // Construir query params
+      const queryParams = new URLSearchParams()
+      
+      if (page) queryParams.append('page', page.toString())
+      if (limit) queryParams.append('limit', limit.toString())
+      if (query) queryParams.append('query', query)
+      if (sortBy) queryParams.append('sortBy', sortBy)
+      if (sortOrder) queryParams.append('sortOrder', sortOrder)
+      if (vendor) queryParams.append('vendor', vendor)
+      
+      // Arrays - status
+      if (status?.length) {
+        status.forEach(s => queryParams.append('status[]', s))
+      }
+      
+      // Arrays - categoryIds
+      if (categoryIds?.length) {
+        categoryIds.forEach(id => queryParams.append('categoryIds[]', id))
+      }
+      
+      // Arrays - collectionIds
+      if (collectionIds?.length) {
+        collectionIds.forEach(id => queryParams.append('collectionIds[]', id))
+      }
+
+      const url = `/products/store/${STORE_ID}?${queryParams.toString()}`
+      console.log('🚀 Fetching products:', url)
+      console.log('📊 Category IDs being sent:', categoryIds)
+      
+      const response = await apiClient.get(url)
+      
+      // Backend devuelve: { data: Product[], pagination: {...} }
       set({
-        products: response.data,
+        products: response.data.data || response.data || [],
+        productsPagination: response.data.pagination || {
+          page: 1,
+          limit: 20,
+          total: 0,
+          totalPages: 0,
+        },
         loading: false,
-        lastFetch: { ...get().lastFetch, products: now },
+        lastFetch: { ...get().lastFetch, products: Date.now() },
       })
+      
       return response.data
     } catch (error) {
-      set({ error: "Failed to fetch products", loading: false })
+      console.error('❌ Error fetching products:', error)
+      set({ 
+        error: "Failed to fetch products", 
+        loading: false,
+        products: [],
+        productsPagination: { page: 1, limit: 20, total: 0, totalPages: 0 }
+      })
       throw error
     }
   },
@@ -257,13 +334,24 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<ProductVariant[]>(`/product-variants/store/${STORE_ID}`)
+      // Obtener productos primero y luego extraer las variantes
+      const productsResponse = await apiClient.get<Product[]>(`/products/store/${STORE_ID}`)
+      const products = productsResponse.data
+      
+      // Extraer todas las variantes de los productos
+      const allVariants: ProductVariant[] = []
+      for (const product of products) {
+        if (product.variants && product.variants.length > 0) {
+          allVariants.push(...product.variants)
+        }
+      }
+      
       set({
-        productVariants: response.data,
+        productVariants: allVariants,
         loading: false,
         lastFetch: { ...get().lastFetch, productVariants: now },
       })
-      return response.data
+      return allVariants
     } catch (error) {
       set({ error: "Failed to fetch product variants", loading: false })
       throw error
@@ -286,13 +374,15 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<Collection[]>(`/collections?storeId=${STORE_ID}`)
+      const response = await apiClient.get(`/collections/${STORE_ID}`)
+      // Manejar respuesta paginada o array directo
+      const collectionsData = response.data.data || response.data
       set({
-        collections: response.data,
+        collections: Array.isArray(collectionsData) ? collectionsData : [],
         loading: false,
         lastFetch: { ...get().lastFetch, collections: now },
       })
-      return response.data
+      return Array.isArray(collectionsData) ? collectionsData : []
     } catch (error) {
       set({ error: "Failed to fetch collections", loading: false })
       throw error
@@ -315,13 +405,15 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<HeroSection[]>(`/hero-sections?storeId=${STORE_ID}`)
+      const response = await apiClient.get(`/hero-sections/${STORE_ID}/active`)
+      // Manejar respuesta paginada o array directo
+      const heroSectionsData = response.data.data || response.data
       set({
-        heroSections: response.data,
+        heroSections: Array.isArray(heroSectionsData) ? heroSectionsData : [],
         loading: false,
         lastFetch: { ...get().lastFetch, heroSections: now },
       })
-      return response.data
+      return Array.isArray(heroSectionsData) ? heroSectionsData : []
     } catch (error) {
       set({ error: "Failed to fetch hero sections", loading: false })
       throw error
@@ -344,13 +436,15 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<CardSection[]>(`/card-section/store/${STORE_ID}`)
+      const response = await apiClient.get(`/card-section/${STORE_ID}`)
+      // Manejar respuesta paginada o array directo
+      const cardSectionsData = response.data.data || response.data
       set({
-        cardSections: response.data,
+        cardSections: Array.isArray(cardSectionsData) ? cardSectionsData : [],
         loading: false,
         lastFetch: { ...get().lastFetch, cardSections: now },
       })
-      return response.data
+      return Array.isArray(cardSectionsData) ? cardSectionsData : []
     } catch (error) {
       set({ error: "Failed to fetch card sections", loading: false })
       throw error
@@ -407,15 +501,19 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<TeamMember[]>(
-        `/team-members?teamSectionId=${teamSectionId}&storeId=${STORE_ID}`,
-      )
+      // Obtener la sección de equipo específica que incluye los miembros
+      const response = await apiClient.get<TeamSection>(`/team-sections/${teamSectionId}`)
+      const teamSection = response.data
+      
+      // Extraer los miembros del equipo de la sección
+      const members = teamSection.members || []
+      
       set({
-        teamMembers: response.data,
+        teamMembers: members,
         loading: false,
         lastFetch: { ...get().lastFetch, teamMembers: now },
       })
-      return response.data
+      return members
     } catch (error) {
       set({ error: "Failed to fetch team members", loading: false })
       throw error
@@ -423,6 +521,8 @@ export const useMainStore = create<MainStore>((set, get) => ({
   },
 
   // Método fetchOrders mejorado con caché
+  // TODO: IMPLEMENTAR EN EL BACKEND - Agregar soporte para filtrado por customerEmail y paginación
+  // Endpoint deseado: GET /orders/:storeId?customerEmail={email}&page={page}&limit={limit}
   fetchOrders: async () => {
     const { orders, lastFetch } = get()
     const now = Date.now()
@@ -438,7 +538,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<Order[]>(`/orders/store/${STORE_ID}`)
+      const response = await apiClient.get<Order[]>(`/orders/${STORE_ID}`)
       set({
         orders: response.data,
         loading: false,
@@ -467,13 +567,15 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<Coupon[]>(`/coupons?storeId=${STORE_ID}`)
+      const response = await apiClient.get(`/coupons/${STORE_ID}`)
+      // Manejar respuesta paginada o array directo
+      const couponsData = response.data.data || response.data
       set({
-        coupons: response.data,
+        coupons: Array.isArray(couponsData) ? couponsData : [],
         loading: false,
         lastFetch: { ...get().lastFetch, coupons: now },
       })
-      return response.data
+      return Array.isArray(couponsData) ? couponsData : []
     } catch (error) {
       set({ error: "Failed to fetch coupons", loading: false })
       throw error
@@ -499,13 +601,15 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<ShippingMethod[]>(`/shipping-methods/store/${STORE_ID}`)
+      const response = await apiClient.get(`/shipping-methods/${STORE_ID}`)
+      // Manejar respuesta paginada o array directo
+      const shippingMethodsData = response.data.data || response.data
       set({
-        shippingMethods: response.data,
+        shippingMethods: Array.isArray(shippingMethodsData) ? shippingMethodsData : [],
         loading: false,
         lastFetch: { ...get().lastFetch, shippingMethods: now },
       })
-      return response.data
+      return Array.isArray(shippingMethodsData) ? shippingMethodsData : []
     } catch (error) {
       set({ error: "Failed to fetch shipping methods", loading: false })
       throw error
@@ -594,13 +698,15 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<Content[]>(`/contents?store=${STORE_ID}`)
+      const response = await apiClient.get(`/contents/${STORE_ID}`)
+      // Manejar respuesta paginada o array directo
+      const contentsData = response.data.data || response.data
       set({
-        contents: response.data,
+        contents: Array.isArray(contentsData) ? contentsData : [],
         loading: false,
         lastFetch: { ...get().lastFetch, contents: now },
       })
-      return response.data
+      return Array.isArray(contentsData) ? contentsData : []
     } catch (error) {
       set({ error: "Failed to fetch contents", loading: false })
       throw error
@@ -760,7 +866,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchFrequentlyBoughtTogether implementado correctamente para incluir el filtro por tienda
+  // Método fetchFrequentlyBoughtTogether implementado correctamente para manejar respuesta paginada
   fetchFrequentlyBoughtTogether: async () => {
     const { frequentlyBoughtTogether, lastFetch } = get()
     const now = Date.now()
@@ -780,16 +886,50 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<FrequentlyBoughtTogether[]>(`/frequently-bought-together/store/${STORE_ID}`)
+      // Manejar respuesta paginada correctamente
+      const response = await apiClient.get<{
+        data: FrequentlyBoughtTogether[],
+        pagination: any
+      }>(`/fbt/${STORE_ID}?limit=100`) // Obtener todos los FBT
+      
+      const fbtData = response.data.data || []
+      
       set({
-        frequentlyBoughtTogether: response.data,
+        frequentlyBoughtTogether: fbtData,
         loading: false,
         lastFetch: { ...get().lastFetch, frequentlyBoughtTogether: now },
       })
-      return response.data
+      return fbtData
     } catch (error) {
       set({ error: "Failed to fetch frequently bought together items", loading: false })
       throw error
+    }
+  },
+
+  // Obtener un producto por slug usando el endpoint dedicado
+  fetchProductBySlug: async (slug: string) => {
+    set({ loading: true, error: null })
+    try {
+      if (!STORE_ID) {
+        throw new Error("No store ID provided in environment variables")
+      }
+      const response = await apiClient.get<Product>(`/products/by-slug/${STORE_ID}/${slug}`)
+      const product = response.data
+      // Insertar o actualizar en el arreglo local de productos para cachear
+      set((state) => {
+        const exists = state.products.some((p) => p.id === product.id)
+        return {
+          products: exists
+            ? state.products.map((p) => (p.id === product.id ? product : p))
+            : [...state.products, product],
+          loading: false,
+          lastFetch: { ...state.lastFetch, products: Date.now() },
+        }
+      })
+      return product
+    } catch (error) {
+      set({ error: "Failed to fetch product by slug", loading: false })
+      return null
     }
   },
 
@@ -797,7 +937,10 @@ export const useMainStore = create<MainStore>((set, get) => ({
   fetchFrequentlyBoughtTogetherById: async (id: string) => {
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<FrequentlyBoughtTogether>(`/frequently-bought-together/${id}`)
+      if (!STORE_ID) {
+        throw new Error("No store ID provided in environment variables")
+      }
+      const response = await apiClient.get<FrequentlyBoughtTogether>(`/fbt/${STORE_ID}/${id}`)
       set({ loading: false })
       return response.data
     } catch (error) {
@@ -820,7 +963,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
         storeId: data.storeId || STORE_ID,
       }
 
-      const response = await apiClient.post<FrequentlyBoughtTogether>("/frequently-bought-together", fbtData)
+      const response = await apiClient.post<FrequentlyBoughtTogether>(`/fbt/${STORE_ID}`, fbtData)
       set((state) => ({
         frequentlyBoughtTogether: [...state.frequentlyBoughtTogether, response.data],
         loading: false,
@@ -836,7 +979,10 @@ export const useMainStore = create<MainStore>((set, get) => ({
   updateFrequentlyBoughtTogether: async (id: string, data: UpdateFrequentlyBoughtTogetherDto) => {
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.patch<FrequentlyBoughtTogether>(`/frequently-bought-together/${id}`, data)
+      if (!STORE_ID) {
+        throw new Error("No store ID provided in environment variables")
+      }
+      const response = await apiClient.patch<FrequentlyBoughtTogether>(`/fbt/${STORE_ID}/${id}`, data)
       set((state) => ({
         frequentlyBoughtTogether: state.frequentlyBoughtTogether.map((item) =>
           item.id === id ? { ...item, ...response.data } : item,
@@ -854,7 +1000,10 @@ export const useMainStore = create<MainStore>((set, get) => ({
   deleteFrequentlyBoughtTogether: async (id: string) => {
     set({ loading: true, error: null })
     try {
-      await apiClient.delete(`/frequently-bought-together/${id}`)
+      if (!STORE_ID) {
+        throw new Error("No store ID provided in environment variables")
+      }
+      await apiClient.delete(`/fbt/${STORE_ID}/${id}`)
       set((state) => ({
         frequentlyBoughtTogether: state.frequentlyBoughtTogether.filter((item) => item.id !== id),
         loading: false,
@@ -879,7 +1028,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
         storeId: STORE_ID,
       }
 
-      const response = await apiClient.post<Order>("/orders", orderData)
+      const response = await apiClient.post<Order>(`/orders/${STORE_ID}`, orderData)
       set((state) => ({
         orders: [...state.orders, response.data],
         loading: false,
@@ -894,7 +1043,10 @@ export const useMainStore = create<MainStore>((set, get) => ({
   updateOrder: async (id: string, data: UpdateOrderDto) => {
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.put<Order>(`/orders/${id}`, data)
+      if (!STORE_ID) {
+        throw new Error("No store ID provided in environment variables")
+      }
+      const response = await apiClient.put<Order>(`/orders/${STORE_ID}/${id}`, data)
       set((state) => ({
         orders: state.orders.map((order) => (order.id === id ? { ...order, ...response.data } : order)),
         loading: false,
@@ -968,24 +1120,26 @@ export const useMainStore = create<MainStore>((set, get) => ({
         teamSectionsResponse,
         frequentlyBoughtTogetherResponse,
       ] = await Promise.all([
-        apiClient.get(`/categories/store/${STORE_ID}`),
+        apiClient.get(`/categories/${STORE_ID}`),
         apiClient.get(`/products/store/${STORE_ID}`),
-        apiClient.get(`/product-variants/store/${STORE_ID}`),
-        apiClient.get(`/collections?storeId=${STORE_ID}`),
-        apiClient.get(`/orders/store/${STORE_ID}`),
-        apiClient.get(`/customers/store/${STORE_ID}`),
-        apiClient.get(`/coupons/store/${STORE_ID}`),
-        apiClient.get(`/shipping-methods/store/${STORE_ID}`),
+        // Product variants se obtienen de los productos, no hay endpoint separado
+        Promise.resolve({ data: [] }),
+        apiClient.get(`/collections/${STORE_ID}`),
+        apiClient.get(`/orders/${STORE_ID}`),
+        // Customers endpoint no existe en el backend, usar array vacío
+        Promise.resolve({ data: [] }),
+        apiClient.get(`/coupons/${STORE_ID}`),
+        apiClient.get(`/shipping-methods/${STORE_ID}`),
         apiClient.get(`/payment-providers/store/${STORE_ID}`),
-        apiClient.get(`/contents/store/${STORE_ID}`),
+        apiClient.get(`/contents/${STORE_ID}`),
         apiClient.get(`/auth/store/${STORE_ID}`),
         apiClient.get(`/shop-settings/store/${STORE_ID}`),
         apiClient.get(`/currencies`),
         apiClient.get(`/exchange-rates`),
-        apiClient.get(`/hero-sections/store/${STORE_ID}`),
-        apiClient.get(`/card-section/store/${STORE_ID}`),
+        apiClient.get(`/hero-sections/${STORE_ID}/active`),
+        apiClient.get(`/card-section/${STORE_ID}`),
         apiClient.get(`/team-sections/store/${STORE_ID}`),
-        apiClient.get(`/frequently-bought-together/store/${STORE_ID}`),
+        apiClient.get(`/fbt/${STORE_ID}`),
       ])
 
       const now = Date.now()
@@ -1090,6 +1244,28 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
   getFrequentlyBoughtTogetherById: (id) => {
     return get().frequentlyBoughtTogether.find((fbt) => fbt.id === id)
+  },
+
+  clearUserData: () => {
+    // Limpiar solo datos relacionados con el usuario (no configuraciones globales)
+    set({
+      orders: [],
+      couponCode: "",
+      users: [],
+      paymentTransactions: [],
+      lastFetch: {
+        ...get().lastFetch,
+        orders: null,
+        couponCode: null,
+        users: null,
+      },
+    })
+    
+    // Limpiar cookies de shop settings para forzar recarga
+    if (typeof window !== "undefined") {
+      Cookies.remove(SHOP_SETTINGS_COOKIE)
+      Cookies.remove(SHOP_SETTINGS_TIMESTAMP_COOKIE)
+    }
   },
 
   initializeStore: async () => {

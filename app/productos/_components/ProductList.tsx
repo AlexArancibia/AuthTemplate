@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, Suspense } from "react"
 import { motion } from "framer-motion"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Pagination } from "@/components/ui/pagination"
 
 import type { Product } from "@/types/product"
 import type { Category } from "@/types/category"
@@ -11,7 +12,6 @@ import { useMainStore } from "@/stores/mainStore"
 import { ProductFilters } from "./ProductsFilter"
 import { FilterDrawer } from "./FilterDrawer"
 import { ProductCard } from "@/components/ProductCard"
-import { Pagination } from "./Pagination"
 
 const PRODUCTS_PER_PAGE = 9
 
@@ -43,340 +43,128 @@ function ProductListContent({
   initialVariantFilters = {},
   collectionName,
 }: ProductListProps) {
-  const { products, shopSettings } = useMainStore()
+  
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
+  // Optimización: Usar selectores específicos para evitar re-renders innecesarios
+  const products = useMainStore(state => state.products)
+  const productsPagination = useMainStore(state => state.productsPagination)
+  const fetchProducts = useMainStore(state => state.fetchProducts)
+  const shopSettings = useMainStore(state => state.shopSettings)
+  const categories = useMainStore(state => state.categories)
+
   const defaultCurrency = shopSettings[0]?.defaultCurrency
 
-  // Calculate min and max prices from products
-  const { minPrice: calculatedMinPrice, maxPrice: calculatedMaxPrice } = useMemo(() => {
-    if (!products || products.length === 0) {
-      return { minPrice: 0, maxPrice: 1000 } // Valores predeterminados seguros
-    }
-
-    let min = Number.POSITIVE_INFINITY
-    let max = Number.NEGATIVE_INFINITY
-
-    products.forEach((product: Product) => {
-      product.variants.forEach((variant) => {
-        const price = variant.prices.find((p) => p.currencyId === defaultCurrency?.id)?.price || 0
-        if (price > 0) {
-          // Solo considerar precios válidos mayores que cero
-          min = Math.min(min, price)
-          max = Math.max(max, price)
-        }
-      })
-    })
-
-    // Si después de procesar todos los productos, aún tenemos valores infinitos, usar valores predeterminados
-    if (!isFinite(min) || !isFinite(max) || min > max) {
-      return { minPrice: 0, maxPrice: 1000 }
-    }
-
-    return { minPrice: Math.floor(min), maxPrice: Math.ceil(max) }
-  }, [products, defaultCurrency])
-
-  // Use initial values or calculated values
   const [sortBy, setSortBy] = useState(initialSortBy)
   const [currentPage, setCurrentPage] = useState(initialPage)
   const [filters, setFilters] = useState<Filters>({
     searchTerm: initialSearchTerm,
     categories: initialCategories,
     variants: initialVariantFilters,
-    priceRange: [
-      initialMinPrice !== undefined && isFinite(initialMinPrice)
-        ? initialMinPrice
-        : isFinite(calculatedMinPrice)
-          ? calculatedMinPrice
-          : 0,
-      initialMaxPrice !== undefined && isFinite(initialMaxPrice)
-        ? initialMaxPrice
-        : isFinite(calculatedMaxPrice)
-          ? calculatedMaxPrice
-          : 1000,
-    ],
+    priceRange: [initialMinPrice || 0, initialMaxPrice || 10000],
   })
 
-  // Update URL when filters change
+  // Mapeo de sortBy del frontend al backend
+  const sortByMapping: Record<string, 'createdAt' | 'updatedAt' | 'title' | 'price' | 'viewCount'> = {
+    'featured': 'viewCount',    // ✅ Ordena por número de vistas (productos más vistos)
+    // 'price-asc': 'price',     // ❌ DESHABILITADO - Campo no existe en Product
+    // 'price-desc': 'price',    // ❌ DESHABILITADO - Campo no existe en Product
+    'name': 'title',             // ✅ Ordena por nombre del producto
+    'newest': 'createdAt',       // ✅ Ordena por fecha de creación
+  }
+
+  const sortOrderMapping: Record<string, 'asc' | 'desc'> = {
+    'featured': 'desc',          // Más vistos primero
+    // 'price-asc': 'asc',       // ❌ DESHABILITADO
+    // 'price-desc': 'desc',     // ❌ DESHABILITADO
+    'name': 'asc',               // A-Z alfabético
+    'newest': 'desc',            // Más recientes primero
+  }
+
+  // Cargar productos del servidor con filtros
   useEffect(() => {
-    // Create a new URLSearchParams object
-    const newParams = new URLSearchParams()
-
-    // Update search term
-    if (filters.searchTerm) {
-      newParams.set("search", filters.searchTerm)
-    }
-
-    // Update categories
-    filters.categories.forEach((category) => {
-      newParams.append("category", category)
-    })
-
-    // Update price range
-    if (filters.priceRange[0] !== calculatedMinPrice) {
-      newParams.set("minPrice", filters.priceRange[0].toString())
-    }
-
-    if (filters.priceRange[1] !== calculatedMaxPrice) {
-      newParams.set("maxPrice", filters.priceRange[1].toString())
-    }
-
-    // Update variant filters
-    Object.entries(filters.variants).forEach(([attribute, values]) => {
-      if (values.length > 0) {
-        newParams.set(`variant_${attribute}`, values.join(","))
-      }
-    })
-
-    // Update sort
-    if (sortBy !== "featured") {
-      newParams.set("sort", sortBy)
-    }
-
-    // Update page
-    if (currentPage !== 1) {
-      newParams.set("page", currentPage.toString())
-    }
-
-    // Compare current and new URL params to avoid unnecessary updates
-    const currentParams = searchParams.toString()
-    const newParamsString = newParams.toString()
-
-    // Only update if the parameters have actually changed
-    if (currentParams !== newParamsString) {
-      // Update URL without refreshing the page
-      router.replace(`${pathname}?${newParamsString}`, { scroll: false })
-    }
-  }, [filters, sortBy, currentPage, pathname, router, calculatedMinPrice, calculatedMaxPrice, searchParams])
-
-  const filteredProducts = useMemo(() => {
-    return products.filter((product: Product) => {
-      // Filtrar productos en estado DRAFT
-      if (product.status === "DRAFT") {
-        return false
-      }
-
-      // Filtrar productos sin stock que no permiten backorder
-      if (!product.allowBackorder) {
-        // Verificar si alguna variante tiene stock disponible
-        const hasStock = product.variants.some((variant) => variant.inventoryQuantity > 0)
-        if (!hasStock) {
-          return false
-        }
-      }
-
-      // Filter by search term
-      if (filters.searchTerm && !product.title.toLowerCase().includes(filters.searchTerm.toLowerCase())) {
-        return false
-      }
-
-      // Filter by category (single category selection)
-      if (
-        filters.categories.length > 0 &&
-        product.categories &&
-        !product.categories.some((cat: Category) => cat.id === filters.categories[0])
-      ) {
-        return false
-      }
-
-      // Filter by variants
-      const variantMatches = Object.entries(filters.variants).every(([attribute, values]) => {
-        return (
-          values.length === 0 ||
-          product.variants.some((variant) =>
-            values.includes(variant.attributes![attribute as keyof typeof variant.attributes] as string),
-          )
-        )
+    const loadProducts = async () => {
+      console.log('🔍 ProductList - Applying filters:', {
+        categories: filters.categories,
+        searchTerm: filters.searchTerm,
+        sortBy,
+        currentPage
       })
-      if (!variantMatches) {
-        return false
-      }
       
-      // Función robusta para obtener el rango de precios de un producto
-      const getProductPriceRange = (product: Product) => {
-        // Validar que el producto tenga variantes
-        if (!product.variants || product.variants.length === 0) {
-          return { productMin: null, productMax: null }
-        }
-
-        // Validar que exista moneda por defecto
-        if (!defaultCurrency?.id) {
-          return { productMin: null, productMax: null }
-        }
-
-        // Extraer todos los precios válidos de todas las variantes
-        const validPrices: number[] = []
-        
-        for (const variant of product.variants) {
-          // Verificar que la variante tenga precios
-          if (!variant.prices || variant.prices.length === 0) {
-            continue
-          }
-
-          // Buscar el precio para la moneda por defecto
-          const priceEntry = variant.prices.find(p => p.currencyId === defaultCurrency.id)
-          
-          if (priceEntry?.price) {
-            // Convertir string a número
-            const price = parseFloat(priceEntry.price.toString())
-            
-            // Validar que el precio sea un número válido y mayor que 0
-            if (!isNaN(price) && isFinite(price) && price > 0) {
-              validPrices.push(price)
-            }
-          }
-        }
-
-        // Si no hay precios válidos, devolver null
-        if (validPrices.length === 0) {
-          return { productMin: null, productMax: null }
-        }
-
-        // Calcular y devolver el rango
-        const productMin = Math.min(...validPrices)
-        const productMax = Math.max(...validPrices)
-        
-        return { productMin, productMax }
-      }
-      
-      // Uso:
-      const { productMin, productMax } = getProductPriceRange(product)
-      
-      /*// Debug: mostrar valores en consola
-      console.log(`Producto: ${product.title}`)
-      console.log(`  productMin: ${productMin}`)
-      console.log(`  productMax: ${productMax}`)
-      console.log(`  priceRange: [${filters.priceRange[0]}, ${filters.priceRange[1]}]`)
-      */
-      // Si no hay precios válidos, no se excluye el producto
-      if (productMin === null || productMax === null) {
-        //console.log(`  ⚠️ Producto sin precios válidos - INCLUIDO`)
-        return true
-      }
-      
-      if (( productMin < filters.priceRange[0] &&  productMax < filters.priceRange[0] ) ||  ( productMin > filters.priceRange[1] &&  productMax > filters.priceRange[1] ) ) {
-        //console.log(`  ❌ Producto EXCLUIDO - no hay solapamiento`)
-        return false
-      } else {
-        //console.log(`  ✅ Producto INCLUIDO - hay solapamiento`)
-      }
-      return true
-
-      /*  codigo original
-      // Filter by price
-      const productPrice = product.variants[0].prices.find((price) => price.currencyId === defaultCurrency?.id)?.price
-      if (productPrice && (productPrice < filters.priceRange[0] || productPrice > filters.priceRange[1])) {
-        return false
-      }
-
-      return true
-      */
-    })
-  }, [products, filters, defaultCurrency])
-
-  const sortedProducts = useMemo(() => {
-    let sorted = [...filteredProducts]
-
-    // First, apply collection prioritization if collectionName is provided
-    if (collectionName) {
-      sorted = sorted.sort((a, b) => {
-        const aHasCollection =
-          a.collections?.some((collection) => collection.title?.toLowerCase() === collectionName.toLowerCase()) || false
-        const bHasCollection =
-          b.collections?.some((collection) => collection.title?.toLowerCase() === collectionName.toLowerCase()) || false
-
-        // If only one product has the collection, prioritize it
-        if (aHasCollection && !bHasCollection) return -1
-        if (!aHasCollection && bHasCollection) return 1
-
-        // If both or neither have the collection, continue with regular sorting
-        return 0
+      await fetchProducts({
+        page: currentPage,
+        limit: PRODUCTS_PER_PAGE,
+        query: filters.searchTerm || undefined,
+        sortBy: sortByMapping[sortBy],
+        sortOrder: sortOrderMapping[sortBy],
+        categoryIds: filters.categories.length > 0 ? filters.categories : undefined,
+        collectionIds: collectionName ? [collectionName] : undefined,
+        status: ['ACTIVE', 'ARCHIVED'], // Excluir DRAFT
       })
     }
 
-    // Then apply the selected sorting method
-    return sorted.sort((a, b) => {
-      // If we have collection prioritization, maintain it for products with same collection status
-      if (collectionName) {
-        const aHasCollection =
-          a.collections?.some((collection) => collection.title?.toLowerCase() === collectionName.toLowerCase()) || false
-        const bHasCollection =
-          b.collections?.some((collection) => collection.title?.toLowerCase() === collectionName.toLowerCase()) || false
+    loadProducts()
+  }, [currentPage, sortBy, filters.searchTerm, filters.categories, collectionName])
 
-        // Only apply secondary sorting if both products have the same collection status
-        if (aHasCollection !== bHasCollection) {
-          return aHasCollection ? -1 : 1
-        }
-      }
-
-      // Apply the selected sorting method
-      switch (sortBy) {
-        case "price-asc":
-          return (
-            (a.variants[0].prices.find((price) => price.currencyId === defaultCurrency?.id)?.price || 0) -
-            (b.variants[0].prices.find((price) => price.currencyId === defaultCurrency?.id)?.price || 0)
-          )
-        case "price-desc":
-          return (
-            (b.variants[0].prices.find((price) => price.currencyId === defaultCurrency?.id)?.price || 0) -
-            (a.variants[0].prices.find((price) => price.currencyId === defaultCurrency?.id)?.price || 0)
-          )
-        case "name":
-          return a.title.localeCompare(b.title)
-        default:
-          return 0
-      }
-    })
-  }, [filteredProducts, sortBy, defaultCurrency, collectionName])
-
-  const totalPages = Math.ceil(sortedProducts.length / PRODUCTS_PER_PAGE)
-
-  const paginatedProducts = useMemo(() => {
-    const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE
-    return sortedProducts.slice(startIndex, startIndex + PRODUCTS_PER_PAGE)
-  }, [sortedProducts, currentPage])
+  // Los productos ya vienen del servidor
+  const displayProducts = products
 
   const handleFilterChange = (newFilters: Filters) => {
     setFilters(newFilters)
-    setCurrentPage(1) // Reset to first page when filters change
+    setCurrentPage(1)
   }
 
   const handleSortChange = (value: string) => {
     setSortBy(value)
+    setCurrentPage(1)
   }
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
-    // Scroll to top when changing pages
-    window.scrollTo({ top: 0, behavior: "smooth" })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  // Sync with URL
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (filters.searchTerm) params.set("search", filters.searchTerm)
+    if (filters.categories.length > 0) {
+      filters.categories.forEach((cat) => params.append("category", cat))
+    }
+    if (currentPage > 1) params.set("page", currentPage.toString())
+    if (sortBy !== "featured") params.set("sort", sortBy)
+
+    const newUrl = `${pathname}?${params.toString()}`
+    if (newUrl !== `${pathname}?${searchParams.toString()}`) {
+      router.replace(newUrl)
+    }
+  }, [filters, sortBy, currentPage, pathname, router, searchParams])
+
   return (
-    <div className="flex flex-col lg:flex-row gap-16">
-      {/* Sidebar con filtros (visible solo en desktop) */}
-      <aside className="hidden lg:block w-72 flex-shrink-0">
+    <div className="grid lg:grid-cols-4 gap-8">
+      {/* Filtros */}
+      <div className="hidden lg:block">
         <ProductFilters
-          onFilterChange={handleFilterChange}
           initialFilters={filters}
-          minPrice={calculatedMinPrice}
-          maxPrice={calculatedMaxPrice}
+          onFilterChange={handleFilterChange}
+          minPrice={0}
+          maxPrice={10000}
         />
-      </aside>
+      </div>
 
       {/* Productos */}
-      <div className="flex-1">
-        {/* Controles superiores */}
-        <div className="flex justify-between items-center mb-6">
+      <div className="lg:col-span-3">
+        <div className="flex items-center justify-between mb-6">
           <FilterDrawer
-            onFilterChange={handleFilterChange}
             initialFilters={filters}
-            minPrice={calculatedMinPrice}
-            maxPrice={calculatedMaxPrice}
+            onFilterChange={handleFilterChange}
+            minPrice={0}
+            maxPrice={10000}
           />
           <p className="text-sm text-muted-foreground hidden sm:block">
-            Mostrando {paginatedProducts.length} de {sortedProducts.length} productos
+            Mostrando {displayProducts.length} de {productsPagination.total} productos
           </p>
           <Select value={sortBy} onValueChange={handleSortChange}>
             <SelectTrigger className="w-[180px]">
@@ -384,8 +172,15 @@ function ProductListContent({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="featured">Destacados</SelectItem>
-              <SelectItem value="price-asc">Precio: Menor a Mayor</SelectItem>
-              <SelectItem value="price-desc">Precio: Mayor a Menor</SelectItem>
+              <SelectItem value="newest">Más recientes</SelectItem>
+              {/* DESHABILITADO: Ordenamiento por precio
+                  Motivo: El precio no es un campo directo del Product en la BD.
+                  Los precios están en ProductVariant -> VariantPrice.
+                  Se requiere modificación en el backend para calcular y ordenar por precio mínimo.
+                  Fecha: Octubre 2025
+              */}
+              {/* <SelectItem value="price-asc">Precio: Menor a Mayor</SelectItem> */}
+              {/* <SelectItem value="price-desc">Precio: Mayor a Menor</SelectItem> */}
               <SelectItem value="name">Nombre</SelectItem>
             </SelectContent>
           </Select>
@@ -393,7 +188,7 @@ function ProductListContent({
 
         {/* Grid de productos */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {paginatedProducts.map((product) => (
+          {displayProducts.map((product) => (
             <motion.div key={product.id} layout>
               <ProductCard product={product} />
             </motion.div>
@@ -401,16 +196,20 @@ function ProductListContent({
         </div>
 
         {/* Mensaje si no hay productos */}
-        {paginatedProducts.length === 0 && (
+        {displayProducts.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-lg text-gray-500">No se encontraron productos con los filtros seleccionados.</p>
+            <p className="text-lg text-gray-500">No se encontraron productos.</p>
           </div>
         )}
 
         {/* Paginación */}
-        {totalPages > 1 && (
+        {productsPagination.totalPages > 1 && (
           <div className="mt-8">
-            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
+            <Pagination 
+              currentPage={currentPage} 
+              totalPages={productsPagination.totalPages} 
+              onPageChange={handlePageChange} 
+            />
           </div>
         )}
       </div>

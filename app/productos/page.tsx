@@ -10,7 +10,10 @@ import ProductListSkeleton from "./_components/ProductListSkeleton"
 function ProductsContent() {
   const searchParams = useSearchParams()
   const [isClient, setIsClient] = useState(false)
-  const { categories } = useMainStore()
+  
+  // Optimización: Usar selectores específicos para evitar re-renders innecesarios
+  const categories = useMainStore(state => state.categories)
+  const collections = useMainStore(state => state.collections)
 
   useEffect(() => {
     setIsClient(true)
@@ -61,6 +64,12 @@ function ProductsContent() {
     : null
 
   const pageTitle = selectedCategory ? selectedCategory.name : "Nuestros Productos"
+
+  // Obtener colección desde query params o usar "Destacados" por defecto
+  const collectionParam = searchParams.get("collection")
+  const selectedCollection = collectionParam 
+    ? collections.find(col => col.id === collectionParam || col.name === collectionParam)
+    : collections.find(col => col.name === "Destacados")
 
   return (
     <main className="min-h-screen bg-white">
@@ -115,7 +124,7 @@ function ProductsContent() {
               initialMinPrice={minPrice}
               initialMaxPrice={maxPrice}
               initialVariantFilters={variantFilters}
-              collectionName="Destacados"
+              collectionName={selectedCollection?.id}
             />
           </motion.div>
         </div>

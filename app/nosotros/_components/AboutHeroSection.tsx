@@ -35,7 +35,7 @@ export function QuienesSomosHero() {
   }, [fetchHeroSections])
 
   // Buscar la sección específica
-  const heroSection = heroSections?.find((section) => section.isActive && section.metadata?.section === "quienes-somos")
+  const heroSection = heroSections?.find((section) => section.isActive && section.metadata?.section?.toLowerCase() === "quienes-somos")
 
   // Debug: Log para verificar qué está pasando
   useEffect(() => {
