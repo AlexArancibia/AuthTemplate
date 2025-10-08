@@ -5,11 +5,11 @@ import axios from "axios"
 
 type Location = {
   countries: Country[]
-  states: Record<string, State[]> // key: countryCode
+  states: Record<string, State[]> // key: countryId
   cities: Record<string, City[]>  // key: stateId
   fetchCountries: () => Promise<void>
-  fetchStates: (countryCode: string) => Promise<void>
-  fetchCities: (stateId: string) => Promise<void>
+  fetchStates: (countryId: string) => Promise<void>
+  fetchCities: (countryId: string, stateId: string) => Promise<void>
 }
 
 export const useGeographicDataStore = create<Location>((set, get) => ({
@@ -23,21 +23,17 @@ export const useGeographicDataStore = create<Location>((set, get) => ({
     set({ countries: res.data.data })
   },
 
-  async fetchStates(countryCode: string) {
-    if (get().states[countryCode]) return
-    const res = await apiClient.get("/shipping-methods/geographic-data", {
-      params: { countryCode }
-    })
+  async fetchStates(countryId: string) {
+    if (get().states[countryId]) return
+    const res = await apiClient.get(`/shipping-methods/geographic-data/${countryId}`)
     set(state => ({
-      states: { ...state.states, [countryCode]: res.data.data }
+      states: { ...state.states, [countryId]: res.data.data }
     }))
   },
 
-  async fetchCities(stateId: string) {
+  async fetchCities(countryId: string, stateId: string) {
     if (get().cities[stateId]) return
-    const res = await apiClient.get("/shipping-methods/geographic-data", {
-      params: { stateId }
-    })
+    const res = await apiClient.get(`/shipping-methods/geographic-data/${countryId}/${stateId}`)
     set(state => ({
       cities: { ...state.cities, [stateId]: res.data.data }
     }))

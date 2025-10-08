@@ -5,26 +5,62 @@ import Link from "next/link"
 import { Truck, CreditCard, Package, Phone } from "lucide-react"
 import type { Product } from "@/types/product"
 import { useMainStore } from "@/stores/mainStore"
-import { useMemo } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { WashingTestButton } from "./WashingTestButton"
 import { DeliveryButton } from "./DeliveryButton"
+import apiClient from "@/lib/axiosConfig"
 
 interface ProductSidebarProps {
   product: Product
 }
 
 export function ProductSidebar({ product }: ProductSidebarProps) {
-  const { products, shippingMethods, paymentProviders, shopSettings } = useMainStore()
+  const { shippingMethods, paymentProviders, shopSettings } = useMainStore()
+  const [latestProducts, setLatestProducts] = useState<Product[]>([])
+  const [loadingLatest, setLoadingLatest] = useState(true)
 
-  const latestProducts = useMemo(() => {
-    return products
-      .filter(
-        (p) => p.id !== product.id && p.status === "ACTIVE", // Solo productos activos
-      )
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 3)
-  }, [products, product])
+  // Cargar últimos productos directamente desde la API
+  useEffect(() => {
+    const fetchLatestProducts = async () => {
+      try {
+        setLoadingLatest(true)
+        const storeId = process.env.NEXT_PUBLIC_STORE_ID
+        
+        if (!storeId) {
+          console.error("No store ID found")
+          return
+        }
+
+        // Petición para obtener los últimos 3 productos activos, ordenados por fecha de creación
+        const response = await apiClient.get(`/products/store/${storeId}`, {
+          params: {
+            page: 1,
+            limit: 4, // Traer 4 para tener margen por si uno es el producto actual
+            sortBy: 'createdAt',
+            sortOrder: 'desc',
+            'status[]': 'ACTIVE'
+          }
+        })
+
+        const products = response.data.data || response.data || []
+        
+        // Filtrar el producto actual y tomar solo 3
+        const filtered = products
+          .filter((p: Product) => p.id !== product.id)
+          .slice(0, 3)
+        
+        setLatestProducts(filtered)
+      } catch (error) {
+        console.error("Error fetching latest products:", error)
+        setLatestProducts([])
+      } finally {
+        setLoadingLatest(false)
+      }
+    }
+
+    fetchLatestProducts()
+  }, [product.id])
 
   const defaultCurrency = shopSettings[0]?.defaultCurrency
 
@@ -43,7 +79,7 @@ export function ProductSidebar({ product }: ProductSidebarProps) {
       </div>
 
       {/* Métodos de envío */}
-      <div className="border rounded-lg p-4 shadow-md bg-gray-50/90 shadow-slate-200/30">
+      {/* <div className="border rounded-lg p-4 shadow-md bg-gray-50/90 shadow-slate-200/30">
         <h3 className="font-normal text-base mb-3 flex items-center gap-2">
           <Truck className="w-5 h-5" />
           Métodos de envío
@@ -60,7 +96,7 @@ export function ProductSidebar({ product }: ProductSidebarProps) {
             </li>
           ))}
         </ul>
-      </div>
+      </div> */}
 
       {/* Métodos de pago */}
       <div className="border rounded-lg p-4 shadow-md bg-gray-50/90 shadow-slate-200/30">
@@ -101,7 +137,20 @@ export function ProductSidebar({ product }: ProductSidebarProps) {
           Últimos productos
         </h3>
         <div className="space-y-4">
-          {latestProducts.length > 0 ? (
+          {loadingLatest ? (
+            // Estado de carga
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="flex items-center gap-3 animate-pulse">
+                  <div className="w-16 h-16 rounded-lg bg-gray-200"></div>
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                    <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : latestProducts.length > 0 ? (
             latestProducts.map((latestProduct) => (
               <Link
                 key={latestProduct.id}

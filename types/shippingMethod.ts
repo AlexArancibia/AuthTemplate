@@ -10,6 +10,12 @@ export interface ShippingMethod {
   description?: string | null;
   prices: ShippingMethodPrice[];
   estimatedDeliveryTime?: string | null;
+  minDeliveryDays?: number;
+  maxDeliveryDays?: number;
+  availableDays?: string[];
+  cutOffTime?: string;
+  minWeight?: string | number;
+  maxWeight?: string | number;
   isActive: boolean;
   orders?: Order[];
   createdAt: Date;
@@ -20,6 +26,19 @@ export interface ShippingMethod {
 export interface ShippingMethodPriceInput {
   currencyId: string;
   price: number;
+  freeShippingThreshold?: number | null;
+  freeShippingMessage?: string | null;
+  countryCodes?: string[];
+  stateCodes?: string[];
+  cityNames?: string[];
+  postalCodes?: string[];
+  postalCodePatterns?: string[];
+  pricePerKg?: number;
+  freeWeightLimit?: number;
+  zonePriority?: number;
+  isZoneActive?: boolean;
+  zoneName?: string | null;
+  zoneDescription?: string | null;
 }
 
 export interface CreateShippingMethodDto {
@@ -46,6 +65,11 @@ export interface ShippingMethodPrice {
   currencyId: string;
   currency?: Currency;
   price: number;
+  
+  // ⬇️ AGREGAR ESTOS CAMPOS QUE YA EXISTEN EN EL BACKEND ⬇️
+  freeShippingThreshold?: number | null;
+  freeShippingMessage?: string | null;
+  
   createdAt: Date;
   updatedAt: Date;
 

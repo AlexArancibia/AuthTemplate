@@ -409,12 +409,13 @@ export default function CheckoutPage() {
 
   // Set default shipping and payment methods once data is loaded
   useEffect(() => {
-    if (shippingMethods.length > 0 && !formData.shippingMethod) {
-      setFormData((prev) => ({
-        ...prev,
-        shippingMethod: shippingMethods[0].id,
-      }))
-    }
+    // Comentado: ahora el usuario debe seleccionar el método de envío manualmente
+    // if (shippingMethods.length > 0 && !formData.shippingMethod) {
+    //   setFormData((prev) => ({
+    //     ...prev,
+    //     shippingMethod: shippingMethods[0].id,
+    //   }))
+    // }
 
     if (paymentProviders.length > 0 && !formData.paymentMethod) {
       setFormData((prev) => ({
@@ -497,20 +498,23 @@ export default function CheckoutPage() {
     // Minimizar el formulario cuando se selecciona una dirección existente
     setShowNewShippingAddress(false)
     
-    // Limpiar el formulario de nueva dirección
-    setFormData((prev) => ({
-      ...prev,
-      address: "",
-      apartment: "",
-      city: "",
-      state: "",
-      zipCode: "",
-      shippingPhone: "",
-      country: "",
-      countryCode3: "",
-      stateId: "",
-      cityId: "",
-    }))
+    // Poblar el formulario con los datos de la dirección seleccionada
+    const selectedAddress = currentUser?.addresses?.find(addr => addr.id === addressId)
+    if (selectedAddress) {
+      setFormData((prev) => ({
+        ...prev,
+        address: selectedAddress.address1,
+        apartment: selectedAddress.address2 || "",
+        city: selectedAddress.city,
+        state: selectedAddress.province || "",
+        zipCode: selectedAddress.zip,
+        shippingPhone: selectedAddress.phone || currentUser?.phone || "",
+        country: selectedAddress.country || "",
+        countryCode3: selectedAddress.countryCode3 || "",
+        stateId: selectedAddress.stateId || "",
+        cityId: selectedAddress.cityId || "",
+      }))
+    }
 
     // If using same address for billing, update billing address too
     if (formData.sameBillingAddress) {
@@ -526,7 +530,53 @@ export default function CheckoutPage() {
     // Minimizar el formulario cuando se selecciona una dirección existente
     setShowNewBillingAddress(false)
     
-    // Limpiar el formulario de nueva dirección de facturación
+    // Poblar el formulario con los datos de la dirección seleccionada
+    const selectedAddress = currentUser?.addresses?.find(addr => addr.id === addressId)
+    if (selectedAddress) {
+      setFormData((prev) => ({
+        ...prev,
+        billingAddress: selectedAddress.address1,
+        billingApartment: selectedAddress.address2 || "",
+        billingCity: selectedAddress.city,
+        billingState: selectedAddress.province || "",
+        billingZipCode: selectedAddress.zip,
+        billingPhone: selectedAddress.phone || currentUser?.phone || "",
+        billingCountry: selectedAddress.country || "",
+        billingCountryCode: selectedAddress.countryCode || "",
+        billingCountryCode3: selectedAddress.countryCode3 || "",
+        billingStateId: selectedAddress.stateId || "",
+        billingCityId: selectedAddress.cityId || "",
+      }))
+    }
+  }
+
+  // Handle deselecting shipping address (for new address form)
+  const handleDeselectShippingAddress = () => {
+    setSelectedShippingAddressId(null)
+    setShippingAddressId(null)
+    
+    // Limpiar los campos del formulario de envío para permitir ingresar una nueva dirección
+    setFormData((prev) => ({
+      ...prev,
+      address: "",
+      apartment: "",
+      city: "",
+      state: "",
+      zipCode: "",
+      shippingPhone: "",
+      country: "",
+      countryCode3: "",
+      stateId: "",
+      cityId: "",
+    }))
+  }
+
+  // Handle deselecting billing address (for new address form)
+  const handleDeselectBillingAddress = () => {
+    setSelectedBillingAddressId(null)
+    setBillingAddressId(null)
+    
+    // Limpiar los campos del formulario de facturación para permitir ingresar una nueva dirección
     setFormData((prev) => ({
       ...prev,
       billingAddress: "",
@@ -541,18 +591,6 @@ export default function CheckoutPage() {
       billingStateId: "",
       billingCityId: "",
     }))
-  }
-
-  // Handle deselecting shipping address (for new address form)
-  const handleDeselectShippingAddress = () => {
-    setSelectedShippingAddressId(null)
-    setShippingAddressId(null)
-  }
-
-  // Handle deselecting billing address (for new address form)
-  const handleDeselectBillingAddress = () => {
-    setSelectedBillingAddressId(null)
-    setBillingAddressId(null)
   }
 
   // Handle editing an address
@@ -822,17 +860,9 @@ const lineItems = prepareLineItems()
       const totalDiscounts = lineItems.reduce((sum, item) => sum + item.totalDiscount, 0);
       const subtotalAfterDiscount = subtotalPrice - totalDiscounts;
 
-      let totalTax = 0;
-      let totalPrice = 0;
-
-      if (taxesIncluded) {
-        const taxDivisor = 1 + taxRate;
-        totalTax = subtotalAfterDiscount - subtotalAfterDiscount / taxDivisor;
-        totalPrice = subtotalAfterDiscount + Number(getShippingCost());
-      } else {
-        totalTax = subtotalAfterDiscount * taxRate;
-        totalPrice = subtotalAfterDiscount + totalTax + Number(getShippingCost());
-      }
+      // IGV removido temporalmente
+      const totalTax = 0;
+      const totalPrice = subtotalAfterDiscount + Number(getShippingCost());
 
       const shippingCost = Number(getShippingCost())
 
@@ -1101,39 +1131,40 @@ const lineItems = prepareLineItems()
     if (!formData.shippingMethod || shippingMethods.length === 0) return 0
 
     const selectedMethod = shippingMethods.find((method) => method.id === formData.shippingMethod)
-    return selectedMethod?.prices[0]?.price || 0
+    const priceData = selectedMethod?.prices[0]
+    
+    if (!priceData) return 0
+    
+    const basePrice = Number(priceData.price || 0)
+    // TEMPORAL: Usar 100 como threshold por defecto mientras el backend no lo guarda
+    // Convertir a número para asegurar comparaciones correctas
+    const freeThreshold = Number(priceData.freeShippingThreshold || 100)
+    
+    // Si hay threshold y el subtotal (solo productos) lo supera, envío es gratis
+    const currentSubtotal = Number(getTotal())
+    const currentDiscounts = calculateDiscounts()
+    const currentSubtotalAfterDiscount = currentSubtotal - currentDiscounts
+    
+    if (freeThreshold && currentSubtotalAfterDiscount >= freeThreshold) {
+      return 0
+    }
+    
+    return basePrice
   }
 
   // Calculate totals
   const totalDiscounts = calculateDiscounts()
 const subtotal = Number(getTotal())
 const shipping = Number(getShippingCost())
-const taxesIncluded = shopSettings?.[0]?.taxesIncluded || false
-const taxRate = Number(shopSettings?.[0]?.taxValue || 18) / 100
+
+// IGV removido temporalmente - tax = 0
+const tax = 0
 
 // Calcular subtotal después de descuentos
 const subtotalAfterDiscount = Math.max(0, subtotal - totalDiscounts)
 
-let tax = 0
-let total = 0
-
-if (taxesIncluded) {
-  // Si los impuestos están incluidos en el precio:
-  // 1. Extraer el impuesto del subtotal original (antes de descuentos)
-  const taxDivisor = 1 + taxRate
-  const taxBeforeDiscount = subtotal - subtotal / taxDivisor
-  
-  // 2. Calcular qué porcentaje del impuesto corresponde al subtotal después de descuentos
-  tax = (subtotalAfterDiscount / subtotal) * taxBeforeDiscount
-  
-  // 3. Calcular total (subtotal con descuento + envío)
-  total = subtotalAfterDiscount + shipping
-} else {
-  // Si los impuestos NO están incluidos:
-  // Calcular impuestos sobre el subtotal después de descuentos
-  tax = subtotalAfterDiscount * taxRate
-  total = subtotalAfterDiscount + tax + shipping
-}
+// Total sin impuestos
+const total = subtotalAfterDiscount + shipping
 
   const prepareLineItems = () => {
     if (!appliedCoupon) {
@@ -1398,7 +1429,7 @@ if (taxesIncluded) {
                     shippingMethods={shippingMethods}
                     paymentProviders={paymentProviders}
                     getPaymentIcon={getPaymentIcon}
-                    total={total}
+                    total={subtotalAfterDiscount}
                     resumeItems={resumeItems}
                     orderId={orderId}
                   />
@@ -1418,6 +1449,7 @@ if (taxesIncluded) {
                   total={total}
                   currency={currency}
                   shopSettings={shopSettings}
+                  shippingMethods={shippingMethods}
                   selectedShippingAddressId={selectedShippingAddressId}
                   selectedBillingAddressId={selectedBillingAddressId}
                 />
