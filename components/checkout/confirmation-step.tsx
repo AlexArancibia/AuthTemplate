@@ -8,6 +8,7 @@ import { ShopSettings } from "@/types/store"
 import { User } from "@/types/user"
 import { Address } from "@/stores/userStore"
 import { CartItem } from "@/stores/cartStore"
+import { ShippingMethod } from "@/types/shippingMethod"
 
 interface ConfirmationStepProps {
   orderId: string | null
@@ -21,6 +22,7 @@ interface ConfirmationStepProps {
   total: number
   currency: string
   shopSettings: ShopSettings[]
+  shippingMethods: ShippingMethod[]
   // Add new props for address handling
   selectedShippingAddressId?: string | null
   selectedBillingAddressId?: string | null
@@ -38,6 +40,7 @@ export function ConfirmationStep({
   total,
   currency,
   shopSettings,
+  shippingMethods,
   selectedShippingAddressId = null,
   selectedBillingAddressId = null,
 }: ConfirmationStepProps) {
@@ -101,6 +104,19 @@ export function ConfirmationStep({
       zipCode: formData.billingZipCode || "",
       billingPhone: formData.billingPhone || "",
     }
+  }
+
+  // Helper function to get shipping method label
+  const getShippingMethodLabel = () => {
+    const selectedMethod = shippingMethods.find(m => m.id === formData.shippingMethod)
+    if (!selectedMethod) return "Envío"
+    
+    const methodName = selectedMethod.name.toLowerCase()
+    if (methodName.includes("recojo")) return "Recojo"
+    if (methodName.includes("envio solo hasta agencia") || methodName.includes("envío solo hasta agencia")) {
+      return "Envío solo hasta agencia"
+    }
+    return "Envío"
   }
 
   return (
@@ -186,7 +202,7 @@ export function ConfirmationStep({
 
               *Subtotal:* ${currency}${Number(subtotal).toFixed(2)}
               *IGV (18%):* ${currency}${Number(tax).toFixed(2)}
-              *Envío:* ${currency}${Number(shipping).toFixed(2)}
+              *${getShippingMethodLabel()}:* ${currency}${Number(shipping).toFixed(2)}
               *Total:* ${currency}${Number(total).toFixed(2)}
 
               *Dirección de envío:*

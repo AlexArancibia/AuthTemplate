@@ -38,6 +38,67 @@ interface AddressData {
   billingPhone?: string
 }
 
+// Función para detectar el tipo de días disponibles
+const getDayType = (availableDays: string[]) => {
+  const allDays = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+  const businessDays = ["mon", "tue", "wed", "thu", "fri"];
+  
+  if (!availableDays || availableDays.length === 0) return "días";
+  
+  const sortedAvailable = [...availableDays].sort();
+  const sortedBusiness = [...businessDays].sort();
+  const sortedAll = [...allDays].sort();
+  
+  if (JSON.stringify(sortedAvailable) === JSON.stringify(sortedBusiness)) {
+    return "días hábiles";
+  } else if (JSON.stringify(sortedAvailable) === JSON.stringify(sortedAll)) {
+    return "días";
+  } else {
+    return "días disponibles";
+  }
+};
+
+// Función para calcular el rango de fechas de entrega
+const getDeliveryDateRange = (minDays: number, maxDays: number, availableDays: string[]) => {
+  const dayMap: { [key: string]: number } = {
+    sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6
+  };
+  
+  const availableDayNumbers = availableDays.map(day => dayMap[day.toLowerCase()]);
+  
+  const calculateDeliveryDate = (daysToAdd: number) => {
+    const today = new Date();
+    let daysAdded = 0;
+    let currentDate = new Date(today);
+    
+    while (daysAdded < daysToAdd) {
+      currentDate.setDate(currentDate.getDate() + 1);
+      const dayOfWeek = currentDate.getDay();
+      
+      if (availableDayNumbers.includes(dayOfWeek)) {
+        daysAdded++;
+      }
+    }
+    
+    return currentDate;
+  };
+  
+  const minDate = calculateDeliveryDate(minDays || 1);
+  const maxDate = calculateDeliveryDate(maxDays || minDays || 1);
+  
+  const formatDate = (date: Date) => {
+    const day = date.getDate();
+    const month = date.toLocaleDateString('es-ES', { month: 'short' });
+    return `${day} ${month}`;
+  };
+  
+  if (minDays === maxDays) {
+    return formatDate(minDate);
+  }
+  
+  return `${formatDate(minDate)} - ${formatDate(maxDate)}`;
+};
+
 // Helper function to safely get price from variant
 const getSafePrice = (variant: CartItem['variant']): number => {
   try {
@@ -267,20 +328,119 @@ export function OrderSummary({
             <span>-{currency}{totalDiscounts.toFixed(2)}</span>
           </div>
         )}
+        {/* IGV removido temporalmente */}
         <div className="flex justify-between">
-          <span>IGV (18%)</span>
           <span>
-            {currency}
-            {(typeof tax === "number" && !isNaN(tax) ? tax : 0).toFixed(2)}
+            {(() => {
+              const selectedMethod = shippingMethods.find(m => m.id === formData.shippingMethod)
+              if (!selectedMethod) return "Envío"
+              
+              const methodName = selectedMethod.name.toLowerCase()
+              if (methodName.includes("recojo") || methodName.includes("pickup") || methodName.includes("tienda")) {
+                return "Recojo en tienda"
+              }
+              if (methodName.includes("envio solo hasta agencia") || methodName.includes("envío solo hasta agencia")) {
+                return "Envío solo hasta agencia"
+              }
+              return "Envío"
+            })()}
           </span>
+          {(() => {
+            if (!formData.shippingMethod) {
+              return <span className="text-gray-400 italic">--</span>
+            }
+            
+            const selectedMethod = shippingMethods.find(m => m.id === formData.shippingMethod)
+            if (!selectedMethod) {
+              return <span className="text-gray-400 italic">--</span>
+            }
+            
+            const methodName = selectedMethod.name.toLowerCase()
+            const isPickup = methodName.includes("recojo") || methodName.includes("pickup") || methodName.includes("tienda")
+            
+            // Si es recojo, mostrar "Gratis" en azul
+            if (isPickup) {
+              return <span className="text-blue-600 font-semibold">Gratis</span>
+            }
+            
+            // Si el shipping es 0, mostrar "Gratis" en verde
+            if (shipping === 0) {
+              return <span className="text-green-600 font-semibold">Gratis</span>
+            }
+            
+            return <span>{currency}{(typeof shipping === "number" && !isNaN(shipping) ? shipping : 0).toFixed(2)}</span>
+          })()}
         </div>
-        <div className="flex justify-between">
-          <span>Envío</span>
-          <span>
-            {currency}
-            {(typeof shipping === "number" && !isNaN(shipping) ? shipping : 0).toFixed(2)}
-          </span>
-        </div>
+        {/* Mensaje de envío gratis (solo si NO es recojo) */}
+        {formData.shippingMethod && (() => {
+          const selectedMethod = shippingMethods.find(m => m.id === formData.shippingMethod)
+          if (!selectedMethod) return null
+          
+          const methodName = selectedMethod.name.toLowerCase()
+          const isPickup = methodName.includes("recojo") || methodName.includes("pickup") || methodName.includes("tienda")
+          if (isPickup) return null // No mostrar mensajes de envío gratis en recojo
+          
+          const priceData = selectedMethod.prices[0]
+          // Convertir a número para asegurar comparaciones y .toFixed()
+          const freeThreshold = Number(priceData?.freeShippingThreshold || 100)
+          const subtotalAfterDiscount = subtotal - totalDiscounts
+          
+          if (shipping === 0 && subtotalAfterDiscount >= freeThreshold) {
+            return (
+              <div className="text-xs text-green-600 mt-1 font-medium">
+                ✓ ¡Calificaste para envío gratis!
+              </div>
+            )
+          } else if (freeThreshold && subtotalAfterDiscount < freeThreshold) {
+            const remaining = freeThreshold - subtotalAfterDiscount
+            return (
+              <div className="text-xs text-blue-600 mt-1">
+                Envío gratis desde {currency}{freeThreshold.toFixed(2)} (Te faltan {currency}{remaining.toFixed(2)})
+              </div>
+            )
+          }
+          return null
+        })()}
+        
+        {/* Fecha de entrega estimada */}
+        {formData.shippingMethod && (() => {
+          const selectedMethod = shippingMethods.find(m => m.id === formData.shippingMethod)
+          if (!selectedMethod) return null
+          
+          const methodName = selectedMethod.name.toLowerCase()
+          const isPickup = methodName.includes("recojo") || methodName.includes("pickup") || methodName.includes("tienda")
+          
+          // Si es recojo, mostrar mensaje diferente
+          if (isPickup) {
+            return (
+              <div className="text-xs text-gray-600 mt-1">
+                Disponible para recoger inmediatamente
+              </div>
+            )
+          }
+          
+          // Si tiene información de días de entrega, mostrarla
+          if (selectedMethod.minDeliveryDays && selectedMethod.maxDeliveryDays && selectedMethod.availableDays) {
+            const dayTypeText = getDayType(selectedMethod.availableDays)
+            const dateRange = getDeliveryDateRange(
+              selectedMethod.minDeliveryDays, 
+              selectedMethod.maxDeliveryDays, 
+              selectedMethod.availableDays
+            )
+            
+            return (
+              <div className="text-xs text-gray-600 mt-1">
+                <span className="font-medium">Llegada estimada:</span> {dateRange}
+                {selectedMethod.minDeliveryDays === selectedMethod.maxDeliveryDays 
+                  ? ` (${selectedMethod.minDeliveryDays} ${dayTypeText})`
+                  : ` (${selectedMethod.minDeliveryDays}-${selectedMethod.maxDeliveryDays} ${dayTypeText})`
+                }
+              </div>
+            )
+          }
+          
+          return null
+        })()}
       </div>
 
       <Separator className="my-4" />

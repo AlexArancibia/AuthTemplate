@@ -142,26 +142,31 @@ export function CustomerInfoStep({
   }, [fetchCountries])
 
   useEffect(() => {
-    if (formData.countryCode3) fetchStates(formData.countryCode3)
-  }, [formData.countryCode3, fetchStates])
+    if (formData.countryId) fetchStates(formData.countryId)
+  }, [formData.countryId, fetchStates])
 
   useEffect(() => {
-    if (formData.stateId) fetchCities(formData.stateId)
-  }, [formData.stateId, fetchCities])
+    if (formData.countryId && formData.stateId) {
+      fetchCities(formData.countryId, formData.stateId)
+    }
+  }, [formData.countryId, formData.stateId, fetchCities])
 
   // useEffect para manejar estados de facturación independientemente
   useEffect(() => {
-    if (formData.billingCountryCode3) fetchStates(formData.billingCountryCode3)
-  }, [formData.billingCountryCode3, fetchStates])
+    if (formData.billingCountryId) fetchStates(formData.billingCountryId)
+  }, [formData.billingCountryId, fetchStates])
 
   useEffect(() => {
-    if (formData.billingStateId) fetchCities(formData.billingStateId)
-  }, [formData.billingStateId, fetchCities])
+    if (formData.billingCountryId && formData.billingStateId) {
+      fetchCities(formData.billingCountryId, formData.billingStateId)
+    }
+  }, [formData.billingCountryId, formData.billingStateId, fetchCities])
 
   const handleCountryChange = (value: string) => {
     const country = countries.find(c => c.code3 === value)
     handleInputChange({ target: { name: "country", value: country?.name || "" } } as any)
     handleInputChange({ target: { name: "countryCode3", value } } as any)
+    handleInputChange({ target: { name: "countryId", value: country?.id || "" } } as any)
     // Limpiar estado y ciudad
     handleInputChange({ target: { name: "state", value: "" } } as any)
     handleInputChange({ target: { name: "stateId", value: "" } } as any)
@@ -170,7 +175,7 @@ export function CustomerInfoStep({
   }
 
   const handleStateChange = (value: string) => {
-    const state = (states[formData.countryCode3] || []).find(s => s.id === value)
+    const state = (states[formData.countryId] || []).find(s => s.id === value)
     handleInputChange({ target: { name: "state", value: state?.name || "" } } as any)
     handleInputChange({ target: { name: "stateId", value } } as any)
     // Limpiar ciudad
@@ -188,6 +193,7 @@ export function CustomerInfoStep({
     const country = countries.find(c => c.code3 === value)
     handleInputChange({ target: { name: "billingCountry", value: country?.name || "" } } as any)
     handleInputChange({ target: { name: "billingCountryCode3", value } } as any)
+    handleInputChange({ target: { name: "billingCountryId", value: country?.id || "" } } as any)
     // Limpiar estado y ciudad de billing
     handleInputChange({ target: { name: "billingState", value: "" } } as any)
     handleInputChange({ target: { name: "billingStateId", value: "" } } as any)
@@ -196,7 +202,7 @@ export function CustomerInfoStep({
   }
 
   const handleBillingStateChange = (value: string) => {
-    const state = (states[formData.billingCountryCode3] || []).find(s => s.id === value)
+    const state = (states[formData.billingCountryId] || []).find(s => s.id === value)
     handleInputChange({ target: { name: "billingState", value: state?.name || "" } } as any)
     handleInputChange({ target: { name: "billingStateId", value } } as any)
     // Limpiar ciudad de billing
@@ -481,7 +487,7 @@ export function CustomerInfoStep({
                     .filter(c => c.name.toLowerCase().includes(countryFilter.toLowerCase()))
                     .filter(c => c.name.toLowerCase() === 'perú' || c.name.toLowerCase() === 'peru')
                     .map(c => (
-                      <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
+                      <SelectItem key={c.code} value={c.code3}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -506,7 +512,7 @@ export function CustomerInfoStep({
                       onKeyDown={e => e.stopPropagation()}
                     />
                   </div>
-                  {(states[formData.countryCode3] || [])
+                  {(states[formData.countryId] || [])
                     .filter(s => s.name.toLowerCase().includes(stateFilter.toLowerCase()))
                     .map(s => (
                       <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
@@ -689,7 +695,7 @@ export function CustomerInfoStep({
                         .filter(c => c.name.toLowerCase().includes(billingCountryFilter.toLowerCase()))
                         .filter(c => c.name.toLowerCase() === 'perú' || c.name.toLowerCase() === 'peru')
                         .map(c => (
-                          <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
+                          <SelectItem key={c.code} value={c.code3}>{c.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -714,7 +720,7 @@ export function CustomerInfoStep({
                           onKeyDown={e => e.stopPropagation()}
                         />
                       </div>
-                      {(states[formData.billingCountryCode3] || [])
+                      {(states[formData.billingCountryId] || [])
                         .filter(s => s.name.toLowerCase().includes(billingStateFilter.toLowerCase()))
                         .map(s => (
                           <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>

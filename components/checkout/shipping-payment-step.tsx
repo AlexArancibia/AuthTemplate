@@ -42,7 +42,7 @@ interface ShippingPaymentStepProps {
   shippingMethods: ShippingMethod[]
   paymentProviders: PaymentProvider[]
   getPaymentIcon: (paymentName: string) => JSX.Element
-  total: number
+  total: number // Subtotal después de descuentos (sin envío)
   resumeItems: string
   orderId: string | null
 }
@@ -58,7 +58,7 @@ export function ShippingPaymentStep({
   shippingMethods,
   paymentProviders,
   getPaymentIcon,
-  total,
+  total, // Este es el subtotal después de descuentos (sin incluir envío)
   resumeItems,
   orderId,
 }: ShippingPaymentStepProps) {
@@ -67,6 +67,67 @@ export function ShippingPaymentStep({
   );
   const isCulqui = selectedProvider?.name?.toLowerCase() === "culqui";
   const [isOpeningCulqi, setIsOpeningCulqi] = useState(false);
+
+  // Función para detectar el tipo de días disponibles
+  const getDayType = (availableDays: string[]) => {
+    const allDays = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+    const businessDays = ["mon", "tue", "wed", "thu", "fri"];
+    
+    if (!availableDays || availableDays.length === 0) return "días";
+    
+    const sortedAvailable = [...availableDays].sort();
+    const sortedBusiness = [...businessDays].sort();
+    const sortedAll = [...allDays].sort();
+    
+    if (JSON.stringify(sortedAvailable) === JSON.stringify(sortedBusiness)) {
+      return "días hábiles";
+    } else if (JSON.stringify(sortedAvailable) === JSON.stringify(sortedAll)) {
+      return "días";
+    } else {
+      return "días disponibles";
+    }
+  };
+
+  // Función para calcular el rango de fechas de entrega
+  const getDeliveryDateRange = (minDays: number, maxDays: number, availableDays: string[]) => {
+    const dayMap: { [key: string]: number } = {
+      sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6
+    };
+    
+    const availableDayNumbers = availableDays.map(day => dayMap[day.toLowerCase()]);
+    
+    const calculateDeliveryDate = (daysToAdd: number) => {
+      const today = new Date();
+      let daysAdded = 0;
+      let currentDate = new Date(today);
+      
+      while (daysAdded < daysToAdd) {
+        currentDate.setDate(currentDate.getDate() + 1);
+        const dayOfWeek = currentDate.getDay();
+        
+        if (availableDayNumbers.includes(dayOfWeek)) {
+          daysAdded++;
+        }
+      }
+      
+      return currentDate;
+    };
+    
+    const minDate = calculateDeliveryDate(minDays || 1);
+    const maxDate = calculateDeliveryDate(maxDays || minDays || 1);
+    
+    const formatDate = (date: Date) => {
+      const day = date.getDate();
+      const month = date.toLocaleDateString('es-ES', { month: 'short' });
+      return `${day} ${month}`;
+    };
+    
+    if (minDays === maxDays) {
+      return formatDate(minDate);
+    }
+    
+    return `${formatDate(minDate)} - ${formatDate(maxDate)}`;
+  };
 
   const handleCulqiPay = async () => {
     const amount = Math.round(Number(total) * 100);
@@ -144,9 +205,32 @@ export function ShippingPaymentStep({
     method.name.toLowerCase().includes("recojo")
   )
 
-  const methodsToShow = pickupMethod
-    ? [...filteredShippingMethods, pickupMethod]
-    : filteredShippingMethods
+  const agencyMethod = shippingMethods.find((method) =>
+    method.name.toLowerCase().includes("envio solo hasta agencia") ||
+    method.name.toLowerCase().includes("envío solo hasta agencia")
+  )
+
+  const isNotLimaProvincia = formData.state?.toLowerCase() !== "lima"
+
+  let methodsToShow = [...filteredShippingMethods]
+  
+  if (pickupMethod && !methodsToShow.find(m => m.id === pickupMethod.id)) {
+    methodsToShow.push(pickupMethod)
+  }
+  
+  if (agencyMethod && isNotLimaProvincia && !methodsToShow.find(m => m.id === agencyMethod.id)) {
+    methodsToShow.push(agencyMethod)
+  }
+
+  // Ordenar para que recojo aparezca primero
+  methodsToShow.sort((a, b) => {
+    const aIsPickup = a.name.toLowerCase().includes("recojo") || a.name.toLowerCase().includes("pickup") || a.name.toLowerCase().includes("tienda")
+    const bIsPickup = b.name.toLowerCase().includes("recojo") || b.name.toLowerCase().includes("pickup") || b.name.toLowerCase().includes("tienda")
+    
+    if (aIsPickup && !bIsPickup) return -1
+    if (!aIsPickup && bIsPickup) return 1
+    return 0
+  })
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-8">
@@ -165,8 +249,26 @@ export function ShippingPaymentStep({
             className="space-y-4"
           >
             {methodsToShow.map((method) => {
-              const price = method.prices[0]?.price || 0
-              const isFree = price === 0
+              const priceData = method.prices[0]
+              const basePrice = Number(priceData?.price || 0)
+              // TEMPORAL: Usar 100 como threshold por defecto mientras el backend no lo guarda
+              // Convertir a número para asegurar que tenga el método .toFixed()
+              const freeThreshold = Number(priceData?.freeShippingThreshold || 100)
+              
+              // DEBUG: Ver qué datos llegan
+              console.log('🔍 DEBUG Método:', method.name)
+              console.log('📦 priceData completo:', priceData)
+              console.log('💰 freeThreshold:', freeThreshold)
+              console.log('🛒 subtotal después de descuentos:', total)
+              
+              // Calcular si califica para envío gratis (usando subtotal después de descuentos)
+              const qualifiesForFreeShipping = freeThreshold && total >= freeThreshold
+              const isFree = basePrice === 0 || qualifiesForFreeShipping
+              const finalPrice = qualifiesForFreeShipping ? 0 : basePrice
+              
+              // Detectar si es recojo en tienda (múltiples variaciones)
+              const methodName = method.name.toLowerCase()
+              const isPickup = methodName.includes("recojo") || methodName.includes("pickup") || methodName.includes("tienda")
 
               return (
                 <div
@@ -181,22 +283,67 @@ export function ShippingPaymentStep({
                       ) : (
                         <Truck className="mr-3 h-5 w-5 text-primary" />
                       )}
-                      <div>
+                      <div className="flex-1">
                         <p className="font-medium">{method.name}</p>
-                        <p className="text-sm text-gray-500">
-                          {method.description || method.estimatedDeliveryTime}
-                        </p>
+                        
+                        {/* Información de tiempo de entrega (solo si NO es recojo) */}
+                        {!isPickup && method.minDeliveryDays && method.maxDeliveryDays && method.availableDays && (
+                          <p className="text-sm text-gray-600 mt-1">
+                            {method.minDeliveryDays === method.maxDeliveryDays 
+                              ? `${method.minDeliveryDays} ${getDayType(method.availableDays)}`
+                              : `${method.minDeliveryDays}-${method.maxDeliveryDays} ${getDayType(method.availableDays)}`
+                            } ({getDeliveryDateRange(method.minDeliveryDays, method.maxDeliveryDays, method.availableDays)})
+                          </p>
+                        )}
+                        
+                        {/* Descripción o tiempo estimado */}
+                        {(() => {
+                          // No mostrar si es solo "0" o vacío
+                          const displayText = method.description || method.estimatedDeliveryTime
+                          const textStr = String(displayText || "")
+                          if (!displayText || textStr === "0" || textStr === "") return null
+                          
+                          return (
+                            <p className="text-sm text-gray-500">
+                              {displayText}
+                            </p>
+                          )
+                        })()}
+                        
+                        {/* Mostrar progreso hacia envío gratis (solo si NO es recojo) */}
+                        {!isPickup && freeThreshold && !qualifiesForFreeShipping && (
+                          <p className="text-xs text-blue-600 mt-1">
+                            ¡Envío gratis desde {paymentProviders[0]?.currency.symbol}{freeThreshold.toFixed(2)}!
+                            {total > 0 && (
+                              <span className="ml-1 text-gray-500">
+                                (Te faltan {paymentProviders[0]?.currency.symbol}{(freeThreshold - total).toFixed(2)})
+                              </span>
+                            )}
+                          </p>
+                        )}
+                        
+                        {/* Mensaje cuando ya califica (solo si NO es recojo) */}
+                        {!isPickup && qualifiesForFreeShipping && (
+                          <p className="text-xs text-green-600 mt-1 font-medium">
+                            ✓ ¡Calificaste para envío gratis!
+                          </p>
+                        )}
                       </div>
                     </div>
                   </Label>
-                  {isFree ? (
+                  {/* Mostrar precio o badge de gratis */}
+                  {isPickup ? (
+                    <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 font-medium px-3 py-1">
+                      Gratis
+                    </Badge>
+                  ) : isFree ? (
                     <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 font-medium">
                       Gratis
                     </Badge>
                   ) : (
                     <span className="font-medium">
                       {paymentProviders[0]?.currency.symbol}
-                      {Number(price).toFixed(2)}
+                      {Number(finalPrice).toFixed(2)}
                     </span>
                   )}
                 </div>
