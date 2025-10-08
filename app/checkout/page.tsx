@@ -106,6 +106,11 @@ export default function CheckoutPage() {
     state: "",
     zipCode: "",
     shippingPhone: "",
+    country: "",
+    countryId: "",
+    countryCode3: "",
+    stateId: "",
+    cityId: "",
     sameBillingAddress: true,
     billingAddress: "",
     billingApartment: "",
@@ -113,6 +118,11 @@ export default function CheckoutPage() {
     billingState: "",
     billingZipCode: "",
     billingPhone: "",
+    billingCountry: "",
+    billingCountryId: "",
+    billingCountryCode3: "",
+    billingStateId: "",
+    billingCityId: "",
     shippingMethod: "",
     paymentMethod: "",
     cardNumber: "",
@@ -509,10 +519,6 @@ export default function CheckoutPage() {
         state: selectedAddress.province || "",
         zipCode: selectedAddress.zip,
         shippingPhone: selectedAddress.phone || currentUser?.phone || "",
-        country: selectedAddress.country || "",
-        countryCode3: selectedAddress.countryCode3 || "",
-        stateId: selectedAddress.stateId || "",
-        cityId: selectedAddress.cityId || "",
       }))
     }
 
@@ -541,11 +547,6 @@ export default function CheckoutPage() {
         billingState: selectedAddress.province || "",
         billingZipCode: selectedAddress.zip,
         billingPhone: selectedAddress.phone || currentUser?.phone || "",
-        billingCountry: selectedAddress.country || "",
-        billingCountryCode: selectedAddress.countryCode || "",
-        billingCountryCode3: selectedAddress.countryCode3 || "",
-        billingStateId: selectedAddress.stateId || "",
-        billingCityId: selectedAddress.cityId || "",
       }))
     }
   }
@@ -564,10 +565,6 @@ export default function CheckoutPage() {
       state: "",
       zipCode: "",
       shippingPhone: "",
-      country: "",
-      countryCode3: "",
-      stateId: "",
-      cityId: "",
     }))
   }
 
@@ -585,11 +582,6 @@ export default function CheckoutPage() {
       billingState: "",
       billingZipCode: "",
       billingPhone: "",
-      billingCountry: "",
-      billingCountryCode: "",
-      billingCountryCode3: "",
-      billingStateId: "",
-      billingCityId: "",
     }))
   }
 
