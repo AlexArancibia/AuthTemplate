@@ -68,8 +68,8 @@ function ProductsContent() {
   // Obtener colección desde query params o usar "Destacados" por defecto
   const collectionParam = searchParams.get("collection")
   const selectedCollection = collectionParam 
-    ? collections.find(col => col.id === collectionParam || col.name === collectionParam)
-    : collections.find(col => col.name === "Destacados")
+    ? collections.find(col => col.id === collectionParam || col.title === collectionParam)
+    : collections.find(col => col.title === "Destacados")
 
   return (
     <main className="min-h-screen bg-white">
