@@ -33,10 +33,11 @@ export interface SearchCategoryParams extends PaginationParams {
 // Parámetros específicos para búsqueda de productos
 export interface SearchProductParams extends Omit<PaginationParams, 'sortBy'> {
   query?: string
-  categoryIds?: string[]  // Cambiado a plural y array para coincidir con el backend
-  collectionIds?: string[]  // Cambiado a plural y array para coincidir con el backend
+  categorySlugs?: string[]  // Slugs de categorías separados por comas en el backend
+  collectionIds?: string[]  // IDs de colecciones separados por comas en el backend
   minPrice?: number
   maxPrice?: number
+  currencyId?: string  // ID de la moneda para filtrar por precio
   inStock?: boolean
   sortBy?: ProductSortBy
 }

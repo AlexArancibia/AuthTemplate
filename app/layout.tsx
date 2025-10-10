@@ -126,7 +126,7 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body className={poppins.className}>
+      <body className={`${poppins.className} overflow-x-hidden`}>
         <Toaster position="top-center" richColors />
         <Navbar />
         <main className="min-h-[70vh] sm:min-h-[80vh]">{children}</main>

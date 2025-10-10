@@ -17,7 +17,7 @@ import { DeliveryHeroSection } from "@/components/DeliverySection"
 import { useCurrencyStore, CurrencyOption } from "@/stores/currency"
 import { PublishBanner } from "@/components/PublishBanner"
 import { BrandsCarousel } from "@/components/BrandsCarousel"
-import { NewProducts } from "@/components/NewProducts"
+import { CollectionCarousel } from "@/components/CollectionCarousel"
 import { Testimonials } from "@/components/Testimonials"
 import { Sponsors } from "@/components/Sponsors"
 
@@ -33,7 +33,16 @@ export default function HomePage() {
       const el = document.getElementById(id)
       if (el) {
         // espera un frame para asegurar layout listo
-        requestAnimationFrame(() => el.scrollIntoView({ behavior: "smooth", block: "start" }))
+        requestAnimationFrame(() => {
+          const headerHeight = 90 // h-18 from navbar (4.5rem = 72px) + extra spacing
+          const elementPosition = el.getBoundingClientRect().top
+          const offsetPosition = elementPosition + window.scrollY - headerHeight
+
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: "smooth"
+          })
+        })
       } else if (retries > 0) {
         // reintenta (por si el componente monta tarde)
         setTimeout(() => tryScrollToHash(hash, retries - 1), 120)
@@ -62,12 +71,24 @@ export default function HomePage() {
         selectedCurrencyId={selectedCurrencyId}
         acceptedCurrencies={acceptedCurrencies}
       />
+      <CollectionCarousel
+        collectionId="col_6e93d324-65cd"
+        selectedCurrencyId={selectedCurrencyId}
+        acceptedCurrencies={acceptedCurrencies}
+        showExploreButton={false}
+        fallbackTitle="PRODUCTOS DESTACADOS"
+        emptyMessage="No hay productos destacados para mostrar."
+      />
       {/* <DeliveryHeroSection /> */}
       <PublishBanner />
       <BrandsCarousel />
-      <NewProducts
+      <CollectionCarousel
+        collectionId="col_cb240586-77ae"
         selectedCurrencyId={selectedCurrencyId}
         acceptedCurrencies={acceptedCurrencies}
+        showExploreButton={true}
+        fallbackTitle="ÚLTIMOS PRODUCTOS"
+        emptyMessage="Aún no hay productos recientes para mostrar."
       />
       {/* <BlogSection /> */}
       <Testimonials />

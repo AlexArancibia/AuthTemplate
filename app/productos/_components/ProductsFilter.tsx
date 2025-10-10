@@ -46,7 +46,16 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const [searchTerm, setSearchTerm] = useState(initialFilters.searchTerm)
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(initialFilters.categories)
+  // Clean old category IDs if present
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(() => {
+    const categories = initialFilters.categories
+    const hasOldIds = categories.some(val => val.startsWith("cat_"))
+    if (hasOldIds) {
+      console.warn("⚠️ Old category IDs detected in filters. Clearing to use slugs.")
+      return []
+    }
+    return categories
+  })
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string[]>>(initialFilters.variants)
   const [priceRange, setPriceRange] = useState<[number, number]>(initialFilters.priceRange)
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm)
@@ -278,9 +287,9 @@ const filteredProducts = products
     })
   }, [categories])
 
-  const handleCategoryChange = useCallback((categoryId: string) => {
+  const handleCategoryChange = useCallback((categorySlug: string) => {
     setSelectedCategories((prev) =>
-      prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [...prev, categoryId],
+      prev.includes(categorySlug) ? prev.filter((slug) => slug !== categorySlug) : [...prev, categorySlug],
     )
   }, [])
 
@@ -346,11 +355,11 @@ const filteredProducts = products
           {sortedCategories.map((category: Category) => (
             <div key={category.id} className="flex items-center space-x-2">
               <Checkbox
-                id={category.id}
-                checked={selectedCategories.includes(category.id)}
-                onCheckedChange={() => handleCategoryChange(category.id)}
+                id={category.slug}
+                checked={selectedCategories.includes(category.slug)}
+                onCheckedChange={() => handleCategoryChange(category.slug)}
               />
-              <label htmlFor={category.id} className="text-sm text-gray-700 cursor-pointer">
+              <label htmlFor={category.slug} className="text-sm text-gray-700 cursor-pointer">
                 {category.name}
               </label>
             </div>
