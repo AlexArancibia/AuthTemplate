@@ -1,6 +1,5 @@
 import { create } from "zustand"
 import apiClient from "@/lib/axiosConfig"
-import Cookies from "js-cookie"
 import type { Product } from "@/types/product"
 import type { Category } from "@/types/category"
 import type { Collection } from "@/types/collection"
@@ -35,30 +34,37 @@ import type {
   SearchPaymentTransactionParams
 } from "@/types/pagination"
 
-// Definir duración del caché (5 minutos)
-const CACHE_DURATION = 5 * 60 * 1000
-
-// Duración del caché para shop settings (10 minutos en milisegundos)
-const SHOP_SETTINGS_CACHE_DURATION = 1 * 60 * 1000
-
-// Nombre de la cookie para shop settings
-const SHOP_SETTINGS_COOKIE = "shop_settings_cache"
-const SHOP_SETTINGS_TIMESTAMP_COOKIE = "shop_settings_timestamp"
-
 // Obtener el storeId del entorno
 const STORE_ID = process.env.NEXT_PUBLIC_STORE_ID
 
 // Helper function para construir query params
 const buildQueryParams = (params: any = {}) => {
+  console.log("🔧 [buildQueryParams] Input params:", params)
   const queryParams = new URLSearchParams()
   
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== '') {
-      queryParams.append(key, String(value))
+      // Manejar arrays (como categoryIds, collectionIds)
+      // NestJS necesita corchetes [] para identificar arrays: categoryIds[]=id1&categoryIds[]=id2
+      if (Array.isArray(value)) {
+        if (value.length > 0) {
+          value.forEach((item) => {
+            console.log(`🔧 [buildQueryParams] Adding array param: ${key}[] = ${item}`)
+            queryParams.append(`${key}[]`, String(item))
+          })
+        }
+      } else {
+        console.log(`🔧 [buildQueryParams] Adding param: ${key} = ${value}`)
+        queryParams.append(key, String(value))
+      }
+    } else {
+      console.log(`🔧 [buildQueryParams] Skipping param: ${key} (value is undefined/null/empty)`)
     }
   })
   
-  return queryParams.toString()
+  const result = queryParams.toString()
+  console.log("🔧 [buildQueryParams] Final query string:", result)
+  return result
 }
 
 // Definir la interfaz MainStore
@@ -103,28 +109,6 @@ interface MainStore {
     heroSections: PaginationMeta | null
     frequentlyBoughtTogether: PaginationMeta | null
     users: PaginationMeta | null
-  }
-  
-  lastFetch: {
-    categories: number | null
-    products: number | null
-    productVariants: number | null
-    collections: number | null
-    orders: number | null
-    customers: number | null
-    coupons: number | null
-    couponCode:number | null
-    shippingMethods: number | null
-    paymentProviders: number | null
-    contents: number | null
-    heroSections: number | null
-    cardSections: number | null
-    teamMembers: number | null
-    frequentlyBoughtTogether: number | null
-    users: number | null
-    shopSettings: number | null
-    currencies: number | null
-    exchangeRates: number | null
   }
 
   setEndpoint: (endpoint: string) => void
@@ -221,28 +205,6 @@ export const useMainStore = create<MainStore>((set, get) => ({
     frequentlyBoughtTogether: null,
     users: null,
   },
-  
-  lastFetch: {
-    categories: null,
-    products: null,
-    productVariants: null,
-    collections: null,
-    orders: null,
-    customers: null,
-    heroSections: null,
-    cardSections: null,
-    teamMembers: null,
-    coupons: null,
-    couponCode: null,
-    shippingMethods: null,
-    paymentProviders: null,
-    contents: null,
-    users: null,
-    shopSettings: null,
-    currencies: null,
-    exchangeRates: null,
-    frequentlyBoughtTogether: null,
-  },
 
   setEndpoint: (endpoint) => {
     if (typeof window !== "undefined") {
@@ -251,36 +213,10 @@ export const useMainStore = create<MainStore>((set, get) => ({
     set({ endpoint })
   },
 
-  // Método fetchCategories mejorado con caché y paginación
+  // Método fetchCategories con paginación
   fetchCategories: async (params: SearchCategoryParams = {}, forceRefresh = false) => {
-    const { categories, lastFetch, paginationMeta } = get()
-    const now = Date.now()
-
     if (!STORE_ID) {
       throw new Error("No store ID provided in environment variables")
-    }
-
-    // Verificar si hay categorías en caché y si el caché aún es válido
-    // Solo usar caché si no hay parámetros de búsqueda o paginación diferentes
-    const isDefaultRequest = !params.page && !params.query && !params.parentId
-    if (
-      !forceRefresh &&
-      isDefaultRequest &&
-      categories.length > 0 && 
-      lastFetch.categories && 
-      now - lastFetch.categories < CACHE_DURATION
-    ) {
-      return {
-        data: categories,
-        meta: paginationMeta.categories || {
-          total: categories.length,
-          page: 1,
-          limit: categories.length,
-          totalPages: 1,
-          hasNext: false,
-          hasPrev: false
-        }
-      }
     }
 
     set({ loading: true, error: null })
@@ -292,9 +228,8 @@ export const useMainStore = create<MainStore>((set, get) => ({
       
       set({
         categories: response.data.data,
-        paginationMeta: { ...get().paginationMeta, categories: response.data.meta },
+        paginationMeta: { ...get().paginationMeta, categories: response.data.pagination },
         loading: false,
-        lastFetch: { ...get().lastFetch, categories: now },
       })
       return response.data
     } catch (error) {
@@ -303,84 +238,87 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchProducts mejorado con caché y paginación
+  // Método fetchProducts con paginación
   fetchProducts: async (params: SearchProductParams = {}, forceRefresh = false) => {
-    const { products, lastFetch, paginationMeta } = get()
-    const now = Date.now()
-
+    console.log("🚀 [MainStore fetchProducts] START - Params received:", params)
+    console.log("🔑 [MainStore fetchProducts] STORE_ID:", STORE_ID)
+    
     if (!STORE_ID) {
+      console.error("❌ [MainStore fetchProducts] No store ID provided in environment variables")
       throw new Error("No store ID provided in environment variables")
     }
 
-    // Verificar si hay productos en caché y si el caché aún es válido
-    const isDefaultRequest = !params.page && !params.query && !params.categoryId && !params.collectionId
-    if (
-      !forceRefresh &&
-      isDefaultRequest &&
-      products.length > 0 && 
-      lastFetch.products && 
-      now - lastFetch.products < CACHE_DURATION
-    ) {
-      return {
-        data: products,
-        meta: paginationMeta.products || {
-          total: products.length,
-          page: 1,
-          limit: products.length,
-          totalPages: 1,
-          hasNext: false,
-          hasPrev: false
-        }
-      }
-    }
-
+    console.log("⏳ [MainStore fetchProducts] Setting loading to true")
     set({ loading: true, error: null })
+    
     try {
       const queryParams = buildQueryParams(params)
-      const response = await apiClient.get<PaginatedResponse<Product>>(`/products/store/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
+      const url = `/products/store/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`
+      console.log("🌐 [MainStore fetchProducts] Full URL:", url)
+      console.log("🌐 [MainStore fetchProducts] Query params:", queryParams)
+      console.log("🌐 [MainStore fetchProducts] Base URL:", process.env.NEXT_PUBLIC_BACKEND_ENDPOINT)
       
-      set({
-        products: response.data.data,
-        paginationMeta: { ...get().paginationMeta, products: response.data.meta },
-        loading: false,
-        lastFetch: { ...get().lastFetch, products: now },
+      console.log("📡 [MainStore fetchProducts] Making API call...")
+      const response = await apiClient.get<PaginatedResponse<Product>>(url)
+      
+      console.log("✅ [MainStore fetchProducts] Response received!")
+      console.log("📊 [MainStore fetchProducts] Response status:", response.status)
+      console.log("📊 [MainStore fetchProducts] Response headers:", response.headers)
+      console.log("📦 [MainStore fetchProducts] Response data keys:", Object.keys(response.data))
+      console.log("📦 [MainStore fetchProducts] Response data structure:", {
+        hasData: !!response.data,
+        hasPagination: !!response.data?.pagination,
+        dataLength: response.data?.data?.length || 0,
+        paginationDetails: response.data?.pagination,
       })
+      console.log("📦 [MainStore fetchProducts] Full response.data:", JSON.stringify(response.data, null, 2))
+      
+      // Validar estructura de respuesta
+      if (!response.data || !response.data.data) {
+        console.error("❌ [MainStore fetchProducts] Invalid response structure:", response.data)
+        throw new Error("Invalid response structure from API")
+      }
+      
+      console.log("💾 [MainStore fetchProducts] Updating store state...")
+      const newState = {
+        products: response.data.data,
+        paginationMeta: { ...get().paginationMeta, products: response.data.pagination || null },
+        loading: false,
+      }
+      console.log("💾 [MainStore fetchProducts] New state:", {
+        productsCount: newState.products.length,
+        paginationMeta: newState.paginationMeta,
+        loading: newState.loading,
+      })
+      
+      set(newState)
+      
+      console.log("✅ [MainStore fetchProducts] Store updated successfully")
+      console.log("🔍 [MainStore fetchProducts] Current store state after update:", {
+        productsCount: get().products.length,
+        paginationMeta: get().paginationMeta,
+      })
+      
       return response.data
-    } catch (error) {
+    } catch (error: any) {
+      console.error("❌ [MainStore fetchProducts] Error caught!")
+      console.error("❌ [MainStore fetchProducts] Error object:", error)
+      console.error("❌ [MainStore fetchProducts] Error details:", {
+        message: error.message,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        headers: error.response?.headers,
+      })
       set({ error: "Failed to fetch products", loading: false })
       throw error
     }
   },
 
-  // Método fetchProductVariants mejorado con caché y paginación
+  // Método fetchProductVariants con paginación
   fetchProductVariants: async (params: SearchProductParams = {}, forceRefresh = false) => {
-    const { productVariants, lastFetch, paginationMeta } = get()
-    const now = Date.now()
-
     if (!STORE_ID) {
       throw new Error("No store ID provided in environment variables")
-    }
-
-    // Verificar si hay datos en caché y si el caché aún es válido
-    const isDefaultRequest = !params.page && !params.query
-    if (
-      !forceRefresh &&
-      isDefaultRequest &&
-      productVariants.length > 0 && 
-      lastFetch.productVariants && 
-      now - lastFetch.productVariants < CACHE_DURATION
-    ) {
-      return {
-        data: productVariants,
-        meta: paginationMeta.productVariants || {
-          total: productVariants.length,
-          page: 1,
-          limit: productVariants.length,
-          totalPages: 1,
-          hasNext: false,
-          hasPrev: false
-        }
-      }
     }
 
     set({ loading: true, error: null })
@@ -390,9 +328,8 @@ export const useMainStore = create<MainStore>((set, get) => ({
       
       set({
         productVariants: response.data.data,
-        paginationMeta: { ...get().paginationMeta, productVariants: response.data.meta },
+        paginationMeta: { ...get().paginationMeta, productVariants: response.data.pagination },
         loading: false,
-        lastFetch: { ...get().lastFetch, productVariants: now },
       })
       return response.data
     } catch (error) {
@@ -401,35 +338,10 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchCollections mejorado con caché y paginación
+  // Método fetchCollections con paginación
   fetchCollections: async (params: SearchCollectionParams = {}, forceRefresh = false) => {
-    const { collections, lastFetch, paginationMeta } = get()
-    const now = Date.now()
-
     if (!STORE_ID) {
       throw new Error("No store ID provided in environment variables")
-    }
-
-    // Verificar si hay colecciones en caché y si el caché aún es válido
-    const isDefaultRequest = !params.page && !params.query
-    if (
-      !forceRefresh &&
-      isDefaultRequest &&
-      collections.length > 0 && 
-      lastFetch.collections && 
-      now - lastFetch.collections < CACHE_DURATION
-    ) {
-      return {
-        data: collections,
-        meta: paginationMeta.collections || {
-          total: collections.length,
-          page: 1,
-          limit: collections.length,
-          totalPages: 1,
-          hasNext: false,
-          hasPrev: false
-        }
-      }
     }
 
     set({ loading: true, error: null })
@@ -439,9 +351,8 @@ export const useMainStore = create<MainStore>((set, get) => ({
       
       set({
         collections: response.data.data,
-        paginationMeta: { ...get().paginationMeta, collections: response.data.meta },
+        paginationMeta: { ...get().paginationMeta, collections: response.data.pagination },
         loading: false,
-        lastFetch: { ...get().lastFetch, collections: now },
       })
       return response.data
     } catch (error) {
@@ -450,35 +361,10 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchHeroSections mejorado con caché y paginación
+  // Método fetchHeroSections con paginación
   fetchHeroSections: async (params: SearchHeroSectionParams = {}, forceRefresh = false) => {
-    const { heroSections, lastFetch, paginationMeta } = get()
-    const now = Date.now()
-
     if (!STORE_ID) {
       throw new Error("No store ID provided in environment variables")
-    }
-
-    // Verificar si hay secciones de héroe en caché y si el caché aún es válido
-    const isDefaultRequest = !params.page && !params.includeInactive
-    if (
-      !forceRefresh &&
-      isDefaultRequest &&
-      heroSections.length > 0 && 
-      lastFetch.heroSections && 
-      now - lastFetch.heroSections < CACHE_DURATION
-    ) {
-      return {
-        data: heroSections,
-        meta: paginationMeta.heroSections || {
-          total: heroSections.length,
-          page: 1,
-          limit: heroSections.length,
-          totalPages: 1,
-          hasNext: false,
-          hasPrev: false
-        }
-      }
     }
 
     set({ loading: true, error: null })
@@ -488,9 +374,8 @@ export const useMainStore = create<MainStore>((set, get) => ({
       
       set({
         heroSections: response.data.data,
-        paginationMeta: { ...get().paginationMeta, heroSections: response.data.meta },
+        paginationMeta: { ...get().paginationMeta, heroSections: response.data.pagination },
         loading: false,
-        lastFetch: { ...get().lastFetch, heroSections: now },
       })
       return response.data
     } catch (error) {
@@ -499,18 +384,10 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchCardSections mejorado con caché
+  // Método fetchCardSections
   fetchCardSections: async () => {
-    const { cardSections, lastFetch } = get()
-    const now = Date.now()
-
     if (!STORE_ID) {
       throw new Error("No store ID provided in environment variables")
-    }
-
-    // Verificar si hay secciones de tarjetas en caché y si el caché aún es válido
-    if (cardSections.length > 0 && lastFetch.cardSections && now - lastFetch.cardSections < CACHE_DURATION) {
-      return cardSections
     }
 
     set({ loading: true, error: null })
@@ -519,7 +396,6 @@ export const useMainStore = create<MainStore>((set, get) => ({
       set({
         cardSections: response.data,
         loading: false,
-        lastFetch: { ...get().lastFetch, cardSections: now },
       })
       return response.data
     } catch (error) {
@@ -528,18 +404,10 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchTeamSections mejorado con caché
+  // Método fetchTeamSections
   fetchTeamSections: async () => {
-    const { teamSections, lastFetch } = get()
-    const now = Date.now()
-
     if (!STORE_ID) {
       throw new Error("No store ID provided in environment variables")
-    }
-
-    // Verificar si hay secciones de equipo en caché y si el caché aún es válido
-    if (teamSections.length > 0 && lastFetch.teamMembers && now - lastFetch.teamMembers < CACHE_DURATION) {
-      return teamSections
     }
 
     set({ loading: true, error: null })
@@ -548,7 +416,6 @@ export const useMainStore = create<MainStore>((set, get) => ({
       set({
         teamSections: response.data,
         loading: false,
-        lastFetch: { ...get().lastFetch, teamMembers: now },
       })
       return response.data
     } catch (error) {
@@ -557,23 +424,10 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchTeamMembers mejorado con caché
+  // Método fetchTeamMembers
   fetchTeamMembers: async (teamSectionId: string) => {
-    const { teamMembers, lastFetch } = get()
-    const now = Date.now()
-
     if (!STORE_ID) {
       throw new Error("No store ID provided in environment variables")
-    }
-
-    // Verificar si hay datos en caché para esta sección de equipo y si el caché aún es válido
-    if (
-      teamMembers.length > 0 &&
-      teamMembers[0]?.teamSectionId === teamSectionId &&
-      lastFetch.teamMembers &&
-      now - lastFetch.teamMembers < CACHE_DURATION
-    ) {
-      return teamMembers
     }
 
     set({ loading: true, error: null })
@@ -584,7 +438,6 @@ export const useMainStore = create<MainStore>((set, get) => ({
       set({
         teamMembers: response.data,
         loading: false,
-        lastFetch: { ...get().lastFetch, teamMembers: now },
       })
       return response.data
     } catch (error) {
@@ -593,35 +446,10 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchOrders mejorado con caché y paginación
+  // Método fetchOrders con paginación
   fetchOrders: async (params: SearchOrderParams = {}, forceRefresh = false) => {
-    const { orders, lastFetch, paginationMeta } = get()
-    const now = Date.now()
-
     if (!STORE_ID) {
       throw new Error("No store ID provided in environment variables")
-    }
-
-    // Verificar si hay órdenes en caché y si el caché aún es válido
-    const isDefaultRequest = !params.page && !params.query && !params.status && !params.customerEmail
-    if (
-      !forceRefresh &&
-      isDefaultRequest &&
-      orders.length > 0 && 
-      lastFetch.orders && 
-      now - lastFetch.orders < CACHE_DURATION
-    ) {
-      return {
-        data: orders,
-        meta: paginationMeta.orders || {
-          total: orders.length,
-          page: 1,
-          limit: orders.length,
-          totalPages: 1,
-          hasNext: false,
-          hasPrev: false
-        }
-      }
     }
 
     set({ loading: true, error: null })
@@ -631,9 +459,8 @@ export const useMainStore = create<MainStore>((set, get) => ({
       
       set({
         orders: response.data.data,
-        paginationMeta: { ...get().paginationMeta, orders: response.data.meta },
+        paginationMeta: { ...get().paginationMeta, orders: response.data.pagination },
         loading: false,
-        lastFetch: { ...get().lastFetch, orders: now },
       })
       return response.data
     } catch (error) {
@@ -642,35 +469,10 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchCoupons mejorado con caché y paginación
+  // Método fetchCoupons con paginación
   fetchCoupons: async (params: SearchCouponParams = {}, forceRefresh = false) => {
-    const { coupons, lastFetch, paginationMeta } = get()
-    const now = Date.now()
-
     if (!STORE_ID) {
       throw new Error("No store ID provided in environment variables")
-    }
-
-    // Verificar si hay cupones en caché y si el caché aún es válido
-    const isDefaultRequest = !params.page && !params.query && !params.type && params.isActive === undefined
-    if (
-      !forceRefresh &&
-      isDefaultRequest &&
-      coupons.length > 0 && 
-      lastFetch.coupons && 
-      now - lastFetch.coupons < CACHE_DURATION
-    ) {
-      return {
-        data: coupons,
-        meta: paginationMeta.coupons || {
-          total: coupons.length,
-          page: 1,
-          limit: coupons.length,
-          totalPages: 1,
-          hasNext: false,
-          hasPrev: false
-        }
-      }
     }
 
     set({ loading: true, error: null })
@@ -680,9 +482,8 @@ export const useMainStore = create<MainStore>((set, get) => ({
       
       set({
         coupons: response.data.data,
-        paginationMeta: { ...get().paginationMeta, coupons: response.data.meta },
+        paginationMeta: { ...get().paginationMeta, coupons: response.data.pagination },
         loading: false,
-        lastFetch: { ...get().lastFetch, coupons: now },
       })
       return response.data
     } catch (error) {
@@ -694,35 +495,10 @@ export const useMainStore = create<MainStore>((set, get) => ({
   setCouponCode: async (code: string) => set({ couponCode: code }),
   clearCoupon: async () => set({ couponCode: "" }),
 
-  // Método fetchShippingMethods mejorado con caché y paginación
+  // Método fetchShippingMethods con paginación
   fetchShippingMethods: async (params: SearchShippingMethodParams = {}, forceRefresh = false) => {
-    const { shippingMethods, lastFetch, paginationMeta } = get()
-    const now = Date.now()
-
     if (!STORE_ID) {
       throw new Error("No store ID provided in environment variables")
-    }
-
-    // Verificar si hay métodos de envío en caché y si el caché aún es válido
-    const isDefaultRequest = !params.page && !params.query
-    if (
-      !forceRefresh &&
-      isDefaultRequest &&
-      shippingMethods.length > 0 && 
-      lastFetch.shippingMethods && 
-      now - lastFetch.shippingMethods < CACHE_DURATION
-    ) {
-      return {
-        data: shippingMethods,
-        meta: paginationMeta.shippingMethods || {
-          total: shippingMethods.length,
-          page: 1,
-          limit: shippingMethods.length,
-          totalPages: 1,
-          hasNext: false,
-          hasPrev: false
-        }
-      }
     }
 
     set({ loading: true, error: null })
@@ -732,9 +508,8 @@ export const useMainStore = create<MainStore>((set, get) => ({
       
       set({
         shippingMethods: response.data.data,
-        paginationMeta: { ...get().paginationMeta, shippingMethods: response.data.meta },
+        paginationMeta: { ...get().paginationMeta, shippingMethods: response.data.pagination },
         loading: false,
-        lastFetch: { ...get().lastFetch, shippingMethods: now },
       })
       return response.data
     } catch (error) {
@@ -743,22 +518,10 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchPaymentProviders mejorado con caché
+  // Método fetchPaymentProviders
   fetchPaymentProviders: async () => {
-    const { paymentProviders, lastFetch } = get()
-    const now = Date.now()
-
     if (!STORE_ID) {
       throw new Error("No store ID provided in environment variables")
-    }
-
-    // Verificar si hay datos en caché y si el caché aún es válido
-    if (
-      paymentProviders.length > 0 &&
-      lastFetch.paymentProviders &&
-      now - lastFetch.paymentProviders < CACHE_DURATION
-    ) {
-      return paymentProviders
     }
 
     set({ loading: true, error: null })
@@ -767,7 +530,6 @@ export const useMainStore = create<MainStore>((set, get) => ({
       set({
         paymentProviders: response.data,
         loading: false,
-        lastFetch: { ...get().lastFetch, paymentProviders: now },
       })
       return response.data
     } catch (error) {
@@ -776,35 +538,10 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchPaymentTransactions mejorado con caché y paginación
+  // Método fetchPaymentTransactions con paginación
   fetchPaymentTransactions: async (params: SearchPaymentTransactionParams = {}, forceRefresh = false) => {
-    const { paymentTransactions, lastFetch, paginationMeta } = get()
-    const now = Date.now()
-
     if (!STORE_ID) {
       throw new Error("No store ID provided in environment variables")
-    }
-
-    // Verificar caché
-    const isDefaultRequest = !params.page && !params.status
-    if (
-      !forceRefresh &&
-      isDefaultRequest &&
-      paymentTransactions.length > 0 &&
-      lastFetch.paymentProviders &&
-      now - lastFetch.paymentProviders < CACHE_DURATION
-    ) {
-      return {
-        data: paymentTransactions,
-        meta: paginationMeta.paymentTransactions || {
-          total: paymentTransactions.length,
-          page: 1,
-          limit: paymentTransactions.length,
-          totalPages: 1,
-          hasNext: false,
-          hasPrev: false
-        }
-      }
     }
 
     set({ loading: true, error: null })
@@ -814,9 +551,8 @@ export const useMainStore = create<MainStore>((set, get) => ({
       
       set({
         paymentTransactions: response.data.data,
-        paginationMeta: { ...get().paginationMeta, paymentTransactions: response.data.meta },
+        paginationMeta: { ...get().paginationMeta, paymentTransactions: response.data.pagination },
         loading: false,
-        lastFetch: { ...get().lastFetch, paymentProviders: now },
       })
       return response.data
     } catch (error) {
@@ -825,35 +561,10 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchContents mejorado con caché y paginación
+  // Método fetchContents con paginación
   fetchContents: async (params: SearchContentParams = {}, forceRefresh = false) => {
-    const { contents, lastFetch, paginationMeta } = get()
-    const now = Date.now()
-
     if (!STORE_ID) {
       throw new Error("No store ID provided in environment variables")
-    }
-
-    // Verificar si hay contenidos en caché y si el caché aún es válido
-    const isDefaultRequest = !params.page && !params.query && !params.type && params.isPublished === undefined
-    if (
-      !forceRefresh &&
-      isDefaultRequest &&
-      contents.length > 0 && 
-      lastFetch.contents && 
-      now - lastFetch.contents < CACHE_DURATION
-    ) {
-      return {
-        data: contents,
-        meta: paginationMeta.contents || {
-          total: contents.length,
-          page: 1,
-          limit: contents.length,
-          totalPages: 1,
-          hasNext: false,
-          hasPrev: false
-        }
-      }
     }
 
     set({ loading: true, error: null })
@@ -863,9 +574,8 @@ export const useMainStore = create<MainStore>((set, get) => ({
       
       set({
         contents: response.data.data,
-        paginationMeta: { ...get().paginationMeta, contents: response.data.meta },
+        paginationMeta: { ...get().paginationMeta, contents: response.data.pagination },
         loading: false,
-        lastFetch: { ...get().lastFetch, contents: now },
       })
       return response.data
     } catch (error) {
@@ -886,7 +596,6 @@ export const useMainStore = create<MainStore>((set, get) => ({
       set({
         users: response.data,
         loading: false,
-        lastFetch: { ...get().lastFetch, users: Date.now() },
       })
       return response.data
     } catch (error) {
@@ -895,94 +604,21 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchShopSettings mejorado con caché en cookies
+  // Método fetchShopSettings
   fetchShopSettings: async () => {
-    console.log("[STORE] Iniciando fetchShopSettings")
-
-    // Verificar si estamos en el cliente
-    if (typeof window === "undefined") {
-      console.log("[STORE] Ejecutando en el servidor, no se pueden usar cookies")
-      set({ loading: true, error: null })
-      try {
-        if (!STORE_ID) {
-          throw new Error("No store ID provided in environment variables")
-        }
-
-        const response = await apiClient.get<ShopSettings>(`/shop-settings/store/${STORE_ID}`)
-        set({
-          shopSettings: [response.data],
-          loading: false,
-          lastFetch: { ...get().lastFetch, shopSettings: Date.now() },
-        })
-        return response.data
-      } catch (error) {
-        set({ error: "Failed to fetch shop settings", loading: false })
-        throw error
-      }
-    }
-
-    // Estamos en el cliente, podemos usar cookies
-    const now = Date.now()
-
-    // Verificar si hay datos en la cookie y si aún son válidos
-    const cachedTimestampStr = Cookies.get(SHOP_SETTINGS_TIMESTAMP_COOKIE)
-    const cachedDataStr = Cookies.get(SHOP_SETTINGS_COOKIE)
-
-    if (cachedTimestampStr && cachedDataStr) {
-      const cachedTimestamp = Number.parseInt(cachedTimestampStr, 10)
-
-      // Verificar si la caché aún es válida (menos de 10 minutos)
-      if (now - cachedTimestamp < SHOP_SETTINGS_CACHE_DURATION) {
-        console.log("[STORE] Usando datos de shop settings desde cookies (caché válida)")
-        try {
-          const cachedData = JSON.parse(cachedDataStr)
-          set({
-            shopSettings: [cachedData],
-            loading: false,
-            lastFetch: { ...get().lastFetch, shopSettings: cachedTimestamp },
-          })
-          return cachedData
-        } catch (e) {
-          console.error("[STORE] Error al parsear datos de la cookie:", e)
-          // Si hay un error al parsear, continuamos con la solicitud normal
-        }
-      } else {
-        console.log("[STORE] Caché de shop settings expirada, solicitando nuevos datos")
-      }
-    } else {
-      console.log("[STORE] No se encontraron datos en caché para shop settings")
-    }
-
-    // Si no hay caché válida, hacemos la solicitud
     set({ loading: true, error: null })
     try {
       if (!STORE_ID) {
         throw new Error("No store ID provided in environment variables")
       }
 
-      console.log("[STORE] Realizando fetch de shop settings")
       const response = await apiClient.get<ShopSettings>(`/shop-settings/store/${STORE_ID}`)
-
-      // Guardar en el store
       set({
         shopSettings: [response.data],
         loading: false,
-        lastFetch: { ...get().lastFetch, shopSettings: now },
       })
-
-      // Guardar en cookies con expiración de 10 minutos
-      try {
-        Cookies.set(SHOP_SETTINGS_COOKIE, JSON.stringify(response.data), { expires: 1 / 144 }) // 1/144 de un día = 10 minutos
-        Cookies.set(SHOP_SETTINGS_TIMESTAMP_COOKIE, now.toString(), { expires: 1 / 144 })
-        console.log("[STORE] Shop settings guardados en cookies")
-      } catch (e) {
-        console.error("[STORE] Error al guardar en cookies:", e)
-        // Continuamos aunque haya error al guardar en cookies
-      }
-
       return response.data
     } catch (error) {
-      console.error("[STORE] Error al obtener shop settings:", error)
       set({ error: "Failed to fetch shop settings", loading: false })
       throw error
     }
@@ -990,31 +626,6 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
   // Método fetchCurrencies con paginación
   fetchCurrencies: async (params: SearchCurrencyParams = {}, forceRefresh = false) => {
-    const { currencies, lastFetch, paginationMeta } = get()
-    const now = Date.now()
-
-    // Verificar si hay datos en caché y si el caché aún es válido
-    const isDefaultRequest = !params.page && !params.query && params.includeInactive === undefined
-    if (
-      !forceRefresh &&
-      isDefaultRequest &&
-      currencies.length > 0 && 
-      lastFetch.currencies && 
-      now - lastFetch.currencies < CACHE_DURATION
-    ) {
-      return {
-        data: currencies,
-        meta: paginationMeta.currencies || {
-          total: currencies.length,
-          page: 1,
-          limit: currencies.length,
-          totalPages: 1,
-          hasNext: false,
-          hasPrev: false
-        }
-      }
-    }
-
     set({ loading: true, error: null })
     try {
       const queryParams = buildQueryParams(params)
@@ -1022,9 +633,8 @@ export const useMainStore = create<MainStore>((set, get) => ({
       
       set({
         currencies: response.data.data,
-        paginationMeta: { ...get().paginationMeta, currencies: response.data.meta },
+        paginationMeta: { ...get().paginationMeta, currencies: response.data.pagination },
         loading: false,
-        lastFetch: { ...get().lastFetch, currencies: now },
       })
       return response.data
     } catch (error) {
@@ -1035,31 +645,6 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
   // Método fetchExchangeRates con paginación
   fetchExchangeRates: async (params: SearchExchangeRateParams = {}, forceRefresh = false) => {
-    const { exchangeRates, lastFetch, paginationMeta } = get()
-    const now = Date.now()
-
-    // Verificar si hay datos en caché y si el caché aún es válido
-    const isDefaultRequest = !params.page && !params.fromCurrencyId && !params.toCurrencyId
-    if (
-      !forceRefresh &&
-      isDefaultRequest &&
-      exchangeRates.length > 0 && 
-      lastFetch.exchangeRates && 
-      now - lastFetch.exchangeRates < CACHE_DURATION
-    ) {
-      return {
-        data: exchangeRates,
-        meta: paginationMeta.exchangeRates || {
-          total: exchangeRates.length,
-          page: 1,
-          limit: exchangeRates.length,
-          totalPages: 1,
-          hasNext: false,
-          hasPrev: false
-        }
-      }
-    }
-
     set({ loading: true, error: null })
     try {
       const queryParams = buildQueryParams(params)
@@ -1067,9 +652,8 @@ export const useMainStore = create<MainStore>((set, get) => ({
       
       set({
         exchangeRates: response.data.data,
-        paginationMeta: { ...get().paginationMeta, exchangeRates: response.data.meta },
+        paginationMeta: { ...get().paginationMeta, exchangeRates: response.data.pagination },
         loading: false,
-        lastFetch: { ...get().lastFetch, exchangeRates: now },
       })
       return response.data
     } catch (error) {
@@ -1080,33 +664,8 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
   // Método fetchFrequentlyBoughtTogether con paginación
   fetchFrequentlyBoughtTogether: async (params: SearchFbtParams = {}, forceRefresh = false) => {
-    const { frequentlyBoughtTogether, lastFetch, paginationMeta } = get()
-    const now = Date.now()
-
     if (!STORE_ID) {
       throw new Error("No store ID provided in environment variables")
-    }
-
-    // Verificar si hay datos en caché y si el caché aún es válido
-    const isDefaultRequest = !params.page && !params.query
-    if (
-      !forceRefresh &&
-      isDefaultRequest &&
-      frequentlyBoughtTogether.length > 0 &&
-      lastFetch.frequentlyBoughtTogether &&
-      now - lastFetch.frequentlyBoughtTogether < CACHE_DURATION
-    ) {
-      return {
-        data: frequentlyBoughtTogether,
-        meta: paginationMeta.frequentlyBoughtTogether || {
-          total: frequentlyBoughtTogether.length,
-          page: 1,
-          limit: frequentlyBoughtTogether.length,
-          totalPages: 1,
-          hasNext: false,
-          hasPrev: false
-        }
-      }
     }
 
     set({ loading: true, error: null })
@@ -1116,9 +675,8 @@ export const useMainStore = create<MainStore>((set, get) => ({
       
       set({
         frequentlyBoughtTogether: response.data.data,
-        paginationMeta: { ...get().paginationMeta, frequentlyBoughtTogether: response.data.meta },
+        paginationMeta: { ...get().paginationMeta, frequentlyBoughtTogether: response.data.pagination },
         loading: false,
-        lastFetch: { ...get().lastFetch, frequentlyBoughtTogether: now },
       })
       return response.data
     } catch (error) {
@@ -1327,7 +885,6 @@ export const useMainStore = create<MainStore>((set, get) => ({
         apiClient.get(`/shop-settings/store/${STORE_ID}`),
       ])
 
-      const now = Date.now()
       set({
         // Los datos paginados vienen en .data
         categories: categoriesResponse.data,
@@ -1353,43 +910,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
           : [shopSettingsResponse.data],
         
         loading: false,
-        lastFetch: {
-          categories: now,
-          products: now,
-          productVariants: now,
-          collections: now,
-          orders: now,
-          customers: now,
-          coupons: now,
-          couponCode: now,
-          heroSections: now,
-          cardSections: now,
-          teamMembers: now,
-          shippingMethods: now,
-          paymentProviders: now,
-          contents: now,
-          users: now,
-          shopSettings: now,
-          currencies: now,
-          exchangeRates: now,
-          frequentlyBoughtTogether: now,
-        },
       })
-
-      // Actualizar también la cookie de shop settings
-      if (typeof window !== "undefined") {
-        try {
-          const shopSettingsData = Array.isArray(shopSettingsResponse.data)
-            ? shopSettingsResponse.data[0]
-            : shopSettingsResponse.data
-
-          Cookies.set(SHOP_SETTINGS_COOKIE, JSON.stringify(shopSettingsData), { expires: 1 / 144 }) // 10 minutos
-          Cookies.set(SHOP_SETTINGS_TIMESTAMP_COOKIE, now.toString(), { expires: 1 / 144 })
-          console.log("[STORE] Shop settings actualizados en cookies durante refreshData")
-        } catch (e) {
-          console.error("[STORE] Error al actualizar cookies en refreshData:", e)
-        }
-      }
     } catch (error) {
       set({ error: "Failed to refresh data", loading: false })
       throw error

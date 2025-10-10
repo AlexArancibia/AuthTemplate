@@ -11,7 +11,7 @@ export interface PaginationMeta {
 
 export interface PaginatedResponse<T> {
   data: T[]
-  meta: PaginationMeta
+  pagination: PaginationMeta
 }
 
 export interface PaginationParams {
@@ -21,6 +21,9 @@ export interface PaginationParams {
   sortOrder?: 'asc' | 'desc'
 }
 
+// Valid sort options for products
+export type ProductSortBy = 'createdAt' | 'updatedAt' | 'title' | 'price' | 'viewCount'
+
 // Parámetros específicos para búsqueda de categorías
 export interface SearchCategoryParams extends PaginationParams {
   query?: string
@@ -28,13 +31,14 @@ export interface SearchCategoryParams extends PaginationParams {
 }
 
 // Parámetros específicos para búsqueda de productos
-export interface SearchProductParams extends PaginationParams {
+export interface SearchProductParams extends Omit<PaginationParams, 'sortBy'> {
   query?: string
-  categoryId?: string
-  collectionId?: string
+  categoryIds?: string[]  // Cambiado a plural y array para coincidir con el backend
+  collectionIds?: string[]  // Cambiado a plural y array para coincidir con el backend
   minPrice?: number
   maxPrice?: number
   inStock?: boolean
+  sortBy?: ProductSortBy
 }
 
 // Parámetros específicos para búsqueda de órdenes

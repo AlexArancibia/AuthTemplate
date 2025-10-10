@@ -4,8 +4,10 @@ import { useState, useEffect, Suspense } from "react"
 import { motion } from "framer-motion"
 import { useSearchParams } from "next/navigation"
 import { useCurrencyStore } from "@/stores/currency"
-import ProductList from "./_components/ProductList"
 import ProductListSkeleton from "./_components/ProductListSkeleton"
+import ProductList from "./_components/ProductList"
+import ProductFilterSidebar from "./_components/ProductFilterSidebar"
+import MobileFilterButton from "./_components/MobileFilterButton"
 import Link from "next/link"
 
 function ProductsContent() {
@@ -39,7 +41,8 @@ function ProductsContent() {
   const searchTerm = searchParams.get("search") || ""
   const categories = searchParams.getAll("category")
   const page = Number.parseInt(searchParams.get("page") || "1", 10)
-  const sortBy = searchParams.get("sort") || "featured"
+  // Valid sortBy values: createdAt, updatedAt, title, price, viewCount
+  const sortBy = searchParams.get("sort") || "createdAt"
 
   // Extract price range
   const minPrice = searchParams.get("minPrice") ? Number.parseFloat(searchParams.get("minPrice")!) : undefined
@@ -82,7 +85,7 @@ function ProductsContent() {
 
           {/* Botón */}
           <Link href="/productos">
-            <button className="font-lato-thin font-light bg-white text-black text-sm font-medium px-6 py-3 rounded-xs cursor-pointer">
+            <button className="font-lato-thin bg-white text-black text-sm font-medium px-6 py-3 rounded-xs cursor-pointer">
               Ver más
             </button>
           </Link>
@@ -105,24 +108,42 @@ function ProductsContent() {
         transition={{ duration: 1, delay: 0.5 }}
       >
         <div className="content-section">
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <ProductList
-              initialSearchTerm={searchTerm}
-              initialCategories={categories}
-              initialPage={page}
-              initialSortBy={sortBy}
-              initialMinPrice={minPrice}
-              initialMaxPrice={maxPrice}
-              initialVariantFilters={variantFilters}
-              collectionName="Destacados"
-              selectedCurrencyId={selectedCurrencyId}
-              acceptedCurrencies={acceptedCurrencies}
-            />
-          </motion.div>
+          {/* Botón de filtros para móviles */}
+          <MobileFilterButton />
+          
+          {/* Layout de dos columnas: Sidebar + Productos */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            {/* Sidebar de Filtros - Ocupa 1 columna - Oculto en móviles */}
+            <motion.div
+              className="hidden lg:block lg:col-span-1"
+              initial={{ x: -20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >
+              <ProductFilterSidebar />
+            </motion.div>
+
+            {/* Lista de Productos - Ocupa 3 columnas */}
+            <motion.div
+              className="lg:col-span-3"
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <ProductList
+                initialSearchTerm={searchTerm}
+                initialCategories={categories}
+                initialPage={page}
+                initialSortBy={sortBy}
+                initialMinPrice={minPrice}
+                initialMaxPrice={maxPrice}
+                initialVariantFilters={variantFilters}
+                collectionName="Destacados"
+                selectedCurrencyId={selectedCurrencyId}
+                acceptedCurrencies={acceptedCurrencies}
+              />
+            </motion.div>
+          </div>
         </div>
       </motion.div>
     </main>

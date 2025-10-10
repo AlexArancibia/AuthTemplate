@@ -52,7 +52,6 @@ export default function Navbar() {
   const { currentUser } = useUserStore()
   const {
     fetchShopSettings,
-    fetchProducts,
     fetchShippingMethods,
     fetchCategories,
     fetchContents,
@@ -160,7 +159,6 @@ const {
         // Realizar todos los fetch en paralelo con límites altos para carga inicial
         await Promise.all([
           fetchShopSettings(),
-          fetchProducts({ limit: 100 }),
           fetchShippingMethods({ limit: 100 }),
           fetchCategories({ limit: 100 }),
           fetchContents({ limit: 100 }),
@@ -182,7 +180,6 @@ const {
     loadData()
   }, [
     fetchShopSettings,
-    fetchProducts,
     fetchShippingMethods,
     fetchCategories,
     fetchCollections,
