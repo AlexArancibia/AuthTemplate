@@ -5,22 +5,39 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import useEmblaCarousel from "embla-carousel-react"
 
 import { ProductCard } from "./ProductCard"
-import { useMainStore } from "@/stores/mainStore"
-import { ProductStatus } from "@/types/common"
 import type { CurrencyOption } from "@/stores/currency"
+import type { Product } from "@/types/product"
+import type { Collection } from "@/types/collection"
+import apiClient from "@/lib/axiosConfig"
+import type { PaginatedResponse } from "@/types/pagination"
 
-interface NewProductsProps {
+interface CollectionCarouselProps {
+  collectionId: string
   selectedCurrencyId: string
   acceptedCurrencies: CurrencyOption[]
+  showExploreButton?: boolean
+  fallbackTitle?: string
+  emptyMessage?: string
 }
 
-export function NewProducts({ selectedCurrencyId, acceptedCurrencies }: NewProductsProps) {
-  const { products } = useMainStore()
+const STORE_ID = process.env.NEXT_PUBLIC_STORE_ID
+
+export function CollectionCarousel({ 
+  collectionId,
+  selectedCurrencyId, 
+  acceptedCurrencies,
+  showExploreButton = false,
+  fallbackTitle = "PRODUCTOS",
+  emptyMessage = "No hay productos para mostrar."
+}: CollectionCarouselProps) {
+  const [products, setProducts] = useState<Product[]>([])
+  const [collectionTitle, setCollectionTitle] = useState<string>(fallbackTitle)
+  const [loading, setLoading] = useState(true)
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: "start",
     loop: false,
     skipSnaps: false,
-    dragFree: true, // igual que en CategorySection
+    dragFree: true,
   })
 
   const [canScrollPrev, setCanScrollPrev] = useState(false)
@@ -42,15 +59,38 @@ export function NewProducts({ selectedCurrencyId, acceptedCurrencies }: NewProdu
     emblaApi.on("reInit", onSelect)
   }, [emblaApi])
 
-  // Filtrar no DRAFT y ordenar por fecha (más recientes primero)
-  const filteredProducts = (products ?? [])
-    .filter((p) => p?.status !== ProductStatus.DRAFT)
-    .sort((a, b) => {
-      const dateA = new Date(a?.createdAt ?? 0).getTime()
-      const dateB = new Date(b?.createdAt ?? 0).getTime()
-      return dateB - dateA
-    })
-    .slice(0, 10)
+  // Fetch de la colección y productos en paralelo
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!STORE_ID) {
+        console.error("No store ID provided in environment variables")
+        setLoading(false)
+        return
+      }
+
+      try {
+        setLoading(true)
+        
+        // Ejecutar ambos requests en paralelo para mejor performance
+        const [collectionResponse, productsResponse] = await Promise.all([
+          apiClient.get<Collection>(`/collections/${STORE_ID}/${collectionId}`),
+          apiClient.get<PaginatedResponse<Product>>(
+            `/products/store/${STORE_ID}?collectionIds=${collectionId}&limit=10&sortBy=createdAt&sortOrder=desc&status=ACTIVE,ARCHIVED`
+          )
+        ])
+        
+        setCollectionTitle(collectionResponse.data.title.toUpperCase())
+        setProducts(productsResponse.data.data ?? [])
+      } catch (error) {
+        console.error("Error fetching data:", error)
+        setProducts([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [collectionId])
 
   const handleExploreStore = () => {
     window.open("https://anjsports.com/tienda/", "_blank")
@@ -59,14 +99,14 @@ export function NewProducts({ selectedCurrencyId, acceptedCurrencies }: NewProdu
   return (
     <section className="py-12 lg:py-16 bg-white w-full">
       <div className="w-full px-4 sm:px-6 lg:px-8">
-        {/* Título principal centrado (mismas fuentes) */}
+        {/* Título principal centrado */}
         <div className="text-center mb-8">
           <h2 className="font-druk text-4xl lg:text-2xl font-archivo-black text-gray-900 mb-4">
-            ÚLTIMOS PRODUCTOS
+            {collectionTitle}
           </h2>
         </div>
 
-        {/* Carrusel de productos con navegación (idéntico a ProductCarousel) */}
+        {/* Carrusel de productos con navegación */}
         <div className="w-full flex items-center gap-2">
           {/* Botón izquierda */}
           <button
@@ -81,8 +121,14 @@ export function NewProducts({ selectedCurrencyId, acceptedCurrencies }: NewProdu
 
           <div className="overflow-hidden flex-1" ref={emblaRef}>
             <div className="flex gap-6">
-              {filteredProducts.length > 0 ? (
-                filteredProducts.map((product) => (
+              {loading ? (
+                <div className="py-10 w-full text-center">
+                  <p className="font-lato-thin text-sm text-gray-500">
+                    Cargando productos...
+                  </p>
+                </div>
+              ) : products.length > 0 ? (
+                products.map((product) => (
                   <div
                     key={product.id}
                     className="flex-none w-[446px] sm:w-[498px] lg:w-[446px]"
@@ -97,7 +143,7 @@ export function NewProducts({ selectedCurrencyId, acceptedCurrencies }: NewProdu
               ) : (
                 <div className="py-10 w-full text-center">
                   <p className="font-lato-thin text-sm text-gray-500">
-                    Aún no hay productos recientes para mostrar.
+                    {emptyMessage}
                   </p>
                 </div>
               )}
@@ -116,17 +162,20 @@ export function NewProducts({ selectedCurrencyId, acceptedCurrencies }: NewProdu
           </button>
         </div>
 
-        {/* CTA explorar tienda (misma estética, tipografía indicada) */}
-        <div className="text-center mt-8">
-          <button
-            onClick={handleExploreStore}
-            className="border border-black bg-white text-black hover:bg-gray-100 px-6 py-2 text-sm font-light uppercase tracking-widest rounded-none font-['Roboto_Condensed']"
-            aria-label="Explorar tienda"
-          >
-            EXPLORAR TIENDA
-          </button>
-        </div>
+        {/* CTA explorar tienda (condicional) */}
+        {showExploreButton && (
+          <div className="text-center mt-8">
+            <button
+              onClick={handleExploreStore}
+              className="border border-black bg-white text-black hover:bg-gray-100 px-6 py-2 text-sm font-light uppercase tracking-widest rounded-none font-['Roboto_Condensed']"
+              aria-label="Explorar tienda"
+            >
+              EXPLORAR TIENDA
+            </button>
+          </div>
+        )}
       </div>
     </section>
   )
 }
+

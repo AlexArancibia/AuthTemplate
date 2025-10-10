@@ -39,7 +39,8 @@ function ProductsContent() {
 
   // Extract filter parameters from URL
   const searchTerm = searchParams.get("search") || ""
-  const categories = searchParams.getAll("category")
+  const categoryParam = searchParams.get("category")
+  const categories = categoryParam ? categoryParam.split(",") : []
   const page = Number.parseInt(searchParams.get("page") || "1", 10)
   // Valid sortBy values: createdAt, updatedAt, title, price, viewCount
   const sortBy = searchParams.get("sort") || "createdAt"

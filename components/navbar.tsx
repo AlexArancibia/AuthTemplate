@@ -234,14 +234,19 @@ const {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    if (searchTerm.trim()) {
+    const trimmedSearch = searchTerm.trim()
+    
+    if (trimmedSearch && trimmedSearch.length >= 2) {
       // Implementar la búsqueda aquí
-      console.log("Buscando:", searchTerm)
+      console.log("Buscando:", trimmedSearch)
       setIsSearchOpen(false)
       setSearchTerm("")
 
       // Redirigir a la página de resultados de búsqueda
-      window.location.href = `/productos?search=${encodeURIComponent(searchTerm.trim())}`
+      window.location.href = `/productos?search=${encodeURIComponent(trimmedSearch)}`
+    } else if (trimmedSearch.length > 0 && trimmedSearch.length < 2) {
+      // Mostrar feedback al usuario (opcional - puede implementarse con toast)
+      console.log("Búsqueda muy corta - mínimo 2 caracteres")
     }
   }
 
@@ -355,7 +360,7 @@ const {
                         sortedCategories.map((category: any) => (
                           <Link
                             key={category.id}
-                            href={`/productos?category=${category.id}`}
+                            href={`/productos?category=${category.slug}`}
                             className="text-sm px-4 py-2 hover:bg-gray-100"
                             role="menuitem"
                           >

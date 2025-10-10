@@ -43,19 +43,33 @@ const buildQueryParams = (params: any = {}) => {
   const queryParams = new URLSearchParams()
   
   Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') {
-      // Manejar arrays (como categoryIds, collectionIds)
-      // NestJS necesita corchetes [] para identificar arrays: categoryIds[]=id1&categoryIds[]=id2
+    // Validar que el valor no sea undefined, null, o string vacío/con solo espacios
+    const isValidValue = value !== undefined && 
+                        value !== null && 
+                        (typeof value !== 'string' || value.trim() !== '')
+    
+    if (isValidValue) {
+      // Manejar arrays - usar formato de comas para categorySlugs, collectionIds, status
       if (Array.isArray(value)) {
         if (value.length > 0) {
-          value.forEach((item) => {
-            console.log(`🔧 [buildQueryParams] Adding array param: ${key}[] = ${item}`)
-            queryParams.append(`${key}[]`, String(item))
-          })
+          // Para categorySlugs, collectionIds, status: usar formato de comas
+          if (['categorySlugs', 'collectionIds', 'status'].includes(key)) {
+            const joinedValue = value.join(',')
+            console.log(`🔧 [buildQueryParams] Adding array param (comma format): ${key} = ${joinedValue}`)
+            queryParams.append(key, joinedValue)
+          } else {
+            // Para otros arrays: mantener el formato con corchetes
+            value.forEach((item) => {
+              console.log(`🔧 [buildQueryParams] Adding array param (bracket format): ${key}[] = ${item}`)
+              queryParams.append(`${key}[]`, String(item))
+            })
+          }
         }
       } else {
-        console.log(`🔧 [buildQueryParams] Adding param: ${key} = ${value}`)
-        queryParams.append(key, String(value))
+        // Para strings, usar trim() antes de agregar
+        const stringValue = typeof value === 'string' ? value.trim() : String(value)
+        console.log(`🔧 [buildQueryParams] Adding param: ${key} = ${stringValue}`)
+        queryParams.append(key, stringValue)
       }
     } else {
       console.log(`🔧 [buildQueryParams] Skipping param: ${key} (value is undefined/null/empty)`)

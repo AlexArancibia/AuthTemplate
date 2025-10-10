@@ -6,6 +6,7 @@ import { useMainStore } from "@/stores/mainStore"
 import { ProductCard } from "@/components/ProductCard"
 import { Pagination } from "./Pagination"
 import ProductListSkeleton from "./ProductListSkeleton"
+import ProductHeader from "./ProductHeader"
 import type { CurrencyOption } from "@/stores/currency"
 import type { SearchProductParams, ProductSortBy } from "@/types/pagination"
 
@@ -39,6 +40,62 @@ export default function ProductList({
   const { products, paginationMeta, fetchProducts, loading } = useMainStore()
   const productListRef = useRef<HTMLDivElement>(null)
   const [currentPage, setCurrentPage] = useState(initialPage)
+  
+  // Track previous filter values to detect actual changes
+  const prevFiltersRef = useRef({
+    searchTerm: initialSearchTerm,
+    categories: initialCategories,
+    sortBy: initialSortBy,
+    minPrice: initialMinPrice,
+    maxPrice: initialMaxPrice
+  })
+
+  // Sync currentPage with initialPage when it changes (e.g., from URL)
+  useEffect(() => {
+    setCurrentPage(initialPage)
+  }, [initialPage])
+
+  // Reset to page 1 ONLY when filters actually change (not just when page changes)
+  useEffect(() => {
+    const filtersChanged = 
+      prevFiltersRef.current.searchTerm !== initialSearchTerm ||
+      JSON.stringify(prevFiltersRef.current.categories) !== JSON.stringify(initialCategories) ||
+      prevFiltersRef.current.sortBy !== initialSortBy ||
+      prevFiltersRef.current.minPrice !== initialMinPrice ||
+      prevFiltersRef.current.maxPrice !== initialMaxPrice
+    
+    if (filtersChanged) {
+      // Update the ref with new values
+      prevFiltersRef.current = {
+        searchTerm: initialSearchTerm,
+        categories: initialCategories,
+        sortBy: initialSortBy,
+        minPrice: initialMinPrice,
+        maxPrice: initialMaxPrice
+      }
+      
+      // Reset to page 1 and scroll to products
+      if (currentPage !== 1) {
+        setCurrentPage(1)
+        // Also update URL to reflect page 1
+        const searchParams = new URLSearchParams(window.location.search)
+        searchParams.set("page", "1")
+        router.push(`${pathname}?${searchParams.toString()}`, { scroll: false })
+      }
+      
+      // Scroll to the top of the product list, accounting for sticky header
+      if (productListRef.current) {
+        const headerHeight = 90 // h-18 from navbar (4.5rem = 72px) + extra spacing
+        const elementPosition = productListRef.current.getBoundingClientRect().top
+        const offsetPosition = elementPosition + window.scrollY - headerHeight
+
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: "smooth"
+        })
+      }
+    }
+  }, [initialSearchTerm, initialCategories, initialSortBy, initialMinPrice, initialMaxPrice, currentPage, pathname, router])
 
   // Fetch products when parameters change
   useEffect(() => {
@@ -52,11 +109,12 @@ export default function ProductList({
           query: initialSearchTerm || undefined,
           minPrice: initialMinPrice,
           maxPrice: initialMaxPrice,
+          currencyId: selectedCurrencyId,
           sortBy: validSortBy,
         }
 
         if (initialCategories && initialCategories.length > 0) {
-          params.categoryIds = initialCategories
+          params.categorySlugs = initialCategories
         }
 
         await fetchProducts(params)
@@ -73,6 +131,7 @@ export default function ProductList({
     initialSortBy,
     initialMinPrice,
     initialMaxPrice,
+    selectedCurrencyId,
     fetchProducts,
   ])
 
@@ -85,9 +144,16 @@ export default function ProductList({
     searchParams.set("page", newPage.toString())
     router.push(`${pathname}?${searchParams.toString()}`, { scroll: false })
 
-    // Scroll to the top of the product list container
+    // Scroll to the top of the product list container, accounting for sticky header
     if (productListRef.current) {
-      productListRef.current.scrollIntoView({ behavior: "smooth", block: "start" })
+      const headerHeight = 90 // h-18 from navbar (4.5rem = 72px) + extra spacing
+      const elementPosition = productListRef.current.getBoundingClientRect().top
+      const offsetPosition = elementPosition + window.scrollY - headerHeight
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth"
+      })
     }
   }
 
@@ -110,6 +176,16 @@ export default function ProductList({
 
   return (
     <div ref={productListRef} data-product-list className="space-y-8">
+      {/* Product Header with count and sort */}
+      {meta && (
+        <ProductHeader
+          currentItems={products.length}
+          totalItems={meta.total}
+          currentPage={meta.page}
+          itemsPerPage={meta.limit}
+        />
+      )}
+      
       {/* Products Grid - 3 columns on desktop, 1 column on mobile */}
       {loading && products.length > 0 ? (
         // Skeleton loading state for pagination

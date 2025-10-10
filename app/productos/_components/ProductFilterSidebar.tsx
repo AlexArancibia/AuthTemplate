@@ -28,11 +28,15 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
   const { categories, fetchCategories, shopSettings } = useMainStore()
   const { selectedCurrencyId, acceptedCurrencies } = useCurrencyStore()
   const isInitialMount = useRef(true)
+  const previousCurrencyId = useRef(selectedCurrencyId)
   
   // Get currency symbol
   const defaultCurrency = shopSettings?.[0]?.defaultCurrency
   const currencyOption = acceptedCurrencies.find((c) => c.id === selectedCurrencyId) || defaultCurrency
   const currencySymbol = currencyOption?.symbol || "$"
+
+  // Fixed price range (simple solution until backend provides min/max endpoint)
+  const productPriceRange = { min: 0, max: 1000 }
 
   // Load categories on mount
   useEffect(() => {
@@ -42,12 +46,30 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
   }, [categories.length, fetchCategories])
 
   // State for filters - initialized directly from URL
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(() => searchParams.getAll("category"))
-  const [priceRange, setPriceRange] = useState<[number, number]>(() => [
-    searchParams.get("minPrice") ? Number(searchParams.get("minPrice")) : 0,
-    searchParams.get("maxPrice") ? Number(searchParams.get("maxPrice")) : 1000
-  ])
-  const [sortBy, setSortBy] = useState<string>(() => searchParams.get("sort") || "createdAt")
+  // Convert old category IDs to slugs if needed
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(() => {
+    const categoryParam = searchParams.get("category")
+    if (!categoryParam) return []
+    
+    const categoryValues = categoryParam.split(",")
+    
+    // If values look like IDs (start with "cat_"), ignore them and start fresh
+    // This handles migration from old ID-based URLs to new slug-based URLs
+    const hasOldIds = categoryValues.some(val => val.startsWith("cat_"))
+    if (hasOldIds) {
+      console.warn("⚠️ Old category IDs detected in URL. Clearing filters to use slugs.")
+      return []
+    }
+    
+    return categoryValues
+  })
+  const [priceRange, setPriceRange] = useState<[number, number]>(() => {
+    const minFromUrl = searchParams.get("minPrice")
+    const maxFromUrl = searchParams.get("maxPrice")
+    const min = minFromUrl && !isNaN(Number(minFromUrl)) ? Number(minFromUrl) : 0
+    const max = maxFromUrl && !isNaN(Number(maxFromUrl)) ? Number(maxFromUrl) : 1000
+    return [min, max]
+  })
   const [searchTerm, setSearchTerm] = useState<string>(() => searchParams.get("search") || "")
   const [showCategories, setShowCategories] = useState(true)
   const [showPriceFilter, setShowPriceFilter] = useState(true)
@@ -56,20 +78,18 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
   const updateURL = useCallback((
     categories: string[],
     price: [number, number],
-    sort: string,
     search: string
   ) => {
     const params = new URLSearchParams()
 
-    // Add selected categories
-    categories.forEach(categoryId => params.append("category", categoryId))
+    // Add selected categories (comma-separated format)
+    if (categories.length > 0) {
+      params.set("category", categories.join(","))
+    }
 
-    // Add price range
-    if (price[0] > 0) params.set("minPrice", price[0].toString())
-    if (price[1] < 1000) params.set("maxPrice", price[1].toString())
-
-    // Add sort
-    if (sort !== "createdAt") params.set("sort", sort)
+    // Add price range (only if different from default range)
+    if (price[0] > productPriceRange.min) params.set("minPrice", price[0].toString())
+    if (price[1] < productPriceRange.max) params.set("maxPrice", price[1].toString())
 
     // Add search term
     if (search) params.set("search", search)
@@ -78,7 +98,48 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     params.set("page", "1")
 
     router.push(`${pathname}?${params.toString()}`, { scroll: false })
-  }, [pathname, router])
+  }, [pathname, router, productPriceRange])
+
+  // Sync price range ONLY when URL params actually change
+  // Not when productPriceRange or priceRange changes (that would reset while dragging)
+  const urlMinPrice = searchParams.get("minPrice")
+  const urlMaxPrice = searchParams.get("maxPrice")
+  
+  useEffect(() => {
+    const newMin = urlMinPrice ? Number(urlMinPrice) : 0
+    const newMax = urlMaxPrice ? Number(urlMaxPrice) : 1000
+    
+    // Only update if the URL values are different from current state
+    if (priceRange[0] !== newMin || priceRange[1] !== newMax) {
+      setPriceRange([newMin, newMax])
+    }
+  }, [urlMinPrice, urlMaxPrice])
+
+  // Reset price filter when currency changes
+  useEffect(() => {
+    if (previousCurrencyId.current !== selectedCurrencyId && previousCurrencyId.current !== undefined) {
+      setPriceRange([productPriceRange.min, productPriceRange.max])
+      updateURL(selectedCategories, [productPriceRange.min, productPriceRange.max], searchTerm)
+    }
+    previousCurrencyId.current = selectedCurrencyId
+  }, [selectedCurrencyId, productPriceRange])
+
+  // Clean URL if it has old category IDs
+  useEffect(() => {
+    const categoryParam = searchParams.get("category")
+    if (categoryParam) {
+      const categoryValues = categoryParam.split(",")
+      const hasOldIds = categoryValues.some(val => val.startsWith("cat_"))
+      
+      if (hasOldIds) {
+        // Remove old IDs from URL
+        const params = new URLSearchParams(window.location.search)
+        params.delete("category")
+        const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname
+        router.replace(newUrl, { scroll: false })
+      }
+    }
+  }, []) // Run only once on mount
 
   // Debounced search
   useEffect(() => {
@@ -87,55 +148,53 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
       return
     }
     const timer = setTimeout(() => {
-      updateURL(selectedCategories, priceRange, sortBy, searchTerm)
+      updateURL(selectedCategories, priceRange, searchTerm)
     }, 500)
     return () => clearTimeout(timer)
   }, [searchTerm])
 
-  // Immediate update for categories and sort
+  // Immediate update for categories
   useEffect(() => {
     if (isInitialMount.current) {
       return
     }
-    updateURL(selectedCategories, priceRange, sortBy, searchTerm)
-  }, [selectedCategories, sortBy])
+    updateURL(selectedCategories, priceRange, searchTerm)
+  }, [selectedCategories])
 
   // Clear all filters
   const clearFilters = () => {
     setSelectedCategories([])
-    setPriceRange([0, 1000])
-    setSortBy("createdAt")
+    setPriceRange([productPriceRange.min, productPriceRange.max])
     setSearchTerm("")
     router.push(pathname, { scroll: false })
   }
 
-  // Handle category selection (toggle multiple categories)
-  const handleCategoryChange = (categoryId: string) => {
+  // Handle category selection (toggle multiple categories by slug)
+  const handleCategoryChange = (categorySlug: string) => {
     setSelectedCategories(prev => 
-      prev.includes(categoryId) 
-        ? prev.filter(id => id !== categoryId)
-        : [...prev, categoryId]
+      prev.includes(categorySlug) 
+        ? prev.filter(slug => slug !== categorySlug)
+        : [...prev, categorySlug]
     )
   }
 
   // Handle price change on slider release
   const handlePriceChange = (value: number[]) => {
     const newPriceRange = value as [number, number]
-    setPriceRange(newPriceRange)
-    updateURL(selectedCategories, newPriceRange, sortBy, searchTerm)
+    // Note: setPriceRange is already called by onValueChange, no need to call it again
+    updateURL(selectedCategories, newPriceRange, searchTerm)
   }
 
   // Check if any filter is active
   const hasActiveFilters =
     selectedCategories.length > 0 ||
-    priceRange[0] > 0 ||
-    priceRange[1] < 1000 ||
-    sortBy !== "createdAt" ||
+    priceRange[0] > productPriceRange.min ||
+    priceRange[1] < productPriceRange.max ||
     searchTerm !== ""
 
   const containerClasses = isMobile
-    ? "bg-gray-50 p-6 space-y-6 h-full overflow-y-auto"
-    : "bg-gray-50 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-gray-200 p-6 space-y-6 sticky top-24 max-h-[calc(100vh-120px)] overflow-y-auto"
+    ? "bg-gray-50 p-6 space-y-6 h-full"
+    : "bg-gray-50 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-gray-200 p-6 space-y-6 sticky top-24"
 
   return (
     <div className={containerClasses}>
@@ -188,21 +247,21 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
         </button>
         
         {showCategories && (
-          <div className="space-y-2 max-h-48 overflow-y-auto">
+          <div className="max-h-64 overflow-y-auto pr-2 space-y-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 transition-colors">
             {categories.length > 0 ? (
               <>
-                {/* Category options con checkboxes para selección múltiple */}
+                {/* Category options con checkboxes para selección múltiple - usando slugs */}
                 {categories.map((category) => (
                   <div key={category.id} className="flex items-center space-x-2">
                     <input
                       type="checkbox"
-                      id={`category-${category.id}`}
-                      checked={selectedCategories.includes(category.id)}
-                      onChange={() => handleCategoryChange(category.id)}
+                      id={`category-${category.slug}`}
+                      checked={selectedCategories.includes(category.slug)}
+                      onChange={() => handleCategoryChange(category.slug)}
                       className="w-4 h-4 text-blue-600 cursor-pointer rounded border-gray-300 focus:ring-blue-500"
                     />
                     <label
-                      htmlFor={`category-${category.id}`}
+                      htmlFor={`category-${category.slug}`}
                       className="text-sm text-gray-600 cursor-pointer hover:text-gray-900 flex-1"
                     >
                       {category.name}
@@ -233,15 +292,17 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
 
         {showPriceFilter && (
           <div className="space-y-4 pt-2">
-            <Slider
-              min={0}
-              max={1000}
-              step={10}
-              value={priceRange}
-              onValueChange={(value) => setPriceRange(value as [number, number])}
-              onValueCommit={handlePriceChange}
-              className="w-full"
-            />
+            <div className="relative py-2">
+              <Slider
+                min={0}
+                max={1000}
+                step={1}
+                value={priceRange}
+                onValueChange={(value) => setPriceRange(value as [number, number])}
+                onValueCommit={handlePriceChange}
+                className="w-full"
+              />
+            </div>
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-600">
                 {currencySymbol}{priceRange[0]}
@@ -254,62 +315,6 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
           </div>
         )}
       </div>
-
-      {/* Sort By */}
-      <div className="space-y-2">
-        <Label htmlFor="sortBy" className="text-sm font-medium text-gray-700">
-          Ordenar por
-        </Label>
-        <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger id="sortBy" className="w-full bg-white">
-            <SelectValue placeholder="Seleccionar orden" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="createdAt">Más recientes</SelectItem>
-            <SelectItem value="updatedAt">Actualizados recientemente</SelectItem>
-            <SelectItem value="title">Nombre (A-Z)</SelectItem>
-            <SelectItem value="price">Precio (Menor a Mayor)</SelectItem>
-            <SelectItem value="viewCount">Más vistos</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Active Filters Display */}
-      {hasActiveFilters && (
-        <div className="pt-4 border-t border-gray-200">
-          <p className="text-xs font-medium text-gray-700 mb-2">Filtros activos:</p>
-          <div className="flex flex-wrap gap-2">
-            {/* Mostrar todas las categorías seleccionadas */}
-            {selectedCategories.map(categoryId => {
-              const category = categories.find((c) => c.id === categoryId)
-              return category ? (
-                <span
-                  key={categoryId}
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
-                >
-                  {category.name}
-                  <button
-                    onClick={() => handleCategoryChange(categoryId)}
-                    className="hover:text-blue-900"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ) : null
-            })}
-            {(priceRange[0] > 0 || priceRange[1] < 1000) && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
-                Precio: {currencySymbol}{priceRange[0]} - {currencySymbol}{priceRange[1]}
-              </span>
-            )}
-            {searchTerm && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">
-                &quot;{searchTerm}&quot;
-              </span>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

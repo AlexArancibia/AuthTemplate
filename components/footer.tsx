@@ -69,7 +69,14 @@ export function Footer() {
       e.preventDefault()
       const el = document.getElementById("testimonios")
       if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "start" })
+        const headerHeight = 90 // h-18 from navbar (4.5rem = 72px) + extra spacing
+        const elementPosition = el.getBoundingClientRect().top
+        const offsetPosition = elementPosition + window.scrollY - headerHeight
+
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: "smooth"
+        })
         // actualiza el hash sin navegar
         history.replaceState(null, "", "/#testimonios")
       }
