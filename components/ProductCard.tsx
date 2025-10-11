@@ -100,8 +100,12 @@ export function ProductCard({
   }, [selectedCurrencyId, acceptedCurrencies, shopSettings])
 
   // Obtener todos los precios de las variantes que coinciden con la moneda predeterminada
-  const prices = product.variants
+  const prices = (product.variants || [])
     .flatMap((variant) => {
+      // Validar que variant tenga prices y sea un array
+      if (!variant.prices || !Array.isArray(variant.prices)) {
+        return null
+      }
       // Buscar el precio que coincide con la moneda activa
       const matchingPrice = variant.prices.find((p) => p.currencyId === activeCurrency?.id)
       return matchingPrice ? matchingPrice.price : null

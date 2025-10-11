@@ -111,6 +111,7 @@ export default function ProductList({
           maxPrice: initialMaxPrice,
           currencyId: selectedCurrencyId,
           sortBy: validSortBy,
+          status: ['ACTIVE', 'ARCHIVED'], // Incluir productos activos y archivados
         }
 
         if (initialCategories && initialCategories.length > 0) {

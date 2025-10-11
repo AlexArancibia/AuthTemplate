@@ -49,19 +49,19 @@ const buildQueryParams = (params: any = {}) => {
                         (typeof value !== 'string' || value.trim() !== '')
     
     if (isValidValue) {
-      // Manejar arrays - usar formato de comas para categorySlugs, collectionIds, status
+      // Manejar arrays
       if (Array.isArray(value)) {
         if (value.length > 0) {
-          // Para categorySlugs, collectionIds, status: usar formato de comas
-          if (['categorySlugs', 'collectionIds', 'status'].includes(key)) {
+          // Para categorySlugs y collectionIds: usar formato de comas
+          if (['categorySlugs', 'collectionIds'].includes(key)) {
             const joinedValue = value.join(',')
             console.log(`🔧 [buildQueryParams] Adding array param (comma format): ${key} = ${joinedValue}`)
             queryParams.append(key, joinedValue)
           } else {
-            // Para otros arrays: mantener el formato con corchetes
+            // Para status y otros arrays: enviar múltiples valores con el mismo nombre
             value.forEach((item) => {
-              console.log(`🔧 [buildQueryParams] Adding array param (bracket format): ${key}[] = ${item}`)
-              queryParams.append(`${key}[]`, String(item))
+              console.log(`🔧 [buildQueryParams] Adding array param (multiple values): ${key} = ${item}`)
+              queryParams.append(key, String(item))
             })
           }
         }
@@ -166,14 +166,14 @@ interface MainStore {
   initializeStore: () => Promise<void>
 
   refreshData: () => Promise<void>
-  getCategoryById: (id: string) => Category | undefined
-  getProductById: (id: string) => Product | undefined
-  getCollectionById: (id: string) => Collection | undefined
-  getOrderById: (id: string) => Order | undefined
-  getCouponById: (id: string) => Coupon | undefined
-  getCurrencyById: (id: string) => Currency | undefined
-  getExchangeRateById: (id: string) => ExchangeRate | undefined
-  getFrequentlyBoughtTogetherById: (id: string) => FrequentlyBoughtTogether | undefined
+  getCategoryById: (id: string) => Promise<Category>
+  getProductById: (id: string) => Promise<Product>
+  getCollectionById: (id: string) => Promise<Collection>
+  getOrderById: (id: string) => Promise<Order>
+  getCouponById: (id: string) => Promise<Coupon>
+  getCurrencyById: (id: string) => Promise<Currency>
+  getExchangeRateById: (id: string) => Promise<ExchangeRate>
+  getFrequentlyBoughtTogetherById: (id: string) => Promise<FrequentlyBoughtTogether>
 }
 
 export const useMainStore = create<MainStore>((set, get) => ({
@@ -685,7 +685,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
     set({ loading: true, error: null })
     try {
       const queryParams = buildQueryParams(params)
-      const response = await apiClient.get<PaginatedResponse<FrequentlyBoughtTogether>>(`/frequently-bought-together/store/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
+      const response = await apiClient.get<PaginatedResponse<FrequentlyBoughtTogether>>(`/fbt/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
       
       set({
         frequentlyBoughtTogether: response.data.data,
@@ -701,9 +701,13 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
   // Método para obtener un FBT específico por ID
   fetchFrequentlyBoughtTogetherById: async (id: string) => {
+    if (!STORE_ID) {
+      throw new Error("No store ID provided in environment variables")
+    }
+
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<FrequentlyBoughtTogether>(`/frequently-bought-together/${id}`)
+      const response = await apiClient.get<FrequentlyBoughtTogether>(`/fbt/${STORE_ID}/${id}`)
       set({ loading: false })
       return response.data
     } catch (error) {
@@ -726,7 +730,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
         storeId: data.storeId || STORE_ID,
       }
 
-      const response = await apiClient.post<FrequentlyBoughtTogether>("/frequently-bought-together", fbtData)
+      const response = await apiClient.post<FrequentlyBoughtTogether>(`/fbt/${STORE_ID}`, fbtData)
       set((state) => ({
         frequentlyBoughtTogether: [...state.frequentlyBoughtTogether, response.data],
         loading: false,
@@ -740,9 +744,13 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
   // Método para actualizar un FBT existente
   updateFrequentlyBoughtTogether: async (id: string, data: any) => {
+    if (!STORE_ID) {
+      throw new Error("No store ID provided in environment variables")
+    }
+
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.patch<FrequentlyBoughtTogether>(`/frequently-bought-together/${id}`, data)
+      const response = await apiClient.patch<FrequentlyBoughtTogether>(`/fbt/${STORE_ID}/${id}`, data)
       set((state) => ({
         frequentlyBoughtTogether: state.frequentlyBoughtTogether.map((item) =>
           item.id === id ? { ...item, ...response.data } : item,
@@ -758,9 +766,13 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
   // Método para eliminar un FBT
   deleteFrequentlyBoughtTogether: async (id: string) => {
+    if (!STORE_ID) {
+      throw new Error("No store ID provided in environment variables")
+    }
+
     set({ loading: true, error: null })
     try {
-      await apiClient.delete(`/frequently-bought-together/${id}`)
+      await apiClient.delete(`/fbt/${STORE_ID}/${id}`)
       set((state) => ({
         frequentlyBoughtTogether: state.frequentlyBoughtTogether.filter((item) => item.id !== id),
         loading: false,
@@ -931,44 +943,108 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  getCategoryById: (id) => {
-    const category = get().categories.find((category) => category.id === id)
-    if (category) {
-      return {
-        ...category,
-        parent: category.parentId ? get().categories.find((c) => c.id === category.parentId) : undefined,
-        children: get().categories.filter((c) => c.parentId === category.id),
-      }
+  getCategoryById: async (id) => {
+    if (!STORE_ID) {
+      throw new Error("No store ID provided in environment variables")
     }
-    return undefined
+    
+    try {
+      const response = await apiClient.get<Category>(`/categories/${STORE_ID}/${id}`)
+      return response.data
+    } catch (error) {
+      console.error("Failed to fetch category by id:", error)
+      throw error
+    }
   },
 
-  getProductById: (id) => {
-    return get().products.find((product) => product.id === id)
+  getProductById: async (id) => {
+    if (!STORE_ID) {
+      throw new Error("No store ID provided in environment variables")
+    }
+    
+    try {
+      const response = await apiClient.get<Product>(`/products/${STORE_ID}/${id}`)
+      return response.data
+    } catch (error) {
+      console.error("Failed to fetch product by id:", error)
+      throw error
+    }
   },
 
-  getCollectionById: (id) => {
-    return get().collections.find((collection) => collection.id === id)
+  getCollectionById: async (id) => {
+    if (!STORE_ID) {
+      throw new Error("No store ID provided in environment variables")
+    }
+    
+    try {
+      const response = await apiClient.get<Collection>(`/collections/${STORE_ID}/${id}`)
+      return response.data
+    } catch (error) {
+      console.error("Failed to fetch collection by id:", error)
+      throw error
+    }
   },
 
-  getOrderById: (id) => {
-    return get().orders.find((order) => order.id === id)
+  getOrderById: async (id) => {
+    if (!STORE_ID) {
+      throw new Error("No store ID provided in environment variables")
+    }
+    
+    try {
+      const response = await apiClient.get<Order>(`/orders/${STORE_ID}/${id}`)
+      return response.data
+    } catch (error) {
+      console.error("Failed to fetch order by id:", error)
+      throw error
+    }
   },
 
-  getCouponById: (id) => {
-    return get().coupons.find((coupon) => coupon.id === id)
+  getCouponById: async (id) => {
+    if (!STORE_ID) {
+      throw new Error("No store ID provided in environment variables")
+    }
+    
+    try {
+      const response = await apiClient.get<Coupon>(`/coupons/${STORE_ID}/${id}`)
+      return response.data
+    } catch (error) {
+      console.error("Failed to fetch coupon by id:", error)
+      throw error
+    }
   },
 
-  getCurrencyById: (id) => {
-    return get().currencies.find((currency) => currency.id === id)
+  getCurrencyById: async (id) => {
+    try {
+      const response = await apiClient.get<Currency>(`/currencies/${id}`)
+      return response.data
+    } catch (error) {
+      console.error("Failed to fetch currency by id:", error)
+      throw error
+    }
   },
 
-  getExchangeRateById: (id) => {
-    return get().exchangeRates.find((exchangeRate) => exchangeRate.id === id)
+  getExchangeRateById: async (id) => {
+    try {
+      const response = await apiClient.get<ExchangeRate>(`/exchange-rates/${id}`)
+      return response.data
+    } catch (error) {
+      console.error("Failed to fetch exchange rate by id:", error)
+      throw error
+    }
   },
 
-  getFrequentlyBoughtTogetherById: (id) => {
-    return get().frequentlyBoughtTogether.find((fbt) => fbt.id === id)
+  getFrequentlyBoughtTogetherById: async (id) => {
+    if (!STORE_ID) {
+      throw new Error("No store ID provided in environment variables")
+    }
+    
+    try {
+      const response = await apiClient.get<FrequentlyBoughtTogether>(`/fbt/${STORE_ID}/${id}`)
+      return response.data
+    } catch (error) {
+      console.error("Failed to fetch frequently bought together by id:", error)
+      throw error
+    }
   },
 
   initializeStore: async () => {

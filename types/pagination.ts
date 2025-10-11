@@ -40,6 +40,7 @@ export interface SearchProductParams extends Omit<PaginationParams, 'sortBy'> {
   currencyId?: string  // ID de la moneda para filtrar por precio
   inStock?: boolean
   sortBy?: ProductSortBy
+  status?: string[]  // Estados de productos: ACTIVE, ARCHIVED, DRAFT
 }
 
 // Parámetros específicos para búsqueda de órdenes

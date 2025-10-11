@@ -20,7 +20,7 @@ export interface Product {
   restockThreshold?: number | null; // Añadido según schema
   restockNotify?: boolean | null; // Añadido según schema
   categories?: Category[]; // Relación opcional
-  variants: ProductVariant[]; // Relación opcional
+  variants?: ProductVariant[]; // Relación opcional
   imageUrls: string[];
   collections?: Collection[]; // Relación opcional
   metaTitle?: string | null;

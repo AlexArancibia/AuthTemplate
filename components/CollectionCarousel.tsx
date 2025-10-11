@@ -7,9 +7,7 @@ import useEmblaCarousel from "embla-carousel-react"
 import { ProductCard } from "./ProductCard"
 import type { CurrencyOption } from "@/stores/currency"
 import type { Product } from "@/types/product"
-import type { Collection } from "@/types/collection"
-import apiClient from "@/lib/axiosConfig"
-import type { PaginatedResponse } from "@/types/pagination"
+import { useMainStore } from "@/stores/mainStore"
 
 interface CollectionCarouselProps {
   collectionId: string
@@ -59,7 +57,7 @@ export function CollectionCarousel({
     emblaApi.on("reInit", onSelect)
   }, [emblaApi])
 
-  // Fetch de la colección y productos en paralelo
+  // Fetch de la colección con sus productos
   useEffect(() => {
     const fetchData = async () => {
       if (!STORE_ID) {
@@ -71,18 +69,22 @@ export function CollectionCarousel({
       try {
         setLoading(true)
         
-        // Ejecutar ambos requests en paralelo para mejor performance
-        const [collectionResponse, productsResponse] = await Promise.all([
-          apiClient.get<Collection>(`/collections/${STORE_ID}/${collectionId}`),
-          apiClient.get<PaginatedResponse<Product>>(
-            `/products/store/${STORE_ID}?collectionIds=${collectionId}&limit=10&sortBy=createdAt&sortOrder=desc&status=ACTIVE,ARCHIVED`
-          )
-        ])
+        // Obtener el método getCollectionById del store
+        const { getCollectionById } = useMainStore.getState()
         
-        setCollectionTitle(collectionResponse.data.title.toUpperCase())
-        setProducts(productsResponse.data.data ?? [])
+        // La colección ya incluye los productos en su respuesta
+        const collection = await getCollectionById(collectionId)
+        
+        setCollectionTitle(collection.title.toUpperCase())
+        // Filtrar solo productos activos o archivados, ordenados por fecha de creación
+        const filteredProducts = (collection.products ?? [])
+          .filter((product) => product.status === 'ACTIVE' || product.status === 'ARCHIVED')
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .slice(0, 10)
+        
+        setProducts(filteredProducts)
       } catch (error) {
-        console.error("Error fetching data:", error)
+        console.error("Error fetching collection data:", error)
         setProducts([])
       } finally {
         setLoading(false)
