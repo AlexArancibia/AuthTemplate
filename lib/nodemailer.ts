@@ -2,16 +2,6 @@ import nodemailer from "nodemailer"
 
 // Configuración del transportador de correo
 const createTransporter = () => {
-  console.log("🔍 [DEBUG-ENV] === VERIFICANDO VARIABLES DE ENTORNO ===")
-  console.log("🔍 [DEBUG-ENV] SMTP_HOST:", process.env.SMTP_HOST)
-  console.log("🔍 [DEBUG-ENV] SMTP_PORT:", process.env.SMTP_PORT)
-  console.log("🔍 [DEBUG-ENV] SMTP_SECURE:", process.env.SMTP_SECURE)
-  console.log("🔍 [DEBUG-ENV] SMTP_USER:", process.env.SMTP_USER ? `${process.env.SMTP_USER.substring(0, 5)}***` : "❌ NO CONFIGURADO")
-  console.log("🔍 [DEBUG-ENV] SMTP_PASS:", process.env.SMTP_PASS ? "***configurado***" : "❌ NO CONFIGURADO")
-  console.log("🔍 [DEBUG-ENV] SMTP_FROM_NAME:", process.env.SMTP_FROM_NAME)
-  console.log("🔍 [DEBUG-ENV] SMTP_FROM_EMAIL:", process.env.SMTP_FROM_EMAIL)
-  console.log("🔍 [DEBUG-ENV] ==========================================")
-  
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST || "smtp.gmail.com",
     port: Number.parseInt(process.env.SMTP_PORT || "587"),
@@ -36,17 +26,7 @@ export const sendEmailToClient = async ({
   attachments?: any[]
 }) => {
   try {
-    console.log("📨 [NODEMAILER] Iniciando envío de email")
-    console.log("📨 [NODEMAILER] Configuración SMTP:", {
-      host: process.env.SMTP_HOST || "smtp.gmail.com",
-      port: process.env.SMTP_PORT || "587",
-      secure: process.env.SMTP_SECURE === "true",
-      user: process.env.SMTP_USER ? "***configurado***" : "❌ NO CONFIGURADO",
-      pass: process.env.SMTP_PASS ? "***configurado***" : "❌ NO CONFIGURADO",
-    })
-    
     const transporter = createTransporter()
-    console.log("📨 [NODEMAILER] Transporter creado")
 
     const mailOptions = {
       from: `"${process.env.SMTP_FROM_NAME || "Tu Tienda"}" <${process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER}>`,
@@ -55,24 +35,12 @@ export const sendEmailToClient = async ({
       html,
       attachments,
     }
-    
-    console.log("📨 [NODEMAILER] Opciones de email:", {
-      from: mailOptions.from,
-      to: mailOptions.to,
-      subject: mailOptions.subject
-    })
 
-    console.log("📨 [NODEMAILER] Enviando email...")
     const result = await transporter.sendMail(mailOptions)
-    console.log("✅ [NODEMAILER] Email enviado exitosamente:", result.messageId)
+    console.log("Email enviado al cliente:", result.messageId)
     return { success: true, messageId: result.messageId }
   } catch (error) {
-    console.error("💥 [NODEMAILER] ERROR al enviar email:")
-    console.error("💥 [NODEMAILER] Error:", error)
-    if (error instanceof Error) {
-      console.error("💥 [NODEMAILER] Mensaje:", error.message)
-      console.error("💥 [NODEMAILER] Stack:", error.stack)
-    }
+    console.error("Error enviando email al cliente:", error)
     throw error
   }
 }

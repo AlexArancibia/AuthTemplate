@@ -37,18 +37,11 @@ export default auth((req) => {
   const { nextUrl } = req;
   const isLoggedIn = !!req.auth;
 
-  console.log("🔒 [MIDDLEWARE]", { isLoggedIn, path: nextUrl.pathname });
+  console.log({ isLoggedIn, path: nextUrl.pathname });
 
   // Permitir todas las rutas de API de autenticación
   if (nextUrl.pathname.startsWith(apiAuthPrefix)) {
-    console.log("✅ [MIDDLEWARE] Permitiendo ruta de API auth:", nextUrl.pathname);
     return NextResponse.next();
-  }
-
-  // CHECK: Si es una ruta de API de email
-  if (nextUrl.pathname.startsWith("/api/email/")) {
-    console.log("📧 [MIDDLEWARE] Detectada ruta de email:", nextUrl.pathname);
-    console.log("📧 [MIDDLEWARE] ¿Está en publicRoutes?", publicRoutes.includes(nextUrl.pathname));
   }
 
   if (
