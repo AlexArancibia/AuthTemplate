@@ -103,15 +103,18 @@ export default function ProductList({
       try {
         const validSortBy: ProductSortBy = (initialSortBy && initialSortBy !== 'featured' ? initialSortBy : 'createdAt') as ProductSortBy
         
+        // Determinar el precio mínimo: usar 1 como default solo si no hay filtro de precio del usuario
+        const effectiveMinPrice = initialMinPrice !== undefined ? initialMinPrice : 1
+        
         const params: SearchProductParams = {
           page: currentPage,
           limit: 9,
           query: initialSearchTerm || undefined,
-          minPrice: initialMinPrice,
+          minPrice: effectiveMinPrice,
           maxPrice: initialMaxPrice,
           currencyId: selectedCurrencyId,
           sortBy: validSortBy,
-          status: ['ACTIVE', 'ARCHIVED'], // Incluir productos activos y archivados
+          status: ['ACTIVE'], // Solo productos activos
         }
 
         if (initialCategories && initialCategories.length > 0) {

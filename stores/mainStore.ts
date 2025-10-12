@@ -168,6 +168,7 @@ interface MainStore {
   refreshData: () => Promise<void>
   getCategoryById: (id: string) => Promise<Category>
   getProductById: (id: string) => Promise<Product>
+  getProductBySlug: (slug: string) => Promise<Product>
   getCollectionById: (id: string) => Promise<Collection>
   getOrderById: (id: string) => Promise<Order>
   getCouponById: (id: string) => Promise<Coupon>
@@ -253,6 +254,9 @@ export const useMainStore = create<MainStore>((set, get) => ({
   },
 
   // Método fetchProducts con paginación
+  // Endpoint: GET /products/store/:storeId
+  // Soporta filtros: query, categorySlugs, collectionIds, status, vendor, minPrice, maxPrice, currencyId
+  // Paginación: page, limit, sortBy, sortOrder
   fetchProducts: async (params: SearchProductParams = {}, forceRefresh = false) => {
     console.log("🚀 [MainStore fetchProducts] START - Params received:", params)
     console.log("🔑 [MainStore fetchProducts] STORE_ID:", STORE_ID)
@@ -270,22 +274,13 @@ export const useMainStore = create<MainStore>((set, get) => ({
       const url = `/products/store/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`
       console.log("🌐 [MainStore fetchProducts] Full URL:", url)
       console.log("🌐 [MainStore fetchProducts] Query params:", queryParams)
-      console.log("🌐 [MainStore fetchProducts] Base URL:", process.env.NEXT_PUBLIC_BACKEND_ENDPOINT)
       
       console.log("📡 [MainStore fetchProducts] Making API call...")
       const response = await apiClient.get<PaginatedResponse<Product>>(url)
       
       console.log("✅ [MainStore fetchProducts] Response received!")
-      console.log("📊 [MainStore fetchProducts] Response status:", response.status)
-      console.log("📊 [MainStore fetchProducts] Response headers:", response.headers)
-      console.log("📦 [MainStore fetchProducts] Response data keys:", Object.keys(response.data))
-      console.log("📦 [MainStore fetchProducts] Response data structure:", {
-        hasData: !!response.data,
-        hasPagination: !!response.data?.pagination,
-        dataLength: response.data?.data?.length || 0,
-        paginationDetails: response.data?.pagination,
-      })
-      console.log("📦 [MainStore fetchProducts] Full response.data:", JSON.stringify(response.data, null, 2))
+      console.log("📦 [MainStore fetchProducts] Products count:", response.data?.data?.length || 0)
+      console.log("📦 [MainStore fetchProducts] Pagination:", response.data?.pagination)
       
       // Validar estructura de respuesta
       if (!response.data || !response.data.data) {
@@ -299,30 +294,19 @@ export const useMainStore = create<MainStore>((set, get) => ({
         paginationMeta: { ...get().paginationMeta, products: response.data.pagination || null },
         loading: false,
       }
-      console.log("💾 [MainStore fetchProducts] New state:", {
-        productsCount: newState.products.length,
-        paginationMeta: newState.paginationMeta,
-        loading: newState.loading,
-      })
       
       set(newState)
       
       console.log("✅ [MainStore fetchProducts] Store updated successfully")
-      console.log("🔍 [MainStore fetchProducts] Current store state after update:", {
-        productsCount: get().products.length,
-        paginationMeta: get().paginationMeta,
-      })
+      console.log("🔍 [MainStore fetchProducts] Products in store:", get().products.length)
       
       return response.data
     } catch (error: any) {
       console.error("❌ [MainStore fetchProducts] Error caught!")
-      console.error("❌ [MainStore fetchProducts] Error object:", error)
       console.error("❌ [MainStore fetchProducts] Error details:", {
         message: error.message,
         status: error.response?.status,
-        statusText: error.response?.statusText,
         data: error.response?.data,
-        headers: error.response?.headers,
       })
       set({ error: "Failed to fetch products", loading: false })
       throw error
@@ -967,6 +951,20 @@ export const useMainStore = create<MainStore>((set, get) => ({
       return response.data
     } catch (error) {
       console.error("Failed to fetch product by id:", error)
+      throw error
+    }
+  },
+
+  getProductBySlug: async (slug) => {
+    if (!STORE_ID) {
+      throw new Error("No store ID provided in environment variables")
+    }
+    
+    try {
+      const response = await apiClient.get<Product>(`/products/by-slug/${STORE_ID}/${slug}`)
+      return response.data
+    } catch (error) {
+      console.error("Failed to fetch product by slug:", error)
       throw error
     }
   },

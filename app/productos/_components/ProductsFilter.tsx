@@ -214,6 +214,7 @@ const filteredProducts = products
 
     // Recopilar todas las presentaciones
     products.forEach((product: Product) => {
+      if (!product.variants) return
       product.variants.forEach((variant) => {
         Object.entries(variant.attributes!).forEach(([key, value]) => {
           if (key === "Presentaciones" && typeof value === "string") {

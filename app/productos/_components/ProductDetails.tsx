@@ -28,7 +28,7 @@ interface ProductDetailsProps {
 }
 
 export default function ProductDetails({ slug }: ProductDetailsProps) {
-  const { products, shopSettings } = useMainStore()
+  const { products, shopSettings, getProductBySlug } = useMainStore()
   const { selectedCurrencyId, acceptedCurrencies } = useCurrencyStore() // Obtener valores del store
   const { addItem } = useCartStore()
   const [product, setProduct] = useState<Product | null>(null)
@@ -41,6 +41,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
   const [imageLoading, setImageLoading] = useState(false)
   const [preloadedImages, setPreloadedImages] = useState<Set<string>>(new Set())
   const [showContinueShopping, setShowContinueShopping] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   // Carrusel para productos relacionados
   const [emblaRef, emblaApi] = useEmblaCarousel({
@@ -100,21 +101,39 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
     })
   }, [product])
 
+  // Fetch del producto individual por slug
   useEffect(() => {
     const loadProduct = async () => {
       setIsLoading(true)
-      const foundProduct = products.find((p) => p.slug === slug)
-      if (foundProduct) {
-        setProduct(foundProduct)
-        // Make sure we have variants before setting the selected variant
-        if (foundProduct.variants && foundProduct.variants.length > 0) {
-          setSelectedVariant(foundProduct.variants[0])
+      setError(null)
+      
+      try {
+        console.log(`[ProductDetails] Fetching product by slug: ${slug}`)
+        const fetchedProduct = await getProductBySlug(slug)
+        
+        console.log("[ProductDetails] Product fetched successfully:", {
+          id: fetchedProduct.id,
+          title: fetchedProduct.title,
+          variantsCount: fetchedProduct.variants?.length || 0,
+        })
+        
+        setProduct(fetchedProduct)
+        
+        // Establecer la primera variante como seleccionada si existen variantes
+        if (fetchedProduct.variants && fetchedProduct.variants.length > 0) {
+          setSelectedVariant(fetchedProduct.variants[0])
         }
+      } catch (error) {
+        console.error("[ProductDetails] Error fetching product:", error)
+        setError("No se pudo cargar el producto. Por favor, intenta nuevamente.")
+        setProduct(null)
+      } finally {
+        setIsLoading(false)
       }
-      setIsLoading(false)
     }
+    
     loadProduct()
-  }, [slug, products])
+  }, [slug, getProductBySlug])
 
   const variantOptions = useMemo(() => {
     if (!product || !product.variants) return {}
@@ -145,7 +164,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
   }, [product, selectedVariant])
 
   const getVariantForImage = (imageUrl: string): ProductVariant | null => {
-    if (!product) return null
+    if (!product || !product.variants) return null
     return product.variants.find((variant) => variant.imageUrls && variant.imageUrls.includes(imageUrl)) || null
   }
 
@@ -172,8 +191,32 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
     return <ProductDetailsSkeleton />
   }
 
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-16 text-center">
+        <div className="max-w-md mx-auto">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Error al cargar el producto</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <Button asChild>
+            <Link href="/productos">Volver a la tienda</Link>
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   if (!product || !selectedVariant) {
-    return null
+    return (
+      <div className="container mx-auto px-4 py-16 text-center">
+        <div className="max-w-md mx-auto">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Producto no encontrado</h2>
+          <p className="text-gray-600 mb-6">El producto que buscas no existe o ha sido eliminado.</p>
+          <Button asChild>
+            <Link href="/productos">Volver a la tienda</Link>
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   const decreaseQuantity = () => setQuantity((prev) => Math.max(1, prev - 1))
@@ -224,7 +267,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
   }
 
   const handleVariantChange = (optionKey: string, optionValue: string) => {
-    if (!selectedVariant.attributes) return
+    if (!selectedVariant.attributes || !product.variants) return
 
     const newVariant = product.variants.find(
       (variant) =>
@@ -282,7 +325,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
   }
 
   const isOptionDisabled = (optionKey: string, optionValue: string) => {
-    if (!selectedVariant.attributes) return true
+    if (!selectedVariant.attributes || !product.variants) return true
 
     const variant = product.variants.find(
       (v) =>
