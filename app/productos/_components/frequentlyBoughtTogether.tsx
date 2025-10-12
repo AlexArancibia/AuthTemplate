@@ -171,9 +171,9 @@ export default function FrequentlyBoughtTogetherComponent({ product }: Frequentl
       price,
       variantDescription,
       imageUrl,
-      hasMultipleVariants: (product.variants?.filter(v => 
+      hasMultipleVariants: ((product.variants?.filter(v => 
         v.prices && v.prices.length > 0 && Number(v.prices[0]?.price || 0) !== 0
-      ).length > 1),
+      ) || []).length > 1),
     }
   }
 

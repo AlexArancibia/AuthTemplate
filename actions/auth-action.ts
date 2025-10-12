@@ -74,6 +74,7 @@ export const registerAction = async (values: z.infer<typeof registerSchema>) => 
     })
     // Crear token de verificación y enviar email
     const token = nanoid()
+    console.log("🎫 [REGISTER] Token generado:", token.substring(0, 10) + "...")
     await db.verificationToken.create({
       data: {
         identifier: data.email,
@@ -81,8 +82,14 @@ export const registerAction = async (values: z.infer<typeof registerSchema>) => 
         expires: new Date(Date.now() + 1000 * 60 * 60 * 24),
       },
     })
+    console.log("✅ [REGISTER] Token guardado en BD para:", data.email)
+    
     try {
-      const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/email/send-verification`, {
+      const emailApiUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/email/send-verification`
+      console.log("📤 [REGISTER] Intentando enviar email a:", emailApiUrl)
+      console.log("📤 [REGISTER] Email destino:", data.email)
+      
+      const response = await fetch(emailApiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -93,6 +100,12 @@ export const registerAction = async (values: z.infer<typeof registerSchema>) => 
           verificationUrl: process.env.NEXTAUTH_URL || 'http://localhost:3000'
         })
       })
+      
+      console.log("📬 [REGISTER] Respuesta del servidor:", {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
+      })
       const contentType = response.headers.get('content-type')
       let result
       if (contentType && contentType.includes('application/json')) {
@@ -102,11 +115,17 @@ export const registerAction = async (values: z.infer<typeof registerSchema>) => 
         throw new Error(`Respuesta no es JSON: ${text}`)
       }
       if (!response.ok || !result.success) {
+        console.error("❌ [REGISTER] Error en respuesta:", result)
         throw new Error(result.error || "Error enviando email de verificación")
       }
+      
+      console.log("✅ [REGISTER] Email enviado exitosamente")
     } catch (error) {
       // Log del error pero no fallar el proceso
-      console.error("Error enviando email de verificación:", error)
+      console.error("💥 [REGISTER] ERROR CRÍTICO enviando email de verificación:")
+      console.error("💥 [REGISTER] Tipo de error:", error instanceof Error ? "Error" : typeof error)
+      console.error("💥 [REGISTER] Mensaje:", error instanceof Error ? error.message : JSON.stringify(error))
+      console.error("💥 [REGISTER] Stack:", error instanceof Error ? error.stack : "N/A")
     }
 
     // Avisar que la cuenta fue creada

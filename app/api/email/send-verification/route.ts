@@ -5,10 +5,10 @@ import { sendEmailToClient } from "@/lib/nodemailer"
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("🔥 Endpoint /api/email/send-verification llamado")
+    console.log("🔥 [API-VERIFICATION] Endpoint llamado")
 
     const body = await request.json()
-    console.log("📧 Body recibido:", { email: body.email, hasToken: !!body.verificationToken })
+    console.log("📧 [API-VERIFICATION] Body recibido:", { email: body.email, hasToken: !!body.verificationToken })
 
     const { email, verificationToken, verificationUrl } = body as {
       email: string
@@ -17,13 +17,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (!email) {
-      console.log("❌ Email no proporcionado")
+      console.log("❌ [API-VERIFICATION] Email no proporcionado")
       return NextResponse.json({ error: "Email requerido" }, { status: 400 })
     }
 
     // Generar token si no se proporciona
     const token = verificationToken || crypto.randomBytes(32).toString("hex")
-    console.log("🔑 Token generado/usado:", token.substring(0, 10) + "...")
+    console.log("🔑 [API-VERIFICATION] Token generado/usado:", token.substring(0, 10) + "...")
 
     // URL base para verificación
     const baseUrl = verificationUrl || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
@@ -32,7 +32,9 @@ export async function POST(request: NextRequest) {
     const subject = "Verificación de Email - Confirma tu cuenta"
     const html = emailVerificationTemplate(token, verifyUrl)
 
-    console.log("📤 Enviando email a:", email)
+    console.log("📤 [API-VERIFICATION] A punto de llamar sendEmailToClient")
+    console.log("📤 [API-VERIFICATION] Email destino:", email)
+    console.log("📤 [API-VERIFICATION] Subject:", subject)
 
     const result = await sendEmailToClient({
       to: email,
@@ -40,7 +42,7 @@ export async function POST(request: NextRequest) {
       html,
     })
 
-    console.log("✅ Email enviado exitosamente:", result.messageId)
+    console.log("✅ [API-VERIFICATION] Email enviado exitosamente:", result.messageId)
 
     return NextResponse.json({
       success: true,
@@ -49,7 +51,12 @@ export async function POST(request: NextRequest) {
       verificationToken: token,
     })
   } catch (error) {
-    console.error("💥 Error en endpoint send-verification:", error)
+    console.error("💥 [API-VERIFICATION] ERROR en endpoint:")
+    console.error("💥 [API-VERIFICATION] Tipo:", error instanceof Error ? "Error" : typeof error)
+    console.error("💥 [API-VERIFICATION] Mensaje:", error instanceof Error ? error.message : JSON.stringify(error))
+    console.error("💥 [API-VERIFICATION] Stack completo:", error instanceof Error ? error.stack : "N/A")
+    console.error("💥 [API-VERIFICATION] Error completo:", error)
+    
     return NextResponse.json(
       {
         error: "Error interno del servidor",
