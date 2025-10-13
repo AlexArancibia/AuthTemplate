@@ -95,7 +95,7 @@ export function CollectionCarousel({
   }, [collectionId])
 
   const handleExploreStore = () => {
-    window.open("https://anjsports.com/tienda/", "_blank")
+    window.open("/productos", "_self")
   }
 
   return (

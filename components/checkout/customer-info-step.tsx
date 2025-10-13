@@ -4,29 +4,39 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type React from "react"
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, ArrowRight, Plus, Home, Building } from "lucide-react"
+import { ArrowLeft, ArrowRight, Plus, Minus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Separator } from "@/components/ui/separator"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { AddressCard } from "@/components/ui/address-card"
+import { AddressForm } from "@/components/dashboard/address-form"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { useState, useEffect } from "react"
 import { useGeographicDataStore } from "@/stores/locationStore"
+import { useUserStore } from "@/stores/userStore"
 import { toast } from "sonner"; 
- 
+
 import type { Address } from "@/stores/userStore"
 import { AddressType } from "@/types/auth"
+import { User } from "@/types/user"
 
 interface CustomerInfoStepProps {
-  formData: any
+  formData: Record<string, any>
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void
   nextStep: () => void
   prevStep: () => void
   isAuthenticated: boolean
-  currentUser: any
+  authCheckComplete: boolean
+  currentUser: (User & { addresses?: Address[] }) | null
   showNewShippingAddress: boolean
   setShowNewShippingAddress: (value: boolean) => void
   showNewBillingAddress: boolean
@@ -35,8 +45,12 @@ interface CustomerInfoStepProps {
   selectedBillingAddressId: string | null
   handleSelectShippingAddress: (addressId: string) => void
   handleSelectBillingAddress: (addressId: string) => void
+  handleDeselectShippingAddress: () => void
+  handleDeselectBillingAddress: () => void
   handleBillingAddressToggle: (value: boolean) => void
   copyShippingToBilling: () => void
+  onEditAddress: (addressId: string) => void
+  onDeleteAddress: (addressId: string) => void
 }
 
 export function CustomerInfoStep({
@@ -45,6 +59,7 @@ export function CustomerInfoStep({
   nextStep,
   prevStep,
   isAuthenticated,
+  authCheckComplete,
   currentUser,
   showNewShippingAddress,
   setShowNewShippingAddress,
@@ -54,12 +69,53 @@ export function CustomerInfoStep({
   selectedBillingAddressId,
   handleSelectShippingAddress,
   handleSelectBillingAddress,
+  handleDeselectShippingAddress,
+  handleDeselectBillingAddress,
   handleBillingAddressToggle,
   copyShippingToBilling,
+  onEditAddress,
+  onDeleteAddress,
 }: CustomerInfoStepProps) {
 
   const router = useRouter()
+  const { updateAddress } = useUserStore()
   const [addressError, setAddressError] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [selectedAddressForEdit, setSelectedAddressForEdit] = useState<Address | null>(null)
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false)
+
+  // Funciones para manejar edición y eliminación
+  const handleEditAddressClick = (address: Address) => {
+    setSelectedAddressForEdit(address)
+    setIsEditDialogOpen(true)
+  }
+
+  const handleEditAddressSubmit = async (data: Partial<Address>) => {
+    if (!selectedAddressForEdit) return
+
+    setIsSubmittingEdit(true)
+    try {
+      await updateAddress(selectedAddressForEdit.id, data)
+      toast.success("Dirección actualizada correctamente")
+      setIsEditDialogOpen(false)
+      setSelectedAddressForEdit(null)
+    } catch (error) {
+      console.error("Error updating address:", error)
+      toast.error("Error al actualizar la dirección")
+    } finally {
+      setIsSubmittingEdit(false)
+    }
+  }
+
+  const handleDeleteAddress = async (addressId: string) => {
+    try {
+      await onDeleteAddress(addressId)
+      // El toast se maneja en el componente padre (checkout page)
+    } catch (error) {
+      console.error("Error deleting address:", error)
+      toast.error("Error al eliminar la dirección")
+    }
+  }
 
   const handleContinue = () => {
     // Si el campo de dirección está vacío, muestra error visual y toast
@@ -86,17 +142,31 @@ export function CustomerInfoStep({
   }, [fetchCountries])
 
   useEffect(() => {
-    if (formData.countryCode3) fetchStates(formData.countryCode3)
-  }, [formData.countryCode3, fetchStates])
+    if (formData.countryId) fetchStates(formData.countryId)
+  }, [formData.countryId, fetchStates])
 
   useEffect(() => {
-    if (formData.stateId) fetchCities(formData.stateId)
-  }, [formData.stateId, fetchCities])
+    if (formData.countryId && formData.stateId) {
+      fetchCities(formData.countryId, formData.stateId)
+    }
+  }, [formData.countryId, formData.stateId, fetchCities])
+
+  // useEffect para manejar estados de facturación independientemente
+  useEffect(() => {
+    if (formData.billingCountryId) fetchStates(formData.billingCountryId)
+  }, [formData.billingCountryId, fetchStates])
+
+  useEffect(() => {
+    if (formData.billingCountryId && formData.billingStateId) {
+      fetchCities(formData.billingCountryId, formData.billingStateId)
+    }
+  }, [formData.billingCountryId, formData.billingStateId, fetchCities])
 
   const handleCountryChange = (value: string) => {
     const country = countries.find(c => c.code3 === value)
     handleInputChange({ target: { name: "country", value: country?.name || "" } } as any)
     handleInputChange({ target: { name: "countryCode3", value } } as any)
+    handleInputChange({ target: { name: "countryId", value: country?.id || "" } } as any)
     // Limpiar estado y ciudad
     handleInputChange({ target: { name: "state", value: "" } } as any)
     handleInputChange({ target: { name: "stateId", value: "" } } as any)
@@ -105,7 +175,7 @@ export function CustomerInfoStep({
   }
 
   const handleStateChange = (value: string) => {
-    const state = (states[formData.countryCode3] || []).find(s => s.id === value)
+    const state = (states[formData.countryId] || []).find(s => s.id === value)
     handleInputChange({ target: { name: "state", value: state?.name || "" } } as any)
     handleInputChange({ target: { name: "stateId", value } } as any)
     // Limpiar ciudad
@@ -120,10 +190,10 @@ export function CustomerInfoStep({
   }
 
   const handleBillingCountryChange = (value: string) => {
-    const country = countries.find(c => c.code === value)
+    const country = countries.find(c => c.code3 === value)
     handleInputChange({ target: { name: "billingCountry", value: country?.name || "" } } as any)
-    handleInputChange({ target: { name: "billingCountryCode", value } } as any)
-    handleInputChange({ target: { name: "billingCountryCode3", value: country?.code3 || "" } } as any)
+    handleInputChange({ target: { name: "billingCountryCode3", value } } as any)
+    handleInputChange({ target: { name: "billingCountryId", value: country?.id || "" } } as any)
     // Limpiar estado y ciudad de billing
     handleInputChange({ target: { name: "billingState", value: "" } } as any)
     handleInputChange({ target: { name: "billingStateId", value: "" } } as any)
@@ -132,7 +202,7 @@ export function CustomerInfoStep({
   }
 
   const handleBillingStateChange = (value: string) => {
-    const state = (states[formData.billingCountryCode] || []).find(s => s.id === value)
+    const state = (states[formData.billingCountryId] || []).find(s => s.id === value)
     handleInputChange({ target: { name: "billingState", value: state?.name || "" } } as any)
     handleInputChange({ target: { name: "billingStateId", value } } as any)
     // Limpiar ciudad de billing
@@ -156,6 +226,11 @@ export function CustomerInfoStep({
 
   // Función para verificar si los campos requeridos están completos
   const isFormValid = () => {
+    // Si la verificación de autenticación no está completa, no permitir continuar
+    if (!authCheckComplete) {
+      return false
+    }
+
     // Verificar información de contacto básica
     const basicInfoValid = formData.firstName && 
                          formData.lastName && 
@@ -164,81 +239,94 @@ export function CustomerInfoStep({
 
     // Verificar dirección de envío
     let shippingValid = false
-    if (isAuthenticated && currentUser?.addresses?.length > 0 && selectedShippingAddressId) {
-      shippingValid = true
+    if (isAuthenticated && currentUser?.addresses && currentUser.addresses.length > 0) {
+      // Si hay direcciones guardadas, debe haber una seleccionada O el formulario debe estar desplegado y completo
+      if (selectedShippingAddressId) {
+        shippingValid = true
+      } else if (showNewShippingAddress) {
+        // Si el formulario está desplegado, debe estar completo
+        shippingValid = formData.address && 
+                       formData.shippingPhone && 
+                       formData.city && 
+                       formData.state
+      } else {
+        // Si no hay dirección seleccionada y el formulario no está desplegado, no es válido
+        shippingValid = false
+      }
     } else {
+      // Si no hay direcciones guardadas, debe estar completo el formulario
       shippingValid = formData.address && 
                      formData.shippingPhone && 
                      formData.city && 
-                     formData.state && 
-                     formData.zipCode
+                     formData.state
     }
 
     // Verificar dirección de facturación si es diferente
     let billingValid = true
     if (!formData.sameBillingAddress) {
-      if (isAuthenticated && currentUser?.addresses?.length > 0 && selectedBillingAddressId) {
-        billingValid = true
+      if (isAuthenticated && currentUser?.addresses && currentUser.addresses.length > 0) {
+        // Si hay direcciones guardadas, debe haber una seleccionada O el formulario debe estar desplegado y completo
+        if (selectedBillingAddressId) {
+          billingValid = true
+        } else if (showNewBillingAddress) {
+          // Si el formulario está desplegado, debe estar completo
+          billingValid = formData.billingAddress && 
+                        formData.billingPhone && 
+                        formData.billingCity && 
+                        formData.billingState
+        } else {
+          // Si no hay dirección seleccionada y el formulario no está desplegado, no es válido
+          billingValid = false
+        }
       } else {
+        // Si no hay direcciones guardadas, debe estar completo el formulario
         billingValid = formData.billingAddress && 
                       formData.billingPhone && 
                       formData.billingCity && 
-                      formData.billingState && 
-                      formData.billingZipCode
+                      formData.billingState
       }
     }
 
     return basicInfoValid && shippingValid && billingValid
   }
 
-  // Render an address card
+  // Render an address card using the reusable AddressCard component
   const renderAddressCard = (address: Address, isSelected: boolean, onSelect: () => void, isShipping: boolean) => (
-    <Card
+    <AddressCard
       key={address.id}
-      className={`mb-3 cursor-pointer transition-all ${isSelected ? "ring-2 ring-primary" : "hover:border-primary/50"}`}
-      onClick={onSelect}
-    >
-      <CardContent className="p-4">
-        <div className="flex justify-between items-start">
-          <div className="flex items-start gap-3">
-            <div className={`mt-1 p-1 rounded-full ${isSelected ? "bg-primary text-white" : "bg-muted"}`}>
-              {address.address1.toLowerCase().includes("oficina") || address.company ? (
-                <Building className="h-4 w-4" />
-              ) : (
-                <Home className="h-4 w-4" />
-              )}
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">{address.address1}</p>
-              {address.address2 && <p className="text-sm text-muted-foreground">{address.address2}</p>}
-              <p className="text-sm text-muted-foreground">
-                {address.city}, {address.province} {address.zip}
-              </p>
-              {address.phone && <p className="text-sm text-muted-foreground">{address.phone}</p>}
-              {address.isDefault && <Badge className="mt-1 bg-primary/10 text-primary">Predeterminada</Badge>}
-            </div>
-          </div>
-          <RadioGroupItem
-            value={address.id}
-            id={`${isShipping ? "shipping" : "billing"}-${address.id}`}
-            className="mt-1"
-            checked={isSelected}
-          />
-        </div>
-      </CardContent>
-    </Card>
+      address={address}
+      isSelected={isSelected}
+      onSelect={onSelect}
+      onEdit={handleEditAddressClick}
+      onDelete={handleDeleteAddress}
+      showRadioButton={true}
+      showEditDeleteButtons={true}
+      variant="checkout"
+      isSubmitting={isSubmittingEdit}
+    />
   )
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
-      {!isAuthenticated && (
+      {!authCheckComplete && (
+        <div className="bg-gray-50 p-4 rounded-lg mb-6">
+          <div className="flex items-center justify-center">
+            <div className="flex items-center gap-3">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+              <span className="text-sm text-gray-600">Verificando autenticación...</span>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {authCheckComplete && !isAuthenticated && (
         <div className="bg-blue-50 p-4 rounded-lg mb-6">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-medium text-blue-800">¿Ya tienes una cuenta?</h3>
               <p className="text-sm text-blue-700">Inicia sesión para agilizar el proceso de compra</p>
             </div>
-            <Button variant="outline" className="bg-white" onClick={() => router.push("/login?redirect=/checkout")}>
+            <Button variant="outline" className="bg-white" onClick={() => router.push("/login?redirect=/checkout&fromLogin=true")}>
               Iniciar sesión
             </Button>
           </div>
@@ -309,10 +397,27 @@ export function CustomerInfoStep({
           <Button
             variant="outline"
             className="mt-3 flex items-center gap-2"
-            onClick={() => setShowNewShippingAddress(true)}
+            onClick={() => {
+              if (showNewShippingAddress) {
+                setShowNewShippingAddress(false)
+              } else {
+                setShowNewShippingAddress(true)
+                // Deseleccionar dirección existente cuando se agrega nueva
+                handleDeselectShippingAddress()
+              }
+            }}
           >
-            <Plus className="h-4 w-4" />
-            Agregar nueva dirección
+            {showNewShippingAddress ? (
+              <>
+                <Minus className="h-4 w-4" />
+                Cancelar
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4" />
+                Agregar nueva dirección
+              </>
+            )}
           </Button>
         </div>
       )}
@@ -353,8 +458,8 @@ export function CustomerInfoStep({
               <Input id="apartment" name="apartment" value={formData.apartment} onChange={handleInputChange} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="zipCode">Código postal</Label>
-              <Input id="zipCode" name="zipCode" value={formData.zipCode} onChange={handleInputChange} required />
+              <Label htmlFor="zipCode">Código postal (opcional)</Label>
+              <Input id="zipCode" name="zipCode" value={formData.zipCode} onChange={handleInputChange} />
             </div>
           </div>
 
@@ -368,7 +473,7 @@ export function CustomerInfoStep({
                 <SelectTrigger>
                   <SelectValue placeholder="-- Elija --" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[200px] overflow-y-auto">
                   <div className="p-2">
                     <Input
                       placeholder="Buscar país..."
@@ -380,8 +485,9 @@ export function CustomerInfoStep({
                   </div>
                   {countries
                     .filter(c => c.name.toLowerCase().includes(countryFilter.toLowerCase()))
+                    .filter(c => c.name.toLowerCase() === 'perú' || c.name.toLowerCase() === 'peru')
                     .map(c => (
-                      <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
+                      <SelectItem key={c.code} value={c.code3}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -396,7 +502,7 @@ export function CustomerInfoStep({
                 <SelectTrigger>
                   <SelectValue placeholder="-- Elija --" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[200px] overflow-y-auto">
                   <div className="p-2">
                     <Input
                       placeholder="Buscar departamento..."
@@ -406,7 +512,7 @@ export function CustomerInfoStep({
                       onKeyDown={e => e.stopPropagation()}
                     />
                   </div>
-                  {(states[formData.countryCode3] || [])
+                  {(states[formData.countryId] || [])
                     .filter(s => s.name.toLowerCase().includes(stateFilter.toLowerCase()))
                     .map(s => (
                       <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
@@ -424,7 +530,7 @@ export function CustomerInfoStep({
                 <SelectTrigger>
                   <SelectValue placeholder="-- Elija --" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[200px] overflow-y-auto">
                   <div className="p-2">
                     <Input
                       placeholder="Buscar ciudad..."
@@ -493,10 +599,27 @@ export function CustomerInfoStep({
               <Button
                 variant="outline"
                 className="mt-3 flex items-center gap-2"
-                onClick={() => setShowNewBillingAddress(true)}
+                onClick={() => {
+                  if (showNewBillingAddress) {
+                    setShowNewBillingAddress(false)
+                  } else {
+                    setShowNewBillingAddress(true)
+                    // Deseleccionar dirección existente cuando se agrega nueva
+                    handleDeselectBillingAddress()
+                  }
+                }}
               >
-                <Plus className="h-4 w-4" />
-                Agregar nueva dirección de facturación
+                {showNewBillingAddress ? (
+                  <>
+                    <Minus className="h-4 w-4" />
+                    Cancelar
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4" />
+                    Agregar nueva dirección de facturación
+                  </>
+                )}
               </Button>
             </div>
           )}
@@ -538,13 +661,12 @@ export function CustomerInfoStep({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="billingZipCode">Código postal</Label>
+                  <Label htmlFor="billingZipCode">Código postal (opcional)</Label>
                   <Input
                     id="billingZipCode"
                     name="billingZipCode"
                     value={formData.billingZipCode}
                     onChange={handleInputChange}
-                    required={!formData.sameBillingAddress}
                   />
                 </div>
               </div>
@@ -553,13 +675,13 @@ export function CustomerInfoStep({
                 <div className="space-y-2">
                   <Label htmlFor="billingCountry">País</Label>
                   <Select
-                    value={formData.billingCountryCode || ""}
+                    value={formData.billingCountryCode3 || ""}
                     onValueChange={handleBillingCountryChange}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="-- Elija --" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-[200px] overflow-y-auto">
                       <div className="p-2">
                         <Input
                           placeholder="Buscar país..."
@@ -571,8 +693,9 @@ export function CustomerInfoStep({
                       </div>
                       {countries
                         .filter(c => c.name.toLowerCase().includes(billingCountryFilter.toLowerCase()))
+                        .filter(c => c.name.toLowerCase() === 'perú' || c.name.toLowerCase() === 'peru')
                         .map(c => (
-                          <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
+                          <SelectItem key={c.code} value={c.code3}>{c.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -582,12 +705,12 @@ export function CustomerInfoStep({
                   <Select
                     value={formData.billingStateId || ""}
                     onValueChange={handleBillingStateChange}
-                    disabled={!formData.billingCountryCode}
+                    disabled={!formData.billingCountryCode3}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="-- Elija --" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-[200px] overflow-y-auto">
                       <div className="p-2">
                         <Input
                           placeholder="Buscar departamento..."
@@ -597,7 +720,7 @@ export function CustomerInfoStep({
                           onKeyDown={e => e.stopPropagation()}
                         />
                       </div>
-                      {(states[formData.billingCountryCode] || [])
+                      {(states[formData.billingCountryId] || [])
                         .filter(s => s.name.toLowerCase().includes(billingStateFilter.toLowerCase()))
                         .map(s => (
                           <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
@@ -615,7 +738,7 @@ export function CustomerInfoStep({
                     <SelectTrigger>
                       <SelectValue placeholder="-- Elija --" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-[200px] overflow-y-auto">
                       <div className="p-2">
                         <Input
                           placeholder="Buscar ciudad..."
@@ -649,6 +772,25 @@ export function CustomerInfoStep({
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
       </div>
+
+      {/* Dialog para editar dirección */}
+      {selectedAddressForEdit && (
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-[95vw] sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Editar dirección</DialogTitle>
+              <DialogDescription>
+                Modifica los datos de tu dirección. Los cambios se aplicarán inmediatamente.
+              </DialogDescription>
+            </DialogHeader>
+            <AddressForm
+              onSubmit={handleEditAddressSubmit}
+              isSubmitting={isSubmittingEdit}
+              initialData={selectedAddressForEdit}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </motion.div>
   )
 }

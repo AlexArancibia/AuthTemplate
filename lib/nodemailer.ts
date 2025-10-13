@@ -2,7 +2,9 @@ import nodemailer from "nodemailer"
 
 // Configuración del transportador de correo
 const createTransporter = () => {
-  return nodemailer.createTransport({
+  const isSpaceMail = process.env.SMTP_HOST?.includes('spacemail') || false;
+  
+  const config = {
     host: process.env.SMTP_HOST || "smtp.gmail.com",
     port: Number.parseInt(process.env.SMTP_PORT || "587"),
     secure: process.env.SMTP_SECURE === "true", // true para 465, false para otros puertos
@@ -10,7 +12,29 @@ const createTransporter = () => {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
-  })
+    // Configuración específica para SpaceMail
+    ...(isSpaceMail ? {
+      tls: {
+        rejectUnauthorized: false,
+        ciphers: 'SSLv3',
+        checkServerIdentity: () => undefined,
+        servername: undefined
+      },
+      connectionTimeout: 60000,
+      greetingTimeout: 30000,
+      socketTimeout: 60000,
+      pool: false,
+      maxConnections: 1,
+      maxMessages: 3,
+      rateLimit: 14
+    } : {
+      tls: {
+        rejectUnauthorized: process.env.NODE_ENV === "production" ? true : false
+      }
+    })
+  }
+  
+  return nodemailer.createTransport(config)
 }
 
 // Función para enviar correo al cliente
@@ -57,7 +81,6 @@ export const sendEmailToAdmin = async ({
 }) => {
   try {
     const transporter = createTransporter()
-
     const adminEmail = process.env.ADMIN_EMAIL || process.env.SMTP_USER
 
     const mailOptions = {

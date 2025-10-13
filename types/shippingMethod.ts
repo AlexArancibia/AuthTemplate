@@ -10,6 +10,12 @@ export interface ShippingMethod {
   description?: string | null;
   prices: ShippingMethodPrice[];
   estimatedDeliveryTime?: string | null;
+  minDeliveryDays?: number;
+  maxDeliveryDays?: number;
+  availableDays?: string[];
+  cutOffTime?: string;
+  minWeight?: string | number;
+  maxWeight?: string | number;
   isActive: boolean;
   orders?: Order[];
   createdAt: Date;
@@ -46,6 +52,11 @@ export interface ShippingMethodPrice {
   currencyId: string;
   currency?: Currency;
   price: number;
+  
+  // ⬇️ Campos para envío gratis y zonas ⬇️
+  freeShippingThreshold?: number | null;
+  freeShippingMessage?: string | null;
+  
   createdAt: Date;
   updatedAt: Date;
 

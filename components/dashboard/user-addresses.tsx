@@ -2,22 +2,10 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { useUserStore, type UserWithRelations, type Address, type AddressCreateData } from "@/stores/userStore"
 import { AddressForm } from "@/components/dashboard/address-form"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+import { AddressCard } from "@/components/ui/address-card"
 import {
   Dialog,
   DialogContent,
@@ -26,7 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Home, Building, Plus, Edit, Trash2, Star } from "lucide-react"
+import { Plus } from "lucide-react"
 import { AddressType } from "@/types/auth"
 
 interface UserAddressesProps {
@@ -41,24 +29,20 @@ export function UserAddresses({ user }: UserAddressesProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const addresses = user.addresses || []
-  const shippingAddresses = addresses.filter(
-    (addr) => addr.addressType === AddressType.SHIPPING || addr.addressType === AddressType.BOTH,
-  )
-  const billingAddresses = addresses.filter(
-    (addr) => addr.addressType === AddressType.BILLING || addr.addressType === AddressType.BOTH,
-  )
+  
+  // Organizar direcciones en 3 secciones
+  const bothAddresses = addresses.filter((addr) => addr.addressType === AddressType.BOTH)
+  const shippingOnlyAddresses = addresses.filter((addr) => addr.addressType === AddressType.SHIPPING)
+  const billingOnlyAddresses = addresses.filter((addr) => addr.addressType === AddressType.BILLING)
 
-  // Modificar la función handleAddAddress para que acepte ambos tipos
+  // Función para agregar nueva dirección
   const handleAddAddress = async (data: AddressCreateData | Partial<Address>) => {
     setIsSubmitting(true)
     try {
-      // Verificar si estamos recibiendo un AddressCreateData o un Partial<Address>
-      // y actuar en consecuencia
       if ("id" in data) {
         // Es un Partial<Address>, pero createAddress espera AddressCreateData
-        // Extraemos solo las propiedades necesarias
         const addressData: AddressCreateData = {
-          addressType: data.addressType as AddressType, // Forzamos el tipo ya que sabemos que existe
+          addressType: data.addressType as AddressType,
           address1: data.address1 as string,
           address2: data.address2,
           city: data.city as string,
@@ -71,7 +55,6 @@ export function UserAddresses({ user }: UserAddressesProps) {
         }
         await createAddress(user.id, addressData)
       } else {
-        // Es un AddressCreateData, podemos pasarlo directamente
         await createAddress(user.id, data as AddressCreateData)
       }
       toast.success("Dirección agregada correctamente")
@@ -84,14 +67,12 @@ export function UserAddresses({ user }: UserAddressesProps) {
     }
   }
 
-  // También necesitamos modificar la función handleEditAddress para asegurar
-  // que estamos pasando el tipo correcto
+  // Función para editar dirección
   const handleEditAddress = async (data: Partial<Address>) => {
     if (!selectedAddress) return
 
     setIsSubmitting(true)
     try {
-      // Aseguramos que estamos pasando un Partial<Address> a updateAddress
       await updateAddress(selectedAddress.id, data)
       toast.success("Dirección actualizada correctamente")
       setIsEditDialogOpen(false)
@@ -104,6 +85,7 @@ export function UserAddresses({ user }: UserAddressesProps) {
     }
   }
 
+  // Función para eliminar dirección
   const handleDeleteAddress = async (addressId: string) => {
     try {
       await deleteAddress(addressId)
@@ -114,97 +96,21 @@ export function UserAddresses({ user }: UserAddressesProps) {
     }
   }
 
-  const handleSetDefaultAddress = async (addressId: string) => {
+  // Función para manejar el click de editar
+  const handleEditClick = (address: Address) => {
+    setSelectedAddress(address)
+    setIsEditDialogOpen(true)
+  }
+
+  // Función para establecer dirección como predeterminada
+  const handleSetDefault = async (addressId: string) => {
     try {
       await setDefaultAddress(addressId)
-      toast.success("Dirección predeterminada actualizada")
+      toast.success("Dirección establecida como predeterminada")
     } catch (error) {
       console.error("Error setting default address:", error)
       toast.error("Error al establecer la dirección predeterminada")
     }
-  }
-
-  const renderAddressCard = (address: Address) => {
-    const isCompanyAddress = address.company || address.address1.toLowerCase().includes("oficina")
-
-    return (
-      <Card key={address.id} className="mb-4 overflow-hidden">
-        <CardContent className="p-0">
-          <div className="flex items-start p-4">
-            <div
-              className={`mt-1 p-2 rounded-full ${isCompanyAddress ? "bg-blue-50 text-blue-600" : "bg-green-50 text-green-600"}`}
-            >
-              {isCompanyAddress ? <Building className="h-5 w-5" /> : <Home className="h-5 w-5" />}
-            </div>
-            <div className="ml-4 flex-1">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">
-                    {address.addressType === AddressType.SHIPPING
-                      ? "Dirección de envío"
-                      : address.addressType === AddressType.BILLING
-                        ? "Dirección de facturación"
-                        : "Dirección de envío y facturación"}
-                  </span>
-                  {address.isDefault && (
-                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                      Predeterminada
-                    </Badge>
-                  )}
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground mt-1">{address.address1}</p>
-              {address.address2 && <p className="text-sm text-muted-foreground">{address.address2}</p>}
-              <p className="text-sm text-muted-foreground">
-                {address.city}, {address.province || ""} {address.zip}
-              </p>
-              {address.phone && <p className="text-sm text-muted-foreground">Tel: {address.phone}</p>}
-              {address.company && <p className="text-sm text-muted-foreground">Empresa: {address.company}</p>}
-            </div>
-          </div>
-          <div className="bg-muted/30 p-2 flex justify-end gap-2 border-t">
-     
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setSelectedAddress(address)
-                setIsEditDialogOpen(true)
-              }}
-              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-            >
-              <Edit className="h-4 w-4 mr-1" />
-              Editar
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                  <Trash2 className="h-4 w-4 mr-1" />
-                  Eliminar
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Esta acción no se puede deshacer. Se eliminará permanentemente esta dirección de tu cuenta.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => handleDeleteAddress(address.id)}
-                    className="bg-red-600 hover:bg-red-700"
-                  >
-                    Eliminar
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        </CardContent>
-      </Card>
-    )
   }
 
   return (
@@ -218,7 +124,7 @@ export function UserAddresses({ user }: UserAddressesProps) {
               Agregar dirección
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[550px]">
+          <DialogContent className="max-w-[95vw] sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Agregar nueva dirección</DialogTitle>
               <DialogDescription>
@@ -244,17 +150,66 @@ export function UserAddresses({ user }: UserAddressesProps) {
         </div>
       ) : (
         <div className="space-y-6">
-          {shippingAddresses.length > 0 && (
+          {/* Direcciones de envío y facturación */}
+          {bothAddresses.length > 0 && (
             <div>
-              <h4 className="text-sm font-medium mb-3">Direcciones de envío</h4>
-              <div>{shippingAddresses.map(renderAddressCard)}</div>
+              <h4 className="text-sm font-medium mb-3">Direcciones de envío y facturación</h4>
+              <div className="space-y-2">
+                {bothAddresses.map((address) => (
+                  <AddressCard
+                    key={address.id}
+                    address={address}
+                    variant="dashboard"
+                    onEdit={handleEditClick}
+                    onDelete={handleDeleteAddress}
+                    onSetDefault={handleSetDefault}
+                    showEditDeleteButtons={true}
+                    isSubmitting={isSubmitting}
+                  />
+                ))}
+              </div>
             </div>
           )}
 
-          {billingAddresses.length > 0 && (
+          {/* Direcciones solo de envío */}
+          {shippingOnlyAddresses.length > 0 && (
             <div>
-              <h4 className="text-sm font-medium mb-3">Direcciones de facturación</h4>
-              <div>{billingAddresses.map(renderAddressCard)}</div>
+              <h4 className="text-sm font-medium mb-3">Direcciones solo de envío</h4>
+              <div className="space-y-2">
+                {shippingOnlyAddresses.map((address) => (
+                  <AddressCard
+                    key={address.id}
+                    address={address}
+                    variant="dashboard"
+                    onEdit={handleEditClick}
+                    onDelete={handleDeleteAddress}
+                    onSetDefault={handleSetDefault}
+                    showEditDeleteButtons={true}
+                    isSubmitting={isSubmitting}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Direcciones solo de facturación */}
+          {billingOnlyAddresses.length > 0 && (
+            <div>
+              <h4 className="text-sm font-medium mb-3">Direcciones solo de facturación</h4>
+              <div className="space-y-2">
+                {billingOnlyAddresses.map((address) => (
+                  <AddressCard
+                    key={address.id}
+                    address={address}
+                    variant="dashboard"
+                    onEdit={handleEditClick}
+                    onDelete={handleDeleteAddress}
+                    onSetDefault={handleSetDefault}
+                    showEditDeleteButtons={true}
+                    isSubmitting={isSubmitting}
+                  />
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -263,12 +218,16 @@ export function UserAddresses({ user }: UserAddressesProps) {
       {/* Edit Address Dialog */}
       {selectedAddress && (
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="sm:max-w-[550px]">
+          <DialogContent className="max-w-[95vw] sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Editar dirección</DialogTitle>
               <DialogDescription>Actualiza los detalles de tu dirección.</DialogDescription>
             </DialogHeader>
-            <AddressForm onSubmit={handleEditAddress} isSubmitting={isSubmitting} initialData={selectedAddress} />
+            <AddressForm 
+              onSubmit={handleEditAddress} 
+              isSubmitting={isSubmitting} 
+              initialData={selectedAddress} 
+            />
           </DialogContent>
         </Dialog>
       )}

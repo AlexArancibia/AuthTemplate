@@ -11,6 +11,9 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error("Error verificando configuración de correo:", error)
-    return NextResponse.json({ error: "Error verificando configuración" }, { status: 500 })
+    return NextResponse.json({ 
+      error: "Error verificando configuración",
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 })
   }
 }

@@ -46,7 +46,7 @@ export function AddressForm({ onSubmit, isSubmitting, initialData, isFirstAddres
           isDefault: initialData.isDefault,
         }
       : {
-          addressType: "SHIPPING" as AddressType, // Use the correct enum value
+          addressType: AddressType.SHIPPING, // Use the correct enum value
           address1: "",
           address2: "",
           city: "",
@@ -118,19 +118,19 @@ export function AddressForm({ onSubmit, isSubmitting, initialData, isFirstAddres
                 >
                   <FormItem className="flex items-center space-x-3 space-y-0">
                     <FormControl>
-                      <RadioGroupItem value="SHIPPING" />
+                      <RadioGroupItem value={AddressType.SHIPPING} />
                     </FormControl>
                     <FormLabel className="font-normal">Dirección de envío</FormLabel>
                   </FormItem>
                   <FormItem className="flex items-center space-x-3 space-y-0">
                     <FormControl>
-                      <RadioGroupItem value="BILLING" />
+                      <RadioGroupItem value={AddressType.BILLING} />
                     </FormControl>
                     <FormLabel className="font-normal">Dirección de facturación</FormLabel>
                   </FormItem>
                   <FormItem className="flex items-center space-x-3 space-y-0">
                     <FormControl>
-                      <RadioGroupItem value="BOTH" />
+                      <RadioGroupItem value={AddressType.BOTH} />
                     </FormControl>
                     <FormLabel className="font-normal">Ambos (envío y facturación)</FormLabel>
                   </FormItem>

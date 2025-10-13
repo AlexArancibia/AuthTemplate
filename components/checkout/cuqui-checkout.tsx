@@ -16,8 +16,9 @@ export async function loadCulqiScript(): Promise<void> {
     });
 }
 
-export async function openCulqiCheckout(amount: number, description: string, shopLogo: string) {
+export async function openCulqiCheckout(amount: number, description: string) {
     const publicKey = await getPublicKey();
+    
     if (!publicKey) {
         throw new Error("La Public Key de Culqi no se pudo obtener.");
     }
@@ -25,13 +26,13 @@ export async function openCulqiCheckout(amount: number, description: string, sho
     window.Culqi.publicKey = publicKey;
 
     window.Culqi.options({
-      style: {
-        logo: shopLogo,
-      },
+        style: {
+            logo: "https://pub-a15fad1bb05e4ecbb92c9d83b643a721.r2.dev/Clefast/Group%202%20(8).png",
+        },
     });
 
     window.Culqi.settings({
-        title: "ANJ",
+        title: "Clefast",
         currency: "PEN",
         description,
         amount,
@@ -42,7 +43,7 @@ export async function openCulqiCheckout(amount: number, description: string, sho
 
 export function setCulqiCallback(
   onSuccess: (token: string) => void,
-  onError: (error: any) => void
+  onError: (error: unknown) => void
 ) {
   window.culqi = () => {
     if (window.Culqi.token) {

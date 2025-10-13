@@ -5,19 +5,28 @@ import Link from "next/link"
 import { CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ShopSettings } from "@/types/store"
+import { User } from "@/types/user"
+import { Address } from "@/stores/userStore"
+import { CartItem } from "@/stores/cartStore"
+import { ShippingMethod } from "@/types/shippingMethod"
 
 interface ConfirmationStepProps {
   orderId: string | null
   isAuthenticated: boolean
-  currentUser: any
-  formData: any
-  items: any[]
+  currentUser: (User & { addresses?: Address[] }) | null
+  formData: Record<string, any>
+  items: CartItem[]
   subtotal: number
   tax: number
   shipping: number
   total: number
   currency: string
   shopSettings: ShopSettings[]
+  shippingMethods: ShippingMethod[]
+  // Add new props for address handling
+  selectedShippingAddressId?: string | null
+  selectedBillingAddressId?: string | null
+  selectedCurrencyId?: string
 }
 
 export function ConfirmationStep({
@@ -32,7 +41,86 @@ export function ConfirmationStep({
   total,
   currency,
   shopSettings,
+  shippingMethods,
+  selectedShippingAddressId = null,
+  selectedBillingAddressId = null,
+  selectedCurrencyId,
 }: ConfirmationStepProps) {
+  // Helper function to get shipping address data
+  const getShippingAddressData = () => {
+    if (isAuthenticated && currentUser && selectedShippingAddressId) {
+      // If user has selected an existing address, get data from that address
+      const selectedAddress = currentUser.addresses?.find(
+        (addr: Address) => addr.id === selectedShippingAddressId
+      )
+      if (selectedAddress) {
+        return {
+          address: selectedAddress.address1,
+          apartment: selectedAddress.address2 || "",
+          city: selectedAddress.city,
+          state: selectedAddress.province || "",
+          zipCode: selectedAddress.zip || "",
+          shippingPhone: selectedAddress.phone || "",
+        }
+      }
+    }
+    // Fallback to form data
+    return {
+      address: formData.address || "",
+      apartment: formData.apartment || "",
+      city: formData.city || "",
+      state: formData.state || "",
+      zipCode: formData.zipCode || "",
+      shippingPhone: formData.shippingPhone || "",
+    }
+  }
+
+  // Helper function to get billing address data
+  const getBillingAddressData = () => {
+    if (formData.sameBillingAddress) {
+      return getShippingAddressData()
+    }
+
+    if (isAuthenticated && currentUser && selectedBillingAddressId) {
+      // If user has selected an existing billing address, get data from that address
+      const selectedAddress = currentUser.addresses?.find(
+        (addr: Address) => addr.id === selectedBillingAddressId
+      )
+      if (selectedAddress) {
+        return {
+          address: selectedAddress.address1,
+          apartment: selectedAddress.address2 || "",
+          city: selectedAddress.city,
+          state: selectedAddress.province || "",
+          zipCode: selectedAddress.zip || "",
+          billingPhone: selectedAddress.phone || "",
+        }
+      }
+    }
+    // Fallback to form data
+    return {
+      address: formData.billingAddress || "",
+      apartment: formData.billingApartment || "",
+      city: formData.billingCity || "",
+      state: formData.billingState || "",
+      zipCode: formData.billingZipCode || "",
+      billingPhone: formData.billingPhone || "",
+    }
+  }
+
+  // Helper function to get shipping method label
+  const getShippingMethodLabel = () => {
+    const selectedMethod = shippingMethods.find(m => m.id === formData.shippingMethod)
+    if (!selectedMethod) return "Envío"
+    
+    const methodName = selectedMethod.name.toLowerCase()
+    if (methodName.includes("recojo")) return "Recojo"
+    if (methodName.includes("envio solo hasta agencia") || methodName.includes("envío solo hasta agencia")) {
+      return "Envío solo hasta agencia"
+    }
+    return "Envío"
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -107,28 +195,37 @@ export function ConfirmationStep({
               *Detalles del pedido:*
               ${items
                 .map(
-                  (item) =>
-                    `- ${item.product.title} - ${Object.entries(item.variant.attributes || {})
+                  (item) => {
+                    const priceObj = item.variant.prices.find(p => p.currencyId === selectedCurrencyId)
+                    const price = priceObj?.price ?? item.variant.prices[0]?.price ?? 0
+                    return `- ${item.product.title} - ${Object.entries(item.variant.attributes || {})
                       .map(([key, value]) => `${key}: ${value}`)
-                      .join(", ")} (${item.quantity} x ${currency}${Number(item.variant.prices[0].price).toFixed(2)})`,
+                      .join(", ")} (${item.quantity} x ${currency}${Number(price).toFixed(2)})`
+                  }
                 )
                 .join("\n")}
 
               *Subtotal:* ${currency}${Number(subtotal).toFixed(2)}
               *IGV (18%):* ${currency}${Number(tax).toFixed(2)}
-              *Envío:* ${currency}${Number(shipping).toFixed(2)}
+              *${getShippingMethodLabel()}:* ${currency}${Number(shipping).toFixed(2)}
               *Total:* ${currency}${Number(total).toFixed(2)}
 
               *Dirección de envío:*
               ${formData.firstName} ${formData.lastName}
-              ${formData.address}${formData.apartment ? `, ${formData.apartment}` : ""}
-              ${formData.city}, ${formData.state} ${formData.zipCode}
+              ${(() => {
+                const shippingData = getShippingAddressData()
+                return `${shippingData.address}${shippingData.apartment ? `, ${shippingData.apartment}` : ""}
+              ${shippingData.city}, ${shippingData.state} ${shippingData.zipCode}`
+              })()}
 
               ${
                 !formData.sameBillingAddress
                   ? `*Dirección de facturación:*
-              ${formData.billingAddress}${formData.billingApartment ? `, ${formData.billingApartment}` : ""}
-              ${formData.billingCity}, ${formData.billingState} ${formData.billingZipCode}`
+              ${(() => {
+                const billingData = getBillingAddressData()
+                return `${billingData.address}${billingData.apartment ? `, ${billingData.apartment}` : ""}
+              ${billingData.city}, ${billingData.state} ${billingData.zipCode}`
+              })()}`
                   : "*Dirección de facturación:* Misma que la dirección de envío"
               }
 
