@@ -43,7 +43,7 @@ html { scroll-behavior: smooth; }
   }
 
   .font-futura {
-    font-family: 'Futura', 'Trebuchet MS', 'Arial', sans-serif;
+    font-family: 'Futura Std', 'Futura', 'Trebuchet MS', 'Arial', sans-serif;
   }
 
   .hero-title {
@@ -231,6 +231,7 @@ html { scroll-behavior: smooth; }
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    font-family: 'Futura Std', 'Futura', 'Trebuchet MS', 'Arial', sans-serif;
   }
   body {
     @apply bg-background text-foreground;

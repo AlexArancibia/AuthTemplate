@@ -108,6 +108,7 @@ export default async function RootLayout({
         <link href="https://fonts.cdnfonts.com/css/druk-wide-bold" rel="stylesheet"/>
         <link href="https://db.onlinewebfonts.com/c/c2001d0359daadcd014fba0e808555d0?family=AdihausDIN+Bold" rel="stylesheet"/>
         <script src="https://c.webfontfree.com/c.js?f=AdihausDIN-Regular" type="text/javascript"></script>
+        <link href="https://fonts.cdnfonts.com/css/futura-std" rel="stylesheet"/>
         {/* Structured Data */}
         <script
           type="application/ld+json"
@@ -126,7 +127,7 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body className={`${poppins.className} overflow-x-hidden`}>
+      <body className="font-futura overflow-x-hidden">
         <Toaster position="top-center" richColors />
         <Navbar />
         <main className="">{children}</main>

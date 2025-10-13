@@ -235,9 +235,9 @@ const {
 
   if (!mounted) {
     return (
-      <header className="w-full bg-black text-white sticky top-0 z-[180]">
+      <header className="w-full bg-black text-white  ">
         <div className="container-section">
-          <div className="content-section flex h-20 items-center justify-between">
+          <div className="content-section flex h-16 items-center justify-between">
             <Skeleton className="h-12 w-48 bg-gray-700" />
             <Skeleton className="h-10 w-96 bg-gray-700 hidden md:block" />
             <div className="flex items-center gap-4">
@@ -253,10 +253,10 @@ const {
 
   return (
     <>
-      <header className="w-full bg-black text-white sticky top-0 z-[180]">
+      <header className="w-full bg-black text-white  ">
         <div className="container-section">
           {/* Header superior: Logo, buscador (desktop) e íconos */}
-          <div className="content-section flex h-20 items-center justify-between">
+          <div className="content-section flex h-16 items-center justify-between">
              <Link href="/" className="logo-container">
               {loading ? (
                  <Loader2 className="h-8 w-8 animate-spin" />
@@ -264,7 +264,7 @@ const {
                  <img 
                    src="/logo-sportt.jpg" 
                    alt="SPORTT PERU" 
-                   className="logo-image"
+                   className="h-8 w-auto object-contain"
                  />
               )}
             </Link>
@@ -494,7 +494,7 @@ const {
         {/* Navegación Desktop */}
         <div className="border-t border-gray-800 hidden md:block">
           <nav className="container-section">
-            <div className="content-section flex items-center h-16">
+            <div className="content-section flex items-center h-12">
               <div className="flex items-center gap-5">
                 {navItems.map((item) => {
                   const isShop = item.name.toLowerCase() === "tienda"

@@ -61,7 +61,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
 
   // Clases para el contenedor principal
   const containerClasses = `
-    relative w-full h-[700px] md:h-[600px]
+    relative w-full h-[800px] md:h-[600px]
   `;
 
   // Clases para la imagen de fondo
@@ -73,7 +73,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
   }`
 
   // Clases para el contenedor de contenido
-  const contentContainerClasses = `absolute inset-0 flex w-full h-full items-center`
+  const contentContainerClasses = `absolute inset-0 flex w-full h-full items-center px-14`
 
   // Clases para la alineación del contenido
   const contentAlignClasses = `w-full flex h-full ${

@@ -78,7 +78,6 @@ export default function HomePage() {
         fallbackTitle="PRODUCTOS DESTACADOS"
         emptyMessage="No hay productos destacados para mostrar."
       />
-      {/* <DeliveryHeroSection /> */}
       <PublishBanner />
       <CollectionCarousel
         collectionId="col_cb240586-77ae"
@@ -88,7 +87,6 @@ export default function HomePage() {
         fallbackTitle="ÚLTIMOS PRODUCTOS"
         emptyMessage="Aún no hay productos recientes para mostrar."
       />
-      {/* <BlogSection /> */}
       <Testimonials />
       <Sponsors />
     </>

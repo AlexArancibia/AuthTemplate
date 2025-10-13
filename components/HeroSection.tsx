@@ -59,8 +59,11 @@ export function HeroSection() {
   if (error || storeError) {
     console.error("[HeroSection] Error:", error || storeError)
     return (
-      <div className="w-full h-[100vh] flex items-center justify-center">
- 
+      <div className="w-full flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-700 mb-2">Error al cargar contenido</h2>
+          <p className="text-gray-500">Por favor, intenta recargar la página</p>
+        </div>
       </div>
     )
   }
@@ -72,7 +75,7 @@ export function HeroSection() {
   }
 
     return (
-      <div className="w-full overflow-hidden -mt-20 sm:-mt-24 lg:-mt-[100px] relative z-10">
+      <div className="w-full overflow-hidden bg-black">
         <HeroCarouselBase heroSections={filteredSections} autoplayInterval={10000} containerHeight="600px" />
       </div>
     )
