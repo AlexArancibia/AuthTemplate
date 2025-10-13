@@ -1,12 +1,10 @@
 "use client"
 
-// ...existing code...
 import type React from "react"
-
 import Link from "next/link"
 import { useState, useEffect, useRef, useMemo } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { Menu, ShoppingCart, User, X, Search, Store, Loader2, ChevronDown } from "lucide-react"
+import { Menu, ShoppingCart, User, X, Search, Store, Loader2, ChevronDown, LogOut } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
@@ -20,6 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
 import { signOut } from "next-auth/react"
 import { toast } from "sonner"
@@ -31,20 +30,10 @@ import { useCookieConsent } from "@/hooks/useCookieConsent"
 import CookieConsentDialog from "./CookieConsentDialog"
 import { useUserStore } from "@/stores/userStore"
 
-interface NavbarProps {
-  // user?: {
-  //   name?: string | null
-  //   email?: string | null
-  //   image?: string | null
-  //   role?: string | null
-  // } | null
-}
-
 const navItems = [
   { name: "Inicio", href: "/" },
   { name: "Tienda", href: "/productos" },
   { name: "Contacto", href: "/contactenos" },
-  { name: "Ofertas", href: "/ofertas" },
 ]
 
 export default function Navbar() {
@@ -70,15 +59,15 @@ const {
     declineAllCookies, 
     acceptSelectedCookies, 
     openCookieSettings 
-  } = useCookieConsent();
+  } = useCookieConsent()
   const router = useRouter()
-    const isCookieConsentEnabled: boolean = shopSettings?.[0]?.cookieConsentEnabled ?? false;
+  const isCookieConsentEnabled: boolean = shopSettings?.[0]?.cookieConsentEnabled ?? false
   const { items, removeItem, updateQuantity, getTotal, getItemsCount } = useCartStore()
   const [mounted, setMounted] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [showInitialLoading, setShowInitialLoading] = useState(true)
-  const [shopOpen, setShopOpen] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [mobileTiendaOpen, setMobileTiendaOpen] = useState(false)
 
   const sortedCategories = useMemo(() => {
     if (!categories) return []
@@ -88,7 +77,6 @@ const {
       return priorityA - priorityB
     })
   }, [categories])
-
   
   const {
     selectedCurrencyId,
@@ -111,7 +99,7 @@ const {
 
     setAcceptedCurrencies(currencyList)
 
-    const saved = localStorage.getItem("currency") // ahora será un ID como "curr_123"
+    const saved = localStorage.getItem("currency")
     const savedCurrency = currencyList.find((c) => c.id === saved)
 
     if (savedCurrency) {
@@ -124,15 +112,12 @@ const {
 
   const activeCurrency = acceptedCurrencies.find(c => c.id === selectedCurrencyId)
 
-  // Simple fetch control
   const hasFetched = useRef(false)
 
-  // Handle hydration
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  // Show loading screen immediately and hide after 700ms
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowInitialLoading(false)
@@ -141,12 +126,10 @@ const {
     return () => clearTimeout(timer)
   }, [])
 
-  // Fetch shop settings on mount
   useEffect(() => {
     console.log("[NAVBAR] useEffect for fetching data triggered")
 
     const loadData = async () => {
-      // Skip if already fetched or already loading
       if (hasFetched.current || loading) {
         console.log("[NAVBAR] Data already fetched or loading, skipping")
         return
@@ -156,7 +139,6 @@ const {
       hasFetched.current = true
 
       try {
-        // Realizar todos los fetch en paralelo con límites altos para carga inicial
         await Promise.all([
           fetchShopSettings(),
           fetchShippingMethods({ limit: 100 }),
@@ -217,18 +199,8 @@ const {
       .substring(0, 2)
   }
 
-  // Get shop name from settings
   const shopName = shopSettings && shopSettings.length > 0 ? shopSettings[0].name : "Mi Tienda"
-  console.log("[NAVBAR] Using shop name:", shopName)
-
-  // Get shop logo from settings
   const shopLogo = shopSettings && shopSettings.length > 0 && shopSettings[0].logo ? shopSettings[0].logo : null
-  console.log("[NAVBAR] Using shop logo:", shopLogo ? "Yes" : "No")
-
-  // Get default currency
-  const defaultCurrency = shopSettings && shopSettings.length > 0 ? shopSettings[0].defaultCurrency : null
-
-  // Cart calculations
   const totalItems = getItemsCount()
   const totalPrice = getTotal(selectedCurrencyId)
 
@@ -237,20 +209,15 @@ const {
     const trimmedSearch = searchTerm.trim()
     
     if (trimmedSearch && trimmedSearch.length >= 2) {
-      // Implementar la búsqueda aquí
       console.log("Buscando:", trimmedSearch)
-      setIsSearchOpen(false)
       setSearchTerm("")
-
-      // Redirigir a la página de resultados de búsqueda
+      setMobileMenuOpen(false)
       window.location.href = `/productos?search=${encodeURIComponent(trimmedSearch)}`
     } else if (trimmedSearch.length > 0 && trimmedSearch.length < 2) {
-      // Mostrar feedback al usuario (opcional - puede implementarse con toast)
       console.log("Búsqueda muy corta - mínimo 2 caracteres")
     }
   }
 
-  // Show loading screen immediately on initial page load - BEFORE any other renders
   if (showInitialLoading) {
     return (
       <div className="fixed inset-0 z-[9999] bg-white flex items-center justify-center" style={{ zIndex: 99999 }}>
@@ -266,164 +233,99 @@ const {
     )
   }
 
-  // Si no está montado, no renderizamos nada o un placeholder simple
   if (!mounted) {
     return (
-      <nav className="bg-background/95 backdrop-blur-md border-b sticky top-0 z-[180]">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-14">
-            <div className="w-1/4 lg:w-1/4">
-              <Skeleton className="h-6 w-32" />
-            </div>
-            <div className="hidden lg:flex lg:w-1/2 xl:w-1/2 justify-center gap-4">
-              {[...Array(7)].map((_, i) => (
-                <Skeleton key={i} className="h-4 w-16" />
-              ))}
-            </div>
-            <div className="flex items-center justify-end w-3/4 lg:w-1/3 xl:w-1/4 gap-3">
-              <Skeleton className="h-8 w-8 rounded-full" />
-              <Skeleton className="h-8 w-8 rounded-full" />
-              <Skeleton className="h-8 w-24 rounded-md" />
-              <Skeleton className="h-8 w-8 rounded-full lg:hidden" />
+      <header className="w-full bg-black text-white sticky top-0 z-[180]">
+        <div className="container-section">
+          <div className="content-section flex h-20 items-center justify-between">
+            <Skeleton className="h-12 w-48 bg-gray-700" />
+            <Skeleton className="h-10 w-96 bg-gray-700 hidden md:block" />
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-10 w-24 bg-gray-700" />
+              <Skeleton className="h-10 w-10 rounded-full bg-gray-700" />
+              <Skeleton className="h-10 w-10 rounded-full bg-gray-700" />
             </div>
           </div>
         </div>
-      </nav>
+      </header>
     )
   }
 
   return (
     <>
-
-    <nav className="bg-background/95 backdrop-blur-md border-b sticky top-0 z-[180] font-adi-regular font-light uppercase">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-18">
-          {/* Logo */}
-          <div className="w-1/2 lg:w-1/4">
-            <Link href="/" aria-label="Ir a la página de inicio" className="flex items-center">
+      <header className="w-full bg-black text-white sticky top-0 z-[180]">
+        <div className="container-section">
+          {/* Header superior: Logo, buscador (desktop) e íconos */}
+          <div className="content-section flex h-20 items-center justify-between">
+             <Link href="/" className="logo-container">
               {loading ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : shopLogo ? (
-                <img src={shopLogo || "/placeholder.svg"} alt={shopName} className="h-10 lg:h-7 w-auto mr-2" />
-              ) : (
-                <Store className="h-5 w-5 mr-2" />
+                 <Loader2 className="h-8 w-8 animate-spin" />
+               ) : (
+                 <img 
+                   src="/logo-sportt.jpg" 
+                   alt="SPORTT PERU" 
+                   className="logo-image"
+                 />
               )}
             </Link>
-          </div>
 
-          {/* Navigation Links - Desktop */}
-          <div className="hidden lg:flex lg:w-1/2 xl:w-1/2 justify-center relative">
-            {navItems.map((item) => {
-              const isShop = item.name.toLowerCase() === "tienda"
-              if (!isShop) {
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={cn(
-                      "px-6 xl:px-12 py-1 text-sm transition-colors hover:text-primary",
-                      pathname === item.href ? "text-primary" : "text-secondary",
-                    )}
-                  >
-                    {item.name}
-                  </Link>
-                )
-              }
-
-              // --- Tienda con dropdown ---
-              return (
-                <div
-                  key="tienda"
-                  className="px-6 xl:px-12 py-1 text-sm relative"
-                  onMouseEnter={() => setShopOpen(true)}
-                  onMouseLeave={() => setShopOpen(false)}
-                >
-                  <Link
-                    href="/productos"
-                    className={cn(
-                      "flex items-center gap-1 transition-colors hover:text-primary",
-                      pathname.startsWith("/productos") ? "text-primary" : "text-secondary",
-                    )}
-                  >
-                    Tienda
-                    <ChevronDown className={cn("h-4 w-4 transition-transform", shopOpen ? "rotate-180" : "rotate-0")} />
-                  </Link>
-
-                  {shopOpen && (
-                    <div
-                      role="menu"
-                      className="absolute left-0 top-full -mt-px w-48 bg-white border border-gray-200 shadow-md rounded-none flex flex-col z-[500]"
-                    >
-                      {sortedCategories.length === 0 ? (
-                        <div className="text-sm text-muted-foreground p-2">Cargando...</div>
-                      ) : (
-                        sortedCategories.map((category: any) => (
-                          <Link
-                            key={category.id}
-                            href={`/productos?category=${category.slug}`}
-                            className="text-sm px-4 py-2 hover:bg-gray-100"
-                            role="menuitem"
-                          >
-                            {category.name}
-                          </Link>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Search and Icons */}
-          <div className="flex items-center justify-end w-3/4 lg:w-1/3 xl:w-1/4 gap-2 md:gap-3">
-            {/* Search Icon and Dialog */}
-            <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
-              <DialogTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-secondary hover:text-primary hover:bg-secondary/10"
-                  aria-label="Buscar productos"
-                >
-                  <Search className="h-4 w-4" aria-hidden="true" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="w-[90%] max-w-md z-[555] bg-background/95 backdrop-blur-md border-none shadow-lg">
-                <DialogTitle className="text-lg text-center">Buscar productos</DialogTitle>
-                <form onSubmit={handleSearch} className="flex flex-col gap-4 mt-2">
-                  <div className="flex w-full items-center space-x-2">
+            {/* Buscador desktop (oculto en móvil) */}
+            <div className="flex-1 max-w-2xl mx-4 hidden md:block">
+              <form onSubmit={handleSearch} className="flex w-full">
                     <Input
-                      type="text"
-                      placeholder="¿Qué estás buscando?"
-                      className="flex-1"
+                   name="q"
+                   placeholder="Buscar en nuestra tienda"
+                   className="flex-1 rounded-r-none bg-white text-black"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      autoFocus
                     />
-                    <Button type="submit" size="sm">
+                <Button type="submit" className="rounded-l-none bg-pink-500 hover:bg-pink-600">
                       Buscar
                     </Button>
+              </form>
                   </div>
-                  {searchTerm.length > 0 && (
-                    <p className="text-xs text-muted-foreground">Presiona Enter para buscar &quot;{searchTerm}&quot;</p>
-                  )}
-                </form>
-              </DialogContent>
-            </Dialog>
 
-            {/* Cart Icon and Drawer */}
+            {/* Íconos y menú */}
+            <div className="flex items-center gap-4">
+              {/* Currency Selector */}
+              {shopSettings?.[0]?.multiCurrencyEnabled && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className="h-10 px-3 text-sm border border-gray-700 bg-transparent rounded-md text-white hover:text-pink-500 hover:border-pink-500 transition hidden md:block"
+                      aria-label="Seleccionar moneda"
+                    >
+                      {acceptedCurrencies.find((c) => c.id === selectedCurrencyId)?.code || "Moneda"}
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="z-[999] w-40">
+                    {acceptedCurrencies.map((currency) => (
+                      <DropdownMenuItem
+                        key={currency.id}
+                        onClick={() => setSelectedCurrencyId(currency.id)}
+                        className={`cursor-pointer ${
+                          selectedCurrencyId === currency.id ? "text-pink-500" : ""
+                        }`}
+                      >
+                        {currency.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              
+              {/* Cart Icon */}
             <Sheet>
               <SheetTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 relative text-secondary hover:text-primary hover:bg-secondary/10"
-                  aria-label="Carrito de compras"
+                    className="text-white hover:text-pink-500 relative"
                 >
-                  <ShoppingCart className="h-4 w-4" aria-hidden="true" />
+                    <ShoppingCart className="h-6 w-6" />
+                    <span className="sr-only">Carrito</span>
                   {totalItems > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center text-[10px]">
+                      <span className="absolute -top-2 -right-2 h-4 w-4 rounded-full bg-pink-500 text-[10px] font-medium flex items-center justify-center">
                       {totalItems}
                     </span>
                   )}
@@ -446,13 +348,13 @@ const {
                           <div className="relative h-14 w-14 bg-gray-100 rounded overflow-hidden flex-shrink-0">
                             {item.variant.imageUrls && item.variant.imageUrls.length > 0 ? (
                               <img
-                                src={item.variant.imageUrls[0] || "/placeholder.svg"}
+                                  src={item.variant.imageUrls[0]}
                                 alt={item.product.title}
                                 className="object-cover h-full w-full"
                               />
                             ) : item.product.imageUrls && item.product.imageUrls.length > 0 ? (
                               <img
-                                src={item.product.imageUrls[0] || "/placeholder.svg"}
+                                  src={item.product.imageUrls[0]}
                                 alt={item.product.title}
                                 className="object-cover h-full w-full"
                               />
@@ -465,8 +367,6 @@ const {
                           <div className="flex-1 min-w-0">
                             <h4 className="text-sm truncate">{item.product.title}</h4>
                             <p className="text-xs text-muted-foreground truncate mb-1">{item.variant.title}</p>
-
-                            {/* Quantity Controls */}
                             <div className="flex items-center gap-2 mb-1">
                               <Button
                                 variant="outline"
@@ -487,7 +387,6 @@ const {
                                 <span className="text-xs">+</span>
                               </Button>
                             </div>
-
                             <p className="text-xs">
                               {item.variant.prices && item.variant.prices.length > 0
                                 ? formatCurrency(
@@ -523,7 +422,7 @@ const {
                           </Button>
                         </SheetClose>
                         <SheetClose asChild>
-                          <Button asChild className="flex-1" size="sm">
+                            <Button asChild className="flex-1 bg-pink-500 hover:bg-pink-600" size="sm">
                             <Link href="/checkout">Proceder a Pagar</Link>
                           </Button>
                         </SheetClose>
@@ -534,140 +433,197 @@ const {
               </SheetContent>
             </Sheet>
 
-            
-            {/* Currency Selector */}
-            {shopSettings?.[0]?.multiCurrencyEnabled &&
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    className="h-8 px-3 text-sm border border-border bg-background rounded-md text-secondary hover:text-primary hover:bg-secondary/10 transition"
-                    aria-label="Seleccionar moneda"
-                  >
-                    {
-                      acceptedCurrencies.find((c) => c.id === selectedCurrencyId)?.code
-                      || "Moneda"
-                    }
-                  </button>
-                </DropdownMenuTrigger>
-
-                <DropdownMenuContent
-                  align="end"
-                  className="z-[999] bg-popover text-popover-foreground border rounded-md shadow-md p-1 w-40"
-                >
-                  {acceptedCurrencies.map((currency) => (
-                    <DropdownMenuItem
-                      key={currency.id}
-                      onClick={() => setSelectedCurrencyId(currency.id)}
-                      className={`cursor-pointer px-3 py-1.5 text-sm rounded-md hover:bg-secondary/10 ${
-                        selectedCurrencyId === currency.id ? "text-primary" : ""
-                      }`}
-                    >
-                      {currency.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            }
-
             {/* User Menu */}
-            {currentUser ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full p-0">
-                    <Avatar className="h-7 w-7">
-                      <AvatarImage src={currentUser.image || ""} alt={currentUser.name || "Usuario"} />
-                      <AvatarFallback className="text-xs">{getInitials(currentUser.name)}</AvatarFallback>
-                    </Avatar>
+                  <Button variant="ghost" size="icon" className="text-white hover:text-pink-500">
+                    <User className="h-6 w-6" />
+                    <span className="sr-only">Cuenta</span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56 z-[999]" align="end" forceMount>
-                  <div className="flex flex-col space-y-1 p-2">
-                    <p className="text-sm">{currentUser.name}</p>
-                    <p className="text-xs text-muted-foreground">{currentUser.email}</p>
-                    {currentUser.role && (
-                      <p className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full w-fit">
-                        {currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)}
-                      </p>
-                    )}
-                  </div>
+                <DropdownMenuContent align="end" className="w-56 z-[999]">
+                  <DropdownMenuLabel>Cuenta</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {currentUser ? (
+                    <>
+                      <DropdownMenuItem className="text-muted-foreground" disabled>
+                        {currentUser.email}
+                      </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href="/dashboard" className="cursor-pointer flex items-center">
-                      <User className="mr-2 h-4 w-4" />
-                      <span>Mi Cuenta</span>
+                        <Link href="/dashboard">Mi cuenta</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/historial">Mis pedidos</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Cerrar sesión
+                      </DropdownMenuItem>
+                    </>
+                  ) : (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link href="/login" className="text-pink-500 font-medium">
+                          Ingresar
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="cursor-pointer text-red-600 focus:text-red-600 flex items-center"
-                    onClick={handleSignOut}
-                  >
-                    <X className="mr-2 h-4 w-4" />
-                    <span>Cerrar sesión</span>
+                      <DropdownMenuItem asChild>
+                        <Link href="/register">Crear Cuenta</Link>
                   </DropdownMenuItem>
+                    </>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
-            ) : (
-              <Button
-                variant="ghost"
-                className="hidden sm:flex bg-primary text-white hover:text-primary text-xs hover:bg-secondary/10 px-2 h-8"
-                asChild
-              >
-                <Link href="/login">
-                  <User className="h-4 w-4 mr-1.5" aria-hidden="true" />
-                  Iniciar Sesión
-                </Link>
-              </Button>
-            )}
 
-            {/* Mobile Menu */}
-            <Sheet>
-              <SheetTrigger asChild>
+              {/* Botón hamburger para móviles */}
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 lg:hidden text-secondary hover:text-primary hover:bg-secondary/10"
-                  aria-label="Abrir menú"
+                className="text-white hover:text-pink-500 md:hidden"
+                onClick={() => setMobileMenuOpen(true)}
                 >
-                  <Menu className="h-5 w-5" aria-hidden="true" />
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Menú</span>
                 </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[300px] sm:w-[320px] bg-background p-4">
-                <SheetHeader className="pb-2">
-                  <SheetTitle className="text-lg">Menú</SheetTitle>
-                </SheetHeader>
-                <nav className="flex flex-col space-y-3 mt-4 font-adi-regular font-light uppercase">
-                  {navItems.map((item) => (
-                    <SheetClose asChild key={item.name}>
+            </div>
+          </div>
+        </div>
+
+        {/* Navegación Desktop */}
+        <div className="border-t border-gray-800 hidden md:block">
+          <nav className="container-section">
+            <div className="content-section flex items-center h-16">
+              <div className="flex items-center gap-5">
+                {navItems.map((item) => {
+                  const isShop = item.name.toLowerCase() === "tienda"
+                  if (!isShop) {
+                    return (
                       <Link
+                        key={item.name}
                         href={item.href}
                         className={cn(
-                          "text-sm font-adi-regular font-light uppercase transition-colors hover:text-primary py-1.5",
-                          pathname === item.href ? "text-primary" : "text-secondary",
+                          "inline-flex h-9 w-max items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-800 hover:text-white",
+                          pathname === item.href ? "text-pink-500" : "text-white"
                         )}
                       >
                         {item.name}
                       </Link>
-                    </SheetClose>
-                  ))}
-                  {!currentUser && (
-                    <SheetClose asChild>
+                    )
+                  }
+
+                  return (
+                    <DropdownMenu key="tienda">
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          className={cn(
+                            "inline-flex h-9 w-max items-center justify-center gap-1 rounded-md px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-800 hover:text-white",
+                            pathname.startsWith("/productos") ? "text-pink-500" : "text-white"
+                          )}
+                        >
+                          <Link href="/productos">Tienda</Link>
+                          <ChevronDown className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-[400px] p-4 grid grid-cols-2 gap-3 z-[999]">
+                        {sortedCategories.length === 0 ? (
+                          <div className="text-sm text-muted-foreground col-span-2">Cargando...</div>
+                        ) : (
+                          sortedCategories.map((category: any) => (
+                            <DropdownMenuItem key={category.id} asChild>
                       <Link
-                        href="/login"
-                        className="text-sm transition-colors hover:text-primary py-1.5 flex items-center lg:hidden"
+                                href={`/productos?category=${category.slug}`}
+                                className="block select-none space-y-1 rounded-md p-3 leading-none transition-colors hover:bg-gray-100 hover:text-gray-900"
                       >
-                        <User className="h-4 w-4 mr-2" />
-                        Iniciar Sesión
+                                {category.name}
                       </Link>
-                    </SheetClose>
-                  )}
-                </nav>
-              </SheetContent>
-            </Sheet>
-          </div>
+                            </DropdownMenuItem>
+                          ))
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )
+                })}
         </div>
       </div>
     </nav>
+        </div>
+
+        {/* Menú móvil con fondo blur */}
+        {mobileMenuOpen && (
+          <div className="fixed inset-0 z-50 backdrop-blur-md bg-black bg-opacity-75">
+            <div className="absolute top-4 right-4">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="text-white"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <span className="text-2xl">&times;</span>
+              </Button>
+            </div>
+            <div className="flex flex-col items-center justify-center h-full px-4">
+              {/* Buscador en el menú móvil */}
+              <div className="w-full max-w-md mb-6 flex justify-center">
+                <form onSubmit={handleSearch} className="flex w-full">
+                  <Input
+                    name="q"
+                    placeholder="Buscar en nuestra tienda"
+                    className="flex-1 rounded-r-none bg-white text-black"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                  <Button type="submit" className="rounded-l-none bg-pink-500 hover:bg-pink-600">
+                    Buscar
+                  </Button>
+                </form>
+              </div>
+              {/* Enlaces de navegación */}
+              <nav className="flex flex-col items-center space-y-6">
+                <Link 
+                  href="/" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-white text-2xl font-semibold hover:text-pink-500 transition-colors"
+                >
+                  Inicio
+                </Link>
+                {/* Sección Tienda con sub ítems */}
+                <div className="flex flex-col items-center">
+                  <button 
+                    onClick={() => setMobileTiendaOpen(!mobileTiendaOpen)}
+                    className="flex items-center gap-2 text-white text-2xl font-semibold hover:text-pink-500 transition-colors"
+                  >
+                    <span className="pl-6">Tienda</span>
+                    <ChevronDown className={`h-5 w-5 transition-transform duration-300 ${mobileTiendaOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  {mobileTiendaOpen && (
+                    <div className="mt-4 flex flex-col items-center space-y-4">
+                      {sortedCategories.map((category: any) => (
+                        <Link 
+                          key={category.slug}
+                          href={`/productos?category=${category.slug}`} 
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="text-white/70 text-lg font-light hover:text-pink-500 transition-colors"
+                        >
+                          {category.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <Link 
+                  href="/contactenos" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-white text-2xl font-semibold hover:text-pink-500 transition-colors"
+                >
+                  Contacto
+                </Link>
+              </nav>
+            </div>
+          </div>
+        )}
+      </header>
 
     {isCookieConsentEnabled && showDialog && (
         <CookieConsentDialog
@@ -679,3 +635,4 @@ const {
     </>
   )
 }
+

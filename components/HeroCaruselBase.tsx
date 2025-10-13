@@ -55,20 +55,17 @@ export function HeroCarouselBase({
   const slideVariants = {
     enter: (direction: number) => ({
       x: direction > 0 ? "100%" : "-100%",
-      scale: 1.02,
-      opacity: 0,
+      opacity: 1,
       zIndex: 0,
     }),
     center: {
       x: 0,
-      scale: 1,
       opacity: 1,
       zIndex: 1,
     },
     exit: (direction: number) => ({
       x: direction < 0 ? "100%" : "-100%",
-      scale: 0.98,
-      opacity: 0,
+      opacity: 1,
       zIndex: 0,
     }),
   }
@@ -280,11 +277,10 @@ export function HeroCarouselBase({
     <div className="w-full overflow-hidden relative" ref={carouselRef}>
       {/* Carrusel principal */}
       <div
-        className="relative h-[500px] md:h-[600px] lg:h-[700px] min-h-[500px] "
-        // style={{
-        //   height: containerHeight,
-        //   willChange: "transform", // Optimización de rendimiento
-        // }}
+        className="relative h-[700px] md:h-[600px]"
+        style={{
+          willChange: "transform", // Optimización de rendimiento
+        }}
       >
         {/* Cambiamos el modo de "wait" a "sync" para que los slides se superpongan durante la transición */}
         <AnimatePresence initial={false} custom={direction} mode="sync">
@@ -297,16 +293,9 @@ export function HeroCarouselBase({
             exit="exit"
             transition={{
               x: {
-                type: "spring",
-                stiffness: 200,
-                damping: 25,
+                type: "tween",
+                ease: "easeInOut",
                 duration: transitionDuration / 1000,
-              },
-              scale: {
-                duration: (transitionDuration / 1000) * 0.8,
-              },
-              opacity: {
-                duration: (transitionDuration / 1000) * 0.5,
               },
             }}
             className="w-full cursor-grab active:cursor-grabbing absolute inset-0"
@@ -356,49 +345,22 @@ export function HeroCarouselBase({
         </div>
       )}
 
-      {/* Indicadores de avance y botón de pausa */}
-      {(showIndicators || showPauseButton) && (
-        <div className="absolute bottom-6 left-0 right-0 flex justify-center items-center gap-4 z-20">
-          {/* Barras de progreso */}
-          {showIndicators && (
-            <div className="flex gap-2 items-center">
-              {sortedHeroSections.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => goToSlide(index)}
-                  className={`group relative h-1.5 rounded-full overflow-hidden transition-all duration-300 hover:bg-white/60 ${
-                    index === currentIndex
-                      ? "bg-primary/50 scale-[1.05] w-[50px] md:w-[80px]"
-                      : "bg-primary/30 w-[30px] md:w-[50px]"
-                  }`}
-                  aria-label={`Ir a la diapositiva ${index + 1}`}
-                  disabled={isTransitioning}
-                >
-                  {index === currentIndex && (
-                    <motion.div
-                      className="absolute inset-0 bg-primary"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${progress}%` }}
-                      transition={{ duration: 0.1, ease: "linear" }}
-                    />
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Botón de pausa/reproducción */}
-          {showPauseButton && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 rounded-full bg-white/20 text-primary shadow-md hover:bg-white/30 transition-all duration-200 hover:scale-110 backdrop-blur-sm"
-              onClick={togglePause}
-              aria-label={isPaused ? "Reproducir" : "Pausar"}
-            >
-              {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
-            </Button>
-          )}
+      {/* Indicadores de puntos */}
+      {showIndicators && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+          {sortedHeroSections.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => goToSlide(index)}
+              className={`w-2 h-2 rounded-full transition-colors ${
+                index === currentIndex
+                  ? "bg-pink-500"
+                  : "bg-white/50"
+              }`}
+              aria-label={`Ir a la diapositiva ${index + 1}`}
+              disabled={isTransitioning}
+            />
+          ))}
         </div>
       )}
     </div>

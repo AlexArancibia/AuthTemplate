@@ -6,7 +6,7 @@ html { scroll-behavior: smooth; }
 
 @layer components{
   .container-section {
-    @apply px-4 sm:px-6 lg:px-8 xl:px-16;
+    @apply px-6 lg:px-8 xl:px-16;
   }
   
   .content-section {
@@ -40,6 +40,47 @@ html { scroll-behavior: smooth; }
 
   .font-adi-regular {
     font-family: var(--font-adi-regular);
+  }
+
+  .font-futura {
+    font-family: 'Futura', 'Trebuchet MS', 'Arial', sans-serif;
+  }
+
+  .hero-title {
+    font-size: 2.25rem; /* 36px - text-4xl */
+    line-height: 2.5rem; /* 40px - text-4xl */
+  }
+
+  @media (min-width: 768px) {
+    .hero-title {
+      font-size: 3rem; /* 48px - md:text-5xl */
+      line-height: 1; /* md:text-5xl */
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .hero-title {
+      font-size: 3.75rem; /* 60px - lg:text-6xl */
+      line-height: 1; /* lg:text-6xl */
+    }
+  }
+
+  /* Header container styles for sporttperu.com design */
+  .container-section {
+    @apply px-6 lg:px-8 xl:px-16;
+  }
+
+  .content-section {
+    @apply max-w-screen-2xl w-full mx-auto;
+  }
+
+  /* Logo specific styles */
+  .logo-container {
+    @apply flex-shrink-0;
+  }
+
+  .logo-image {
+    @apply w-20 h-6 object-contain;
   }
 
   /* Custom scrollbar styles */

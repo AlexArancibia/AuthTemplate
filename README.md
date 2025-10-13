@@ -23,6 +23,22 @@ const { data, pagination } = extractPaginatedData<Product[]>(response)
 
 **Importante:** Todos los métodos del store ya están actualizados. No necesitas cambiar código existente.
 
+## Environment Setup
+
+Before running the application, you need to create a `.env.local` file in the root directory with the following variables:
+
+```env
+# Backend Configuration
+NEXT_PUBLIC_BACKEND_ENDPOINT=your-backend-url-here
+NEXT_PUBLIC_API_KEY=your-api-key-here
+NEXT_PUBLIC_STORE_ID=your-store-id-here
+```
+
+Replace the placeholder values with your actual configuration:
+- `NEXT_PUBLIC_BACKEND_ENDPOINT`: Your backend API URL (e.g., `http://localhost:8000/api` or `https://your-api.com/api`)
+- `NEXT_PUBLIC_API_KEY`: Your API authentication key
+- `NEXT_PUBLIC_STORE_ID`: Your store ID for fetching store-specific data
+
 ## Getting Started
 
 First, run the development server:

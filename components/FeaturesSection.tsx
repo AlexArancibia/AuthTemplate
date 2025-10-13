@@ -66,7 +66,7 @@ function FeatureCard({ card, index, isInView }: { card: Card; index: number; isI
 
       {/* Título */}
       <div className="p-0 pt-4 text-center">
-        <h3 className="font-adi-bold text-base font-semibold uppercase text-black tracking-wide text-left">
+        <h3 className="font-adi-bold text-base font-semibold uppercase text-black tracking-wide text-center">
           {card.title}
         </h3>
 

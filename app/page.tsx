@@ -16,7 +16,6 @@ import { AboutSection } from "@/components/AboutSection"
 import { DeliveryHeroSection } from "@/components/DeliverySection"
 import { useCurrencyStore, CurrencyOption } from "@/stores/currency"
 import { PublishBanner } from "@/components/PublishBanner"
-import { BrandsCarousel } from "@/components/BrandsCarousel"
 import { CollectionCarousel } from "@/components/CollectionCarousel"
 import { Testimonials } from "@/components/Testimonials"
 import { Sponsors } from "@/components/Sponsors"
@@ -81,7 +80,6 @@ export default function HomePage() {
       />
       {/* <DeliveryHeroSection /> */}
       <PublishBanner />
-      <BrandsCarousel />
       <CollectionCarousel
         collectionId="col_cb240586-77ae"
         selectedCurrencyId={selectedCurrencyId}

@@ -42,7 +42,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
       return { background: `linear-gradient(${angle}deg, ${colorStart}, ${colorEnd})` }
     }
 
-    return { backgroundColor: styles.overlayColor || "rgba(0,0,0,0.3)" }
+    return { backgroundColor: styles.overlayColor || "rgba(0,0,0,0.2)" }
   }
 
   // Extraer ID de YouTube si es necesario
@@ -61,10 +61,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
 
   // Clases para el contenedor principal
   const containerClasses = `
-    relative w-full 
-    ${styles.height?.mobile || "h-[500px]"} 
-    md:${styles.height?.tablet || "h-[600px]"} 
-    lg:${styles.height?.desktop || "h-[670px]"}
+    relative w-full h-[700px] md:h-[600px]
   `;
 
   // Clases para la imagen de fondo
@@ -76,7 +73,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
   }`
 
   // Clases para el contenedor de contenido
-  const contentContainerClasses = `absolute inset-0 flex w-full h-full ${styles.verticalAlign || "items-center"}`
+  const contentContainerClasses = `absolute inset-0 flex w-full h-full items-center`
 
   // Clases para la alineación del contenido
   const contentAlignClasses = `w-full flex h-full ${
@@ -85,14 +82,10 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
       : styles.textAlign === "text-right"
         ? "justify-end"
         : "justify-start"
-  } ${styles.verticalAlign || "items-center"}`
+  } items-center`
 
   // Clases para el div de contenido
-  const contentDivClasses = ` space-y-4 md:space-y-6 ${styles.textAlign || ""} ${styles.contentWidth?.mobile || ""} md:${
-    styles.contentWidth?.tablet || ""
-  } lg:${styles.contentWidth?.desktop || ""} ${styles.contentPadding?.mobile || ""} md:${
-    styles.contentPadding?.tablet || ""
-  } lg:${styles.contentPadding?.desktop || ""} w-full  lg:w-1/2 `
+  const contentDivClasses = `${styles.textAlign || "text-center"} content-section`
 
   // Clases para el título
   const titleClasses = `${styles.titleColor || ""} ${styles.titleSize?.mobile || ""} md:${
@@ -180,7 +173,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
                 src={mobileBackgroundImage || "/placeholder.png"}
                 alt={title || "Background"}
                 fill
-                className="object-cover object-center"
+                className="w-full h-full object-cover object-center"
                 priority
                 sizes="100vw"
                 quality={100}
@@ -192,7 +185,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
                 src={backgroundImage || "/placeholder.png"}
                 alt={title || "Background"}
                 fill
-                className="object-cover object-center"
+                className="w-full h-full object-cover object-center"
                 priority
                 sizes="100vw"
                 quality={100}
@@ -207,59 +200,67 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
 
       {/* Contenido */}
       <div className={contentContainerClasses}>
-        <div className="container mx-auto px-2 md:px-4 h-full flex">
-          <div className={`${contentAlignClasses} items-start lg:items-center pt-24 sm:pt-28 md:pt-32 lg:pt-0 lg:pb-16`}>
+        <div className="container mx-auto px-2 md:px-4 h-full flex items-center justify-center">
+          <div className={contentAlignClasses}>
             <motion.div
               className={contentDivClasses}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: animationDelay }}
             >
-              <div className="w-full flex justify-start">
-                <div className="inline-block px-3 py-1 sm:px-5 sm:py-1 mb-3 sm:mb-4 lg:mb-6 rounded-full bg-gradient-to-r from-blue-400 to-fuchsia-500 text-white text-sm sm:text-base md:text-lg font-druk font-extrabold uppercase tracking-wide shadow-lg">
-                  DESDE 2010
-                </div>
-              </div>
-              {title && (
-                <motion.h1
-                  className={`font-druk font-extrabold uppercase text-[2.5rem] sm:text-[3.5rem] md:text-[4.5rem] lg:text-[3.5em] mt-4 sm:mt-6 lg:mt-0 ${styles.titleColor || ""} `}
+              {subtitle && (
+                <motion.h2
+                  className={cn(
+                    "text-3xl md:text-4xl font-normal mb-2",
+                    styles?.subtitleColor ?? "text-white"
+                  )}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: animationDelay }}
+                  transition={{ duration: 0.7, delay: 0.3 + animationDelay }}
+                  dangerouslySetInnerHTML={{ __html: subtitle }}
+                />
+              )}
+
+              {title && (
+                <motion.h1
+                  className={cn(
+                    "text-4xl md:text-5xl lg:text-6xl font-normal uppercase mb-4",
+                    styles?.titleColor ?? "text-white"
+                  )}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.7, delay: 0.5 + animationDelay }}
                 >
                   {title}
                 </motion.h1>
               )}
 
-              {subtitle && (
-                <motion.div
-                  className={cn(
-                    "font-lato font-light text-sm md:text-lg",
-                    styles?.subtitleChildrenSize ?? "[&_*]:text-sm md:[&_*]:text-lg",
-                    "[&_*]:[font-family:inherit] [&_*]:text-[inherit]",
-                    styles?.subtitleColor ?? ""
-                  )}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.1 + animationDelay }}
-                  dangerouslySetInnerHTML={{ __html: subtitle }}
-                />
-              )}
-
-              {buttonText && buttonLink && (
+              {buttonText && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.2 + animationDelay }}
+                  transition={{ duration: 0.7, delay: 0.7 + animationDelay }}
                   className={buttonContainerClasses}
                 >
-                  <Button
-                    variant={(styles.buttonVariant || "default") as any}
-                    size={(styles.buttonSize || "default") as any}
-                    className="px-4 py-3 sm:px-7 sm:py-5 rounded-xl bg-white text-neutral-800 text-xs font-light uppercase tracking-[0.2em] shadow-[0_0_10px_rgba(0,0,0,0.05)] hover:bg-white hover:text-neutral-800 hover:shadow-[0_0_12px_rgba(0,0,0,0.08)] transition-all duration-200"
-                  >
-                    <Link href={buttonLink}>{buttonText}</Link>
-                  </Button>
+                  {buttonLink ? (
+                    <Link href={buttonLink}>
+                      <Button
+                        variant={(styles.buttonVariant || "default") as any}
+                        size={(styles.buttonSize || "default") as any}
+                        className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground shadow h-9 px-4 py-2 mt-4 bg-pink-500 hover:bg-pink-600 transition-all duration-700"
+                      >
+                        {buttonText}
+                      </Button>
+                    </Link>
+                  ) : (
+                    <Button
+                      variant={(styles.buttonVariant || "default") as any}
+                      size={(styles.buttonSize || "default") as any}
+                      className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground shadow h-9 px-4 py-2 mt-4 bg-pink-500 hover:bg-pink-600 transition-all duration-700"
+                    >
+                      {buttonText}
+                    </Button>
+                  )}
                 </motion.div>
               )}
             </motion.div>

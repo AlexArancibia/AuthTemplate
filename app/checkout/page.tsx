@@ -1284,7 +1284,7 @@ if (taxesIncluded) {
   // Render skeleton loading state
   if (pageLoading || userLoading) {
     return (
-      <div className="bg-gray-50 min-h-screen py-10">
+      <div className="bg-gray-50 n py-10">
         <div className="container mx-auto px-4">
           {/* Skeleton Header */}
           <div className="max-w-4xl mx-auto mb-8">
@@ -1401,7 +1401,7 @@ if (taxesIncluded) {
   ]
 
   return (
-    <div className="bg-gradient-to-b from-slate-50 to-white min-h-screen py-12">
+    <div className="bg-gradient-to-b from-slate-50 to-white n py-12">
       <div className="container max-w-6xl mx-auto px-4 sm:px-6">
         {/* Checkout Header */}
         <div className="max-w-4xl mx-auto mb-12">
