@@ -1,5 +1,6 @@
 import { create } from "zustand"
 import apiClient from "@/lib/axiosConfig"
+import { extractApiData, extractPaginatedData } from "@/lib/apiHelpers"
 import type { Product } from "@/types/product"
 import type { Category } from "@/types/category"
 import type { Collection } from "@/types/collection"
@@ -13,10 +14,11 @@ import type { ProductVariant } from "@/types/productVariant"
 import type { Content } from "@/types/content"
 import type { User } from "@/types/user"
 import type { PaymentProvider, PaymentTransaction } from "@/types/payments"
-import type { HeroSection } from "@/types/heroSection"
-import type { CardSection } from "@/types/card"
-import type { TeamMember, TeamSection } from "@/types/team"
-import type { FrequentlyBoughtTogether } from "@/types/fbt"
+import type { HeroSection, CreateHeroSectionDto, UpdateHeroSectionDto } from "@/types/heroSection"
+import type { CardSection, CreateCardSectionDto, UpdateCardSectionDto } from "@/types/card"
+import type { TeamMember, TeamSection, CreateTeamSectionDto, UpdateTeamSectionDto } from "@/types/team"
+import type { FrequentlyBoughtTogether, CreateFrequentlyBoughtTogetherDto, UpdateFrequentlyBoughtTogetherDto } from "@/types/fbt"
+import type { CreateCollectionDto, UpdateCollectionDto } from "@/types/collection"
 import type { 
   PaginatedResponse, 
   PaginationMeta,
@@ -152,8 +154,8 @@ interface MainStore {
 
   // Métodos adicionales para FBT
   fetchFrequentlyBoughtTogetherById: (id: string) => Promise<FrequentlyBoughtTogether>
-  createFrequentlyBoughtTogether: (data: any) => Promise<FrequentlyBoughtTogether>
-  updateFrequentlyBoughtTogether: (id: string, data: any) => Promise<FrequentlyBoughtTogether>
+  createFrequentlyBoughtTogether: (data: CreateFrequentlyBoughtTogetherDto) => Promise<FrequentlyBoughtTogether>
+  updateFrequentlyBoughtTogether: (id: string, data: UpdateFrequentlyBoughtTogetherDto) => Promise<FrequentlyBoughtTogether>
   deleteFrequentlyBoughtTogether: (id: string) => Promise<void>
 
   // Mantener solo los métodos de creación y actualización para orders y refunds
@@ -241,12 +243,13 @@ export const useMainStore = create<MainStore>((set, get) => ({
       
       const response = await apiClient.get<PaginatedResponse<Category>>(`/categories/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
       
+      const { data, pagination } = extractPaginatedData<Category[]>(response)
       set({
-        categories: response.data.data,
-        paginationMeta: { ...get().paginationMeta, categories: response.data.pagination },
+        categories: data,
+        paginationMeta: { ...get().paginationMeta, categories: pagination },
         loading: false,
       })
-      return response.data
+      return { data, pagination }
     } catch (error) {
       set({ error: "Failed to fetch categories", loading: false })
       throw error
@@ -289,9 +292,10 @@ export const useMainStore = create<MainStore>((set, get) => ({
       }
       
       console.log("💾 [MainStore fetchProducts] Updating store state...")
+      const { data, pagination } = extractPaginatedData<Product[]>(response)
       const newState = {
-        products: response.data.data,
-        paginationMeta: { ...get().paginationMeta, products: response.data.pagination || null },
+        products: data,
+        paginationMeta: { ...get().paginationMeta, products: pagination || null },
         loading: false,
       }
       
@@ -300,7 +304,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
       console.log("✅ [MainStore fetchProducts] Store updated successfully")
       console.log("🔍 [MainStore fetchProducts] Products in store:", get().products.length)
       
-      return response.data
+      return { data, pagination }
     } catch (error: any) {
       console.error("❌ [MainStore fetchProducts] Error caught!")
       console.error("❌ [MainStore fetchProducts] Error details:", {
@@ -324,12 +328,13 @@ export const useMainStore = create<MainStore>((set, get) => ({
       const queryParams = buildQueryParams(params)
       const response = await apiClient.get<PaginatedResponse<ProductVariant>>(`/product-variants/store/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
       
+      const { data, pagination } = extractPaginatedData<ProductVariant[]>(response)
       set({
-        productVariants: response.data.data,
-        paginationMeta: { ...get().paginationMeta, productVariants: response.data.pagination },
+        productVariants: data,
+        paginationMeta: { ...get().paginationMeta, productVariants: pagination },
         loading: false,
       })
-      return response.data
+      return { data, pagination }
     } catch (error) {
       set({ error: "Failed to fetch product variants", loading: false })
       throw error
@@ -347,12 +352,13 @@ export const useMainStore = create<MainStore>((set, get) => ({
       const queryParams = buildQueryParams(params)
       const response = await apiClient.get<PaginatedResponse<Collection>>(`/collections/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
       
+      const { data, pagination } = extractPaginatedData<Collection[]>(response)
       set({
-        collections: response.data.data,
-        paginationMeta: { ...get().paginationMeta, collections: response.data.pagination },
+        collections: data,
+        paginationMeta: { ...get().paginationMeta, collections: pagination },
         loading: false,
       })
-      return response.data
+      return { data, pagination }
     } catch (error) {
       set({ error: "Failed to fetch collections", loading: false })
       throw error
@@ -370,12 +376,13 @@ export const useMainStore = create<MainStore>((set, get) => ({
       const queryParams = buildQueryParams(params)
       const response = await apiClient.get<PaginatedResponse<HeroSection>>(`/hero-sections/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
       
+      const { data, pagination } = extractPaginatedData<HeroSection[]>(response)
       set({
-        heroSections: response.data.data,
-        paginationMeta: { ...get().paginationMeta, heroSections: response.data.pagination },
+        heroSections: data,
+        paginationMeta: { ...get().paginationMeta, heroSections: pagination },
         loading: false,
       })
-      return response.data
+      return { data, pagination }
     } catch (error) {
       set({ error: "Failed to fetch hero sections", loading: false })
       throw error
@@ -391,11 +398,12 @@ export const useMainStore = create<MainStore>((set, get) => ({
     set({ loading: true, error: null })
     try {
       const response = await apiClient.get<CardSection[]>(`/card-section/${STORE_ID}`)
+      const cardSections = extractApiData<CardSection[]>(response)
       set({
-        cardSections: response.data,
+        cardSections,
         loading: false,
       })
-      return response.data
+      return cardSections
     } catch (error) {
       set({ error: "Failed to fetch card sections", loading: false })
       throw error
@@ -411,11 +419,12 @@ export const useMainStore = create<MainStore>((set, get) => ({
     set({ loading: true, error: null })
     try {
       const response = await apiClient.get<TeamSection[]>(`/team-section/store/${STORE_ID}`)
+      const teamSections = extractApiData<TeamSection[]>(response)
       set({
-        teamSections: response.data,
+        teamSections,
         loading: false,
       })
-      return response.data
+      return teamSections
     } catch (error) {
       set({ error: "Failed to fetch team sections", loading: false })
       throw error
@@ -433,11 +442,12 @@ export const useMainStore = create<MainStore>((set, get) => ({
       const response = await apiClient.get<TeamMember[]>(
         `/team-members?teamSectionId=${teamSectionId}&storeId=${STORE_ID}`,
       )
+      const teamMembers = extractApiData<TeamMember[]>(response)
       set({
-        teamMembers: response.data,
+        teamMembers,
         loading: false,
       })
-      return response.data
+      return teamMembers
     } catch (error) {
       set({ error: "Failed to fetch team members", loading: false })
       throw error
@@ -455,12 +465,13 @@ export const useMainStore = create<MainStore>((set, get) => ({
       const queryParams = buildQueryParams(params)
       const response = await apiClient.get<PaginatedResponse<Order>>(`/orders/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
       
+      const { data, pagination } = extractPaginatedData<Order[]>(response)
       set({
-        orders: response.data.data,
-        paginationMeta: { ...get().paginationMeta, orders: response.data.pagination },
+        orders: data,
+        paginationMeta: { ...get().paginationMeta, orders: pagination },
         loading: false,
       })
-      return response.data
+      return { data, pagination }
     } catch (error) {
       set({ error: "Failed to fetch orders", loading: false })
       throw error
@@ -478,12 +489,13 @@ export const useMainStore = create<MainStore>((set, get) => ({
       const queryParams = buildQueryParams(params)
       const response = await apiClient.get<PaginatedResponse<Coupon>>(`/coupons/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
       
+      const { data, pagination } = extractPaginatedData<Coupon[]>(response)
       set({
-        coupons: response.data.data,
-        paginationMeta: { ...get().paginationMeta, coupons: response.data.pagination },
+        coupons: data,
+        paginationMeta: { ...get().paginationMeta, coupons: pagination },
         loading: false,
       })
-      return response.data
+      return { data, pagination }
     } catch (error) {
       set({ error: "Failed to fetch coupons", loading: false })
       throw error
@@ -504,12 +516,13 @@ export const useMainStore = create<MainStore>((set, get) => ({
       const queryParams = buildQueryParams(params)
       const response = await apiClient.get<PaginatedResponse<ShippingMethod>>(`/shipping-methods/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
       
+      const { data, pagination } = extractPaginatedData<ShippingMethod[]>(response)
       set({
-        shippingMethods: response.data.data,
-        paginationMeta: { ...get().paginationMeta, shippingMethods: response.data.pagination },
+        shippingMethods: data,
+        paginationMeta: { ...get().paginationMeta, shippingMethods: pagination },
         loading: false,
       })
-      return response.data
+      return { data, pagination }
     } catch (error) {
       set({ error: "Failed to fetch shipping methods", loading: false })
       throw error
@@ -525,11 +538,12 @@ export const useMainStore = create<MainStore>((set, get) => ({
     set({ loading: true, error: null })
     try {
       const response = await apiClient.get<PaymentProvider[]>(`/payment-providers/store/${STORE_ID}`)
+      const paymentProviders = extractApiData<PaymentProvider[]>(response)
       set({
-        paymentProviders: response.data,
+        paymentProviders,
         loading: false,
       })
-      return response.data
+      return paymentProviders
     } catch (error) {
       set({ error: "Failed to fetch payment providers", loading: false })
       throw error
@@ -547,12 +561,13 @@ export const useMainStore = create<MainStore>((set, get) => ({
       const queryParams = buildQueryParams(params)
       const response = await apiClient.get<PaginatedResponse<PaymentTransaction>>(`/payment-transactions/store/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
       
+      const { data, pagination } = extractPaginatedData<PaymentTransaction[]>(response)
       set({
-        paymentTransactions: response.data.data,
-        paginationMeta: { ...get().paginationMeta, paymentTransactions: response.data.pagination },
+        paymentTransactions: data,
+        paginationMeta: { ...get().paginationMeta, paymentTransactions: pagination },
         loading: false,
       })
-      return response.data
+      return { data, pagination }
     } catch (error) {
       set({ error: "Failed to fetch payment transactions", loading: false })
       throw error
@@ -570,12 +585,13 @@ export const useMainStore = create<MainStore>((set, get) => ({
       const queryParams = buildQueryParams(params)
       const response = await apiClient.get<PaginatedResponse<Content>>(`/contents/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
       
+      const { data, pagination } = extractPaginatedData<Content[]>(response)
       set({
-        contents: response.data.data,
-        paginationMeta: { ...get().paginationMeta, contents: response.data.pagination },
+        contents: data,
+        paginationMeta: { ...get().paginationMeta, contents: pagination },
         loading: false,
       })
-      return response.data
+      return { data, pagination }
     } catch (error) {
       set({ error: "Failed to fetch contents", loading: false })
       throw error
@@ -591,11 +607,12 @@ export const useMainStore = create<MainStore>((set, get) => ({
       }
 
       const response = await apiClient.get<User[]>(`/auth/store/${STORE_ID}`)
+      const users = extractApiData<User[]>(response)
       set({
-        users: response.data,
+        users,
         loading: false,
       })
-      return response.data
+      return users
     } catch (error) {
       set({ error: "Failed to fetch users", loading: false })
       throw error
@@ -611,11 +628,12 @@ export const useMainStore = create<MainStore>((set, get) => ({
       }
 
       const response = await apiClient.get<ShopSettings>(`/shop-settings/store/${STORE_ID}`)
+      const shopSettings = extractApiData<ShopSettings>(response)
       set({
-        shopSettings: [response.data],
+        shopSettings: [shopSettings],
         loading: false,
       })
-      return response.data
+      return shopSettings
     } catch (error) {
       set({ error: "Failed to fetch shop settings", loading: false })
       throw error
@@ -629,12 +647,13 @@ export const useMainStore = create<MainStore>((set, get) => ({
       const queryParams = buildQueryParams(params)
       const response = await apiClient.get<PaginatedResponse<Currency>>(`/currencies${queryParams ? `?${queryParams}` : ''}`)
       
+      const { data, pagination } = extractPaginatedData<Currency[]>(response)
       set({
-        currencies: response.data.data,
-        paginationMeta: { ...get().paginationMeta, currencies: response.data.pagination },
+        currencies: data,
+        paginationMeta: { ...get().paginationMeta, currencies: pagination },
         loading: false,
       })
-      return response.data
+      return { data, pagination }
     } catch (error) {
       set({ error: "Failed to fetch currencies", loading: false })
       throw error
@@ -648,12 +667,13 @@ export const useMainStore = create<MainStore>((set, get) => ({
       const queryParams = buildQueryParams(params)
       const response = await apiClient.get<PaginatedResponse<ExchangeRate>>(`/exchange-rates${queryParams ? `?${queryParams}` : ''}`)
       
+      const { data, pagination } = extractPaginatedData<ExchangeRate[]>(response)
       set({
-        exchangeRates: response.data.data,
-        paginationMeta: { ...get().paginationMeta, exchangeRates: response.data.pagination },
+        exchangeRates: data,
+        paginationMeta: { ...get().paginationMeta, exchangeRates: pagination },
         loading: false,
       })
-      return response.data
+      return { data, pagination }
     } catch (error) {
       set({ error: "Failed to fetch exchange rates", loading: false })
       throw error
@@ -671,12 +691,13 @@ export const useMainStore = create<MainStore>((set, get) => ({
       const queryParams = buildQueryParams(params)
       const response = await apiClient.get<PaginatedResponse<FrequentlyBoughtTogether>>(`/fbt/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
       
+      const { data, pagination } = extractPaginatedData<FrequentlyBoughtTogether[]>(response)
       set({
-        frequentlyBoughtTogether: response.data.data,
-        paginationMeta: { ...get().paginationMeta, frequentlyBoughtTogether: response.data.pagination },
+        frequentlyBoughtTogether: data,
+        paginationMeta: { ...get().paginationMeta, frequentlyBoughtTogether: pagination },
         loading: false,
       })
-      return response.data
+      return { data, pagination }
     } catch (error) {
       set({ error: "Failed to fetch frequently bought together items", loading: false })
       throw error
@@ -692,8 +713,9 @@ export const useMainStore = create<MainStore>((set, get) => ({
     set({ loading: true, error: null })
     try {
       const response = await apiClient.get<FrequentlyBoughtTogether>(`/fbt/${STORE_ID}/${id}`)
+      const fbtItem = extractApiData<FrequentlyBoughtTogether>(response)
       set({ loading: false })
-      return response.data
+      return fbtItem
     } catch (error) {
       set({ error: "Failed to fetch frequently bought together item", loading: false })
       throw error
@@ -701,25 +723,21 @@ export const useMainStore = create<MainStore>((set, get) => ({
   },
 
   // Método para crear un nuevo FBT
-  createFrequentlyBoughtTogether: async (data: any) => {
+  createFrequentlyBoughtTogether: async (data: CreateFrequentlyBoughtTogetherDto) => {
     set({ loading: true, error: null })
     try {
       if (!STORE_ID) {
         throw new Error("No store ID provided in environment variables")
       }
 
-      // Asegurarse de que el storeId esté incluido en los datos
-      const fbtData = {
-        ...data,
-        storeId: data.storeId || STORE_ID,
-      }
-
-      const response = await apiClient.post<FrequentlyBoughtTogether>(`/fbt/${STORE_ID}`, fbtData)
+      // FBT NO requiere storeId en body, solo en URL
+      const response = await apiClient.post<FrequentlyBoughtTogether>(`/fbt/${STORE_ID}`, data)
+      const newFbt = extractApiData<FrequentlyBoughtTogether>(response)
       set((state) => ({
-        frequentlyBoughtTogether: [...state.frequentlyBoughtTogether, response.data],
+        frequentlyBoughtTogether: [...state.frequentlyBoughtTogether, newFbt],
         loading: false,
       }))
-      return response.data
+      return newFbt
     } catch (error) {
       set({ error: "Failed to create frequently bought together item", loading: false })
       throw error
@@ -727,21 +745,23 @@ export const useMainStore = create<MainStore>((set, get) => ({
   },
 
   // Método para actualizar un FBT existente
-  updateFrequentlyBoughtTogether: async (id: string, data: any) => {
+  updateFrequentlyBoughtTogether: async (id: string, data: UpdateFrequentlyBoughtTogetherDto) => {
     if (!STORE_ID) {
       throw new Error("No store ID provided in environment variables")
     }
 
     set({ loading: true, error: null })
     try {
+      // FBT NO requiere storeId en body, solo en URL
       const response = await apiClient.patch<FrequentlyBoughtTogether>(`/fbt/${STORE_ID}/${id}`, data)
+      const updatedFbt = extractApiData<FrequentlyBoughtTogether>(response)
       set((state) => ({
         frequentlyBoughtTogether: state.frequentlyBoughtTogether.map((item) =>
-          item.id === id ? { ...item, ...response.data } : item,
+          item.id === id ? { ...item, ...updatedFbt } : item,
         ),
         loading: false,
       }))
-      return response.data
+      return updatedFbt
     } catch (error) {
       set({ error: "Failed to update frequently bought together item", loading: false })
       throw error
@@ -782,11 +802,12 @@ export const useMainStore = create<MainStore>((set, get) => ({
       }
 
       const response = await apiClient.post<Order>(`/orders/${STORE_ID}` , orderData)
+      const newOrder = extractApiData<Order>(response)
       set((state) => ({
-        orders: [...state.orders, response.data],
+        orders: [...state.orders, newOrder],
         loading: false,
       }))
-      return response.data
+      return newOrder
     } catch (error) {
       set({ error: "Failed to create order", loading: false })
       throw error
@@ -797,11 +818,12 @@ export const useMainStore = create<MainStore>((set, get) => ({
     set({ loading: true, error: null })
     try {
       const response = await apiClient.put<Order>(`/orders/${id}`, data)
+      const updatedOrder = extractApiData<Order>(response)
       set((state) => ({
-        orders: state.orders.map((order) => (order.id === id ? { ...order, ...response.data } : order)),
+        orders: state.orders.map((order) => (order.id === id ? { ...order, ...updatedOrder } : order)),
         loading: false,
       }))
-      return response.data
+      return updatedOrder
     } catch (error) {
       set({ error: "Failed to update order", loading: false })
       throw error
@@ -934,7 +956,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
     
     try {
       const response = await apiClient.get<Category>(`/categories/${STORE_ID}/${id}`)
-      return response.data
+      return extractApiData<Category>(response)
     } catch (error) {
       console.error("Failed to fetch category by id:", error)
       throw error
@@ -948,7 +970,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
     
     try {
       const response = await apiClient.get<Product>(`/products/${STORE_ID}/${id}`)
-      return response.data
+      return extractApiData<Product>(response)
     } catch (error) {
       console.error("Failed to fetch product by id:", error)
       throw error
@@ -962,7 +984,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
     
     try {
       const response = await apiClient.get<Product>(`/products/by-slug/${STORE_ID}/${slug}`)
-      return response.data
+      return extractApiData<Product>(response)
     } catch (error) {
       console.error("Failed to fetch product by slug:", error)
       throw error
@@ -976,7 +998,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
     
     try {
       const response = await apiClient.get<Collection>(`/collections/${STORE_ID}/${id}`)
-      return response.data
+      return extractApiData<Collection>(response)
     } catch (error) {
       console.error("Failed to fetch collection by id:", error)
       throw error
@@ -990,7 +1012,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
     
     try {
       const response = await apiClient.get<Order>(`/orders/${STORE_ID}/${id}`)
-      return response.data
+      return extractApiData<Order>(response)
     } catch (error) {
       console.error("Failed to fetch order by id:", error)
       throw error
@@ -1004,7 +1026,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
     
     try {
       const response = await apiClient.get<Coupon>(`/coupons/${STORE_ID}/${id}`)
-      return response.data
+      return extractApiData<Coupon>(response)
     } catch (error) {
       console.error("Failed to fetch coupon by id:", error)
       throw error
@@ -1014,7 +1036,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
   getCurrencyById: async (id) => {
     try {
       const response = await apiClient.get<Currency>(`/currencies/${id}`)
-      return response.data
+      return extractApiData<Currency>(response)
     } catch (error) {
       console.error("Failed to fetch currency by id:", error)
       throw error
@@ -1024,7 +1046,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
   getExchangeRateById: async (id) => {
     try {
       const response = await apiClient.get<ExchangeRate>(`/exchange-rates/${id}`)
-      return response.data
+      return extractApiData<ExchangeRate>(response)
     } catch (error) {
       console.error("Failed to fetch exchange rate by id:", error)
       throw error
@@ -1038,7 +1060,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
     
     try {
       const response = await apiClient.get<FrequentlyBoughtTogether>(`/fbt/${STORE_ID}/${id}`)
-      return response.data
+      return extractApiData<FrequentlyBoughtTogether>(response)
     } catch (error) {
       console.error("Failed to fetch frequently bought together by id:", error)
       throw error

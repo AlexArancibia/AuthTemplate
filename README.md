@@ -1,5 +1,28 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## 📚 Documentación Importante
+
+### Migración API (v2.0.0)
+El backend ahora envuelve todas las respuestas en un formato estandarizado. **Lee esta documentación antes de trabajar con el store:**
+
+- **[Guía de Migración Completa](./API_RESPONSE_MIGRATION_GUIDE.md)** - Detalles completos de los cambios
+- **[Referencia Rápida de API Helpers](./API_HELPERS_QUICK_REFERENCE.md)** - Para desarrollo diario
+- **[Changelog](./CHANGELOG_FRONTEND.md)** - Historial de cambios
+
+### 🎯 Quick Start: API Helpers
+
+```typescript
+import { extractApiData, extractPaginatedData } from "@/lib/apiHelpers"
+
+// Para respuestas simples
+const product = extractApiData<Product>(response)
+
+// Para respuestas paginadas
+const { data, pagination } = extractPaginatedData<Product[]>(response)
+```
+
+**Importante:** Todos los métodos del store ya están actualizados. No necesitas cambiar código existente.
+
 ## Getting Started
 
 First, run the development server:

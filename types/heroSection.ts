@@ -81,4 +81,32 @@ export interface HeroSection {
   createdAt: Date; // Cambiado a Date según Prisma
   updatedAt: Date; // Cambiado a Date según Prisma
 }
+
+export interface CreateHeroSectionDto {
+  title: string;
+  subtitle?: string;
+  backgroundImage?: string;
+  mobileBackgroundImage?: string;
+  backgroundVideo?: string;
+  mobileBackgroundVideo?: string;
+  buttonText?: string;
+  buttonLink?: string;
+  styles: HeroSectionStyles | Record<string, any>;
+  metadata?: HeroSectionMetadata;
+  isActive?: boolean;
+}
+
+export interface UpdateHeroSectionDto {
+  title?: string;
+  subtitle?: string ;
+  buttonText?: string ;
+  buttonLink?: string ;
+  backgroundImage?: string ;
+  mobileBackgroundImage?: string ;
+  backgroundVideo?: string ;
+  mobileBackgroundVideo?: string ;
+  styles?: HeroSectionStyles | Record<string, any>;
+  metadata?: HeroSectionMetadata ;
+  isActive?: boolean;
+}
  
