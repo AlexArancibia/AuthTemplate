@@ -5,7 +5,6 @@ import { Toaster } from "sonner";
 import Navbar from "@/components/navbar";
 import { auth } from "@/auth";
 import { Footer } from "@/components/footer";
-import { PreFooterContact } from "@/components/PreFooter";
 import { WhatsAppButton } from "@/components/WhatsappButton";
 
 const inter = Inter({
@@ -131,7 +130,6 @@ export default async function RootLayout({
         <Toaster position="top-center" richColors />
         <Navbar />
         <main className="">{children}</main>
-        <PreFooterContact />
         <Footer />
         <WhatsAppButton />
       </body>
