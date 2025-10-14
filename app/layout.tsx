@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Poppins } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import Navbar from "@/components/navbar";
@@ -8,7 +8,7 @@ import { Footer } from "@/components/footer";
 import { PreFooterContact } from "@/components/PreFooter";
 import { WhatsAppButton } from "@/components/WhatsappButton";
 
-const poppins = Poppins({
+const inter = Inter({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
 });
@@ -127,7 +127,7 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body className="font-futura overflow-x-hidden">
+      <body className={inter.className + " overflow-x-hidden"}>
         <Toaster position="top-center" richColors />
         <Navbar />
         <main className="">{children}</main>
