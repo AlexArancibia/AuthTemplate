@@ -19,6 +19,7 @@ import { PublishBanner } from "@/components/PublishBanner"
 import { CollectionCarousel } from "@/components/CollectionCarousel"
 import { Testimonials } from "@/components/Testimonials"
 import { Sponsors } from "@/components/Sponsors"
+import { FeaturedProductsWithSidebar } from "@/components/FeaturedProductsWithSidebar"
 
 export default function HomePage() {
   const pathname = usePathname()
@@ -63,10 +64,14 @@ export default function HomePage() {
     <>
     
     <HeroSection />
-    <Suspense fallback={<div className="h-96 bg-muted animate-pulse" />}>
+    <FeaturedProductsWithSidebar
+      selectedCurrencyId={selectedCurrencyId}
+      acceptedCurrencies={acceptedCurrencies}
+    />
+    {/* <Suspense fallback={<div className="h-96 bg-muted animate-pulse" />}>
         <FeaturesSection id="cs_5c596d6f-a27c" />
-      </Suspense>
-      <ProductCarousel
+      </Suspense> */}
+      {/* <ProductCarousel
         selectedCurrencyId={selectedCurrencyId}
         acceptedCurrencies={acceptedCurrencies}
       />
@@ -88,7 +93,7 @@ export default function HomePage() {
         emptyMessage="Aún no hay productos recientes para mostrar."
       />
       <Testimonials />
-      <Sponsors />
+      <Sponsors /> */}
     </>
   )
 }

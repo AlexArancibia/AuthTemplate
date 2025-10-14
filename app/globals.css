@@ -116,6 +116,66 @@ html { scroll-behavior: smooth; }
   .scrollbar-track-transparent::-webkit-scrollbar-track {
     background: transparent;
   }
+
+  /* Scrollbar estilo móvil - overlay semitransparente elegante */
+  .scrollbar-elegant {
+    scrollbar-width: thin;
+  }
+
+  .scrollbar-elegant::-webkit-scrollbar {
+    width: 4px; /* Muy fino como en móvil */
+  }
+
+  .scrollbar-elegant::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-elegant::-webkit-scrollbar-thumb {
+    border-radius: 10px; /* Muy redondeado, estilo móvil */
+    transition: background-color 0.2s ease-in-out;
+  }
+
+  /* MÓVIL/TÁCTIL - Scrollbar visible durante el scroll (comportamiento nativo) */
+  @media (hover: none) and (pointer: coarse) {
+    .scrollbar-elegant {
+      scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+    }
+
+    .scrollbar-elegant::-webkit-scrollbar-thumb {
+      background-color: rgba(0, 0, 0, 0.2); /* Visible en móvil */
+    }
+
+    .scrollbar-elegant::-webkit-scrollbar-thumb:active {
+      background-color: rgba(0, 0, 0, 0.35); /* Más visible al arrastrar */
+    }
+  }
+
+  /* DESKTOP - Scrollbar invisible hasta hover */
+  @media (hover: hover) and (pointer: fine) {
+    .scrollbar-elegant {
+      scrollbar-color: transparent transparent; /* Invisible por defecto */
+    }
+
+    .scrollbar-elegant:hover {
+      scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+    }
+
+    .scrollbar-elegant::-webkit-scrollbar-thumb {
+      background-color: transparent; /* Invisible por defecto */
+    }
+
+    .scrollbar-elegant:hover::-webkit-scrollbar-thumb {
+      background-color: rgba(0, 0, 0, 0.2); /* Aparece al hover */
+    }
+
+    .scrollbar-elegant::-webkit-scrollbar-thumb:hover {
+      background-color: rgba(0, 0, 0, 0.35); /* Más visible al hover directo */
+    }
+
+    .scrollbar-elegant::-webkit-scrollbar-thumb:active {
+      background-color: rgba(0, 0, 0, 0.45); /* Más visible al arrastrar */
+    }
+  }
 }
 
 @theme inline {
