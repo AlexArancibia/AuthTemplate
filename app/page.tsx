@@ -21,6 +21,7 @@ import { Testimonials } from "@/components/Testimonials"
 import { Sponsors } from "@/components/Sponsors"
 import { FeaturedProductsWithSidebar } from "@/components/FeaturedProductsWithSidebar"
 import PromotionalGrid from "@/components/PromotionalGrid"
+import { FeaturedProductsSection } from "@/components/FeaturedProductsSection"
 
 export default function HomePage() {
   const pathname = usePathname()
@@ -84,6 +85,10 @@ export default function HomePage() {
       emptyMessage="No hay productos disponibles"
     />
     <PromotionalGrid />
+    <FeaturedProductsSection
+      selectedCurrencyId={selectedCurrencyId}
+      acceptedCurrencies={acceptedCurrencies}
+    />
     {/* <Suspense fallback={<div className="h-96 bg-muted animate-pulse" />}>
         <FeaturesSection id="cs_5c596d6f-a27c" />
       </Suspense> */}
