@@ -134,8 +134,7 @@ function ProductsCarousel({
           {products.map((product) => (
             <div
               key={product.id}
-              className="flex-shrink-0 px-2"
-              style={{ width: "33.3333%" }}
+              className="flex-shrink-0 px-2 w-full sm:w-1/2 lg:w-1/3"
             >
               <ProductCard
                 product={product}

@@ -184,8 +184,7 @@ export function CollectionCarousel({
                   return (
                     <div
                       key={product.id}
-                      className="flex-shrink-0 px-2"
-                      style={{ width: "25%" }}
+                      className="flex-shrink-0 px-2 w-full sm:w-1/2 md:w-1/3 lg:w-1/4"
                     >
                       <Link href={`/productos/${product.slug}`}>
                         <div className="rounded-xl border bg-card text-card-foreground group relative overflow-hidden transition-all duration-300 hover:shadow-lg shadow-sm p-0">

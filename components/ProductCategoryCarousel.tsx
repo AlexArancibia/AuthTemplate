@@ -77,7 +77,7 @@ export function ProductCategoryCarousel({
   return (
     <div className="space-y-8">
       {/* Navegación de categorías */}
-      <div className="flex flex-wrap justify-center gap-4">
+      <div className="flex flex-wrap justify-center gap-4 md:">
         {categories.map((category, index) => (
           <button
             key={category.id}
