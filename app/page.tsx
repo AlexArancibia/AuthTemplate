@@ -68,6 +68,20 @@ export default function HomePage() {
       selectedCurrencyId={selectedCurrencyId}
       acceptedCurrencies={acceptedCurrencies}
     />
+    <CollectionCarousel
+      collectionId="col_17efa15c-9082"
+      selectedCurrencyId={selectedCurrencyId}
+      acceptedCurrencies={acceptedCurrencies}
+      showExploreButton={true}
+      emptyMessage="No hay productos disponibles"
+    />
+    <CollectionCarousel
+      collectionId="col_13049889-0e20"
+      selectedCurrencyId={selectedCurrencyId}
+      acceptedCurrencies={acceptedCurrencies}
+      showExploreButton={true}
+      emptyMessage="No hay productos disponibles"
+    />
     {/* <Suspense fallback={<div className="h-96 bg-muted animate-pulse" />}>
         <FeaturesSection id="cs_5c596d6f-a27c" />
       </Suspense> */}
