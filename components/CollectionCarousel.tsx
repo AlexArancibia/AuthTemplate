@@ -1,8 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react"
 import useEmblaCarousel from "embla-carousel-react"
+import Link from "next/link"
+import Image from "next/image"
 
 import { ProductCard } from "./ProductCard"
 import type { CurrencyOption } from "@/stores/currency"
@@ -57,7 +59,7 @@ export function CollectionCarousel({
     emblaApi.on("reInit", onSelect)
   }, [emblaApi])
 
-  // Fetch de la colección con sus productos
+  // Fetch de la colección con sus productos completos
   useEffect(() => {
     const fetchData = async () => {
       if (!STORE_ID) {
@@ -69,20 +71,21 @@ export function CollectionCarousel({
       try {
         setLoading(true)
         
-        // Obtener el método getCollectionById del store
-        const { getCollectionById } = useMainStore.getState()
-        
-        // La colección ya incluye los productos en su respuesta
+        // Obtener el título de la colección primero
+        const { getCollectionById, fetchProducts } = useMainStore.getState()
         const collection = await getCollectionById(collectionId)
+        setCollectionTitle(collection.title)
         
-        setCollectionTitle(collection.title.toUpperCase())
-        // Filtrar solo productos activos o archivados, ordenados por fecha de creación
-        const filteredProducts = (collection.products ?? [])
-          .filter((product) => product.status === 'ACTIVE' || product.status === 'ARCHIVED')
-          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-          .slice(0, 10)
+        // Obtener productos completos con variantes y precios usando fetchProducts
+        const response = await fetchProducts({
+          collectionIds: [collectionId],
+          status: ['ACTIVE'],
+          limit: 12,
+          sortBy: 'createdAt',
+          sortOrder: 'desc'
+        })
         
-        setProducts(filteredProducts)
+        setProducts(response.data)
       } catch (error) {
         console.error("Error fetching collection data:", error)
         setProducts([])
@@ -98,31 +101,75 @@ export function CollectionCarousel({
     window.open("/productos", "_self")
   }
 
+  // Función para obtener el precio formateado
+  const getFormattedPrice = (product: Product) => {
+    const activeCurrency = acceptedCurrencies.find((currency) => currency.id === selectedCurrencyId)
+    
+    if (!activeCurrency) return null
+
+    const prices = (product.variants || [])
+      .flatMap((variant) => {
+        if (!variant.prices || !Array.isArray(variant.prices)) {
+          return null
+        }
+        // Buscar precio que coincida con la moneda activa
+        const matchingPrice = variant.prices.find((p) => 
+          p.currency?.code === activeCurrency.code || p.currencyId === activeCurrency.id
+        )
+        return matchingPrice ? Number(matchingPrice.price) : null
+      })
+      .filter((price): price is number => price !== null && price > 0)
+
+    if (prices.length === 0) return null
+
+    const lowestPrice = Math.min(...prices)
+    return `${activeCurrency.symbol} ${Number(lowestPrice).toFixed(2)}`
+  }
+
+  // Función para obtener el stock
+  const getStockCount = (product: Product) => {
+    const totalStock = (product.variants || [])
+      .reduce((total, variant) => {
+        return total + (variant.inventoryQuantity || 0)
+      }, 0)
+    
+    return totalStock
+  }
+
+  // Función para formatear el título como en la imagen
+  const formatTitle = (title: string) => {
+    // Para "Maderas Butterfly" específicamente
+    if (title.toLowerCase().includes('maderas butterfly')) {
+      return 'Maderas Butterfly'
+    }
+    // Para otros títulos, mantener formato original
+    return title
+  }
+
   return (
-    <section className="py-12 lg:py-16 bg-white w-full">
-      <div className="w-full px-4 sm:px-6 lg:px-8">
+    <section className="container-section pb-8 md:py-8">
+      <div className="content-section">
         {/* Título principal centrado */}
-        <div className="text-center mb-8">
-          <h2 className="font-druk text-4xl lg:text-2xl font-archivo-black text-gray-900 mb-4">
-            {collectionTitle}
-          </h2>
-        </div>
+        <h2 className="text-3xl font-semibold text-center mb-12">
+          {formatTitle(collectionTitle)}
+        </h2>
 
-        {/* Carrusel de productos con navegación */}
-        <div className="w-full flex items-center gap-2">
+        {/* Carrusel de productos */}
+        <div className="relative overflow-hidden">
           {/* Botón izquierda */}
-          <button
-            onClick={scrollPrev}
-            disabled={!canScrollPrev}
-            className="p-2 disabled:opacity-30"
-            aria-label="Anterior"
-            style={{ background: "none", border: "none", outline: "none", boxShadow: "none" }}
-          >
-            <ChevronLeft className="w-10 h-10 text-gray-700" />
-          </button>
+          {canScrollPrev && (
+            <button
+              onClick={scrollPrev}
+              className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input hover:text-accent-foreground h-9 w-9 absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 hover:bg-white transition-colors shadow-md z-10"
+              aria-label="Anterior"
+            >
+              <ChevronLeft className="h-5 w-5 text-gray-800" />
+            </button>
+          )}
 
-          <div className="overflow-hidden flex-1" ref={emblaRef}>
-            <div className="flex gap-6">
+          {/* Contenido del carrusel */}
+          <div className="overflow-hidden touch-pan-x" ref={emblaRef}>
+            <div className="flex">
               {loading ? (
                 <div className="py-10 w-full text-center">
                   <p className="font-lato-thin text-sm text-gray-500">
@@ -130,18 +177,65 @@ export function CollectionCarousel({
                   </p>
                 </div>
               ) : products.length > 0 ? (
-                products.map((product) => (
-                  <div
-                    key={product.id}
-                    className="flex-none w-[446px] sm:w-[498px] lg:w-[446px]"
-                  >
-                    <ProductCard
-                      product={product}
-                      selectedCurrencyId={selectedCurrencyId}
-                      acceptedCurrencies={acceptedCurrencies}
-                    />
-                  </div>
-                ))
+                products.map((product) => {
+                  const price = getFormattedPrice(product)
+                  const stockCount = getStockCount(product)
+                  
+                  return (
+                    <div
+                      key={product.id}
+                      className="flex-shrink-0 px-2"
+                      style={{ width: "25%" }}
+                    >
+                      <Link href={`/productos/${product.slug}`}>
+                        <div className="rounded-xl border bg-card text-card-foreground group relative overflow-hidden transition-all duration-300 hover:shadow-lg shadow-sm p-0">
+                          <div className="p-0">
+                            {/* Imagen del producto */}
+                            <div className="relative overflow-hidden w-full aspect-square p-6">
+                              <Image
+                                src={product.imageUrls && product.imageUrls.length > 0 ? product.imageUrls[0] : "/placeholder.png"}
+                                alt={product.title}
+                                fill
+                                className="object-contain p-2 shadow-md transition-transform duration-300 group-hover:scale-105"
+                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                              />
+                              
+                              {/* Botón de carrito (aparece en hover) */}
+                              <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-3">
+                                <button className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-secondary-foreground h-10 w-10 rounded-full bg-white shadow-md hover:bg-gray-100 opacity-0 translate-x-4 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0 group-hover:transition-all group-hover:delay-100">
+                                  <ShoppingCart className="h-4 w-4" />
+                                  <span className="sr-only">Añadir al carrito</span>
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Información del producto */}
+                            <div className="p-4 w-full">
+                              <h5 className="text-sm font-lato-light truncate max-w-full overflow-hidden text-ellipsis whitespace-nowrap">
+                                {product.title}
+                              </h5>
+                              
+                              {/* Precio */}
+                              {price && (
+                                <div className="flex items-baseline gap-2 mt-1">
+                                  <span className="text-lg font-lato-bold text-pink-500">{price}</span>
+                                </div>
+                              )}
+                              
+                              {/* Stock */}
+                              <div className="flex items-center gap-2 mt-2">
+                                <span className="h-2 w-2 rounded-full bg-green-500"></span>
+                                <p className="text-muted-foreground text-sm font-lato-light">
+                                  {stockCount} en stock
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    </div>
+                  )
+                })
               ) : (
                 <div className="py-10 w-full text-center">
                   <p className="font-lato-thin text-sm text-gray-500">
@@ -153,27 +247,26 @@ export function CollectionCarousel({
           </div>
 
           {/* Botón derecha */}
-          <button
-            onClick={scrollNext}
-            disabled={!canScrollNext}
-            className="p-2 disabled:opacity-30"
-            aria-label="Siguiente"
-            style={{ background: "none", border: "none", outline: "none", boxShadow: "none" }}
-          >
-            <ChevronRight className="w-10 h-10 text-gray-700" />
-          </button>
+          {canScrollNext && (
+            <button
+              onClick={scrollNext}
+              className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input hover:text-accent-foreground h-9 w-9 absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/80 hover:bg-white transition-colors shadow-md z-10"
+              aria-label="Siguiente"
+            >
+              <ChevronRight className="h-5 w-5 text-gray-800" />
+            </button>
+          )}
         </div>
 
-        {/* CTA explorar tienda (condicional) */}
+        {/* Botón "Explora" centrado */}
         {showExploreButton && (
-          <div className="text-center mt-8">
-            <button
-              onClick={handleExploreStore}
-              className="border border-black bg-white text-black hover:bg-gray-100 px-6 py-2 text-sm font-light uppercase tracking-widest rounded-none font-['Roboto_Condensed']"
-              aria-label="Explorar tienda"
+          <div className="flex justify-center">
+            <Link
+              href="/productos"
+              className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-lato-light focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 py-2 rounded-full transition-all mt-8 md:mt-16 px-8 bg-gradient-to-tr from-white to-gray-200 shadow-md shadow-slate-100 hover:to-gray-300"
             >
-              EXPLORAR TIENDA
-            </button>
+              Explora
+            </Link>
           </div>
         )}
       </div>
