@@ -20,6 +20,7 @@ import { CollectionCarousel } from "@/components/CollectionCarousel"
 import { Testimonials } from "@/components/Testimonials"
 import { Sponsors } from "@/components/Sponsors"
 import { FeaturedProductsWithSidebar } from "@/components/FeaturedProductsWithSidebar"
+import PromotionalGrid from "@/components/PromotionalGrid"
 
 export default function HomePage() {
   const pathname = usePathname()
@@ -82,6 +83,7 @@ export default function HomePage() {
       showExploreButton={true}
       emptyMessage="No hay productos disponibles"
     />
+    <PromotionalGrid />
     {/* <Suspense fallback={<div className="h-96 bg-muted animate-pulse" />}>
         <FeaturesSection id="cs_5c596d6f-a27c" />
       </Suspense> */}
