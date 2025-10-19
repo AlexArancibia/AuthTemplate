@@ -127,7 +127,7 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
               <FormItem>
                 <FormLabel>Empresa (opcional)</FormLabel>
                 <FormControl>
-                  <Input placeholder="Nombre de ANJ" {...field} />
+                  <Input placeholder="Nombre de SPORTT PERU" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

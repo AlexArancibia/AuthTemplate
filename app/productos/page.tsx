@@ -9,6 +9,14 @@ import ProductList from "./_components/ProductList"
 import ProductFilterSidebar from "./_components/ProductFilterSidebar"
 import MobileFilterButton from "./_components/MobileFilterButton"
 import Link from "next/link"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 
 function ProductsContent() {
   const searchParams = useSearchParams()
@@ -28,7 +36,7 @@ function ProductsContent() {
             <p className="text-white/90 text-lg">Descubre nuestra línea completa de productos de limpieza industrial</p>
           </div>
         </div>
-        <div className="container-section py-8 md:py-16">
+        <div className="container-section py-4 md:py-4">
           <div className="content-section">
             <ProductListSkeleton />
           </div>
@@ -61,9 +69,25 @@ function ProductsContent() {
   })
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="container-section pt-8">
+      <div className="content-section">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/">Inicio</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>Tienda</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+        <h1 className="text-3xl font-bold text-center">Tienda</h1>
+      </div>
       {/* Sección de encabezado con efecto de fade-in */}
-      <motion.section
+      {/* <motion.section
         className="relative py-24 sm:py-32 px-4 text-center bg-cover bg-center bg-no-repeat"
         style={{
           backgroundImage: `url('/productsBanner.jpg')`,
@@ -84,14 +108,12 @@ function ProductsContent() {
             Ofertas
           </h1>
 
-          {/* Botón */}
           <Link href="/productos">
             <button className="font-lato-thin bg-white text-black text-sm font-medium px-6 py-3 rounded-xs cursor-pointer">
               Ver más
             </button>
           </Link>
 
-          {/* Logos */}
           <div className="mt-6 flex flex-wrap justify-center items-center gap-24 px-4">
             <img src="/xiom.png" alt="Xiom" className="h-8 w-auto" />
             <img src="/sanwei.png" alt="Sanwei" className="h-8 w-auto" />
@@ -99,11 +121,10 @@ function ProductsContent() {
             <img src="/victas_logo2.png" alt="Victas" className="h-8 w-auto" />
           </div>
         </div>
-      </motion.section>
-
+      </motion.section> */}
       {/* Sección de productos con efecto de fade-in */}
       <motion.div
-        className="container-section py-8 md:py-16"
+        className="container-section py-2 md:py-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 1, delay: 0.5 }}
@@ -161,7 +182,7 @@ export default function ProductsPage() {
             <p className="text-white/90 text-lg">Descubre nuestra línea completa de productos de limpieza industrial</p>
           </div>
         </div>
-        <div className="container-section py-8 md:py-16">
+        <div className="container-section py-0 md:py-0">
           <div className="content-section">
             <ProductListSkeleton />
           </div>

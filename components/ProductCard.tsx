@@ -139,6 +139,17 @@ export function ProductCard({
 
   const image = product.imageUrls && product.imageUrls.length > 0 ? product.imageUrls[0] : "/placeholder.png"
 
+  // Función para obtener el stock
+  const getStockCount = (product: Product) => {
+    const totalStock = (product.variants || [])
+      .reduce((total, variant) => {
+        return total + (variant.inventoryQuantity || 0)
+      }, 0)
+    
+    return totalStock
+  }
+  const stockCount = getStockCount(product)
+
   return (
     <div className="group relative bg-white rounded-none p-4 flex flex-col h-full">
       <Link href={`/productos/${product.slug}`} className="flex flex-col h-full">
@@ -198,7 +209,9 @@ export function ProductCard({
         {/* Product Info - Ahora con espacio fijo */}
         <div className="flex-grow flex flex-col">
           <div className="mb-2">
-            <p className="font-lato-thin text-sm font-medium text-gray-900 line-clamp-2 uppercase tracking-wide">{product.title}</p>
+            <h5 className="text-sm font-lato-light truncate max-w-full overflow-hidden text-ellipsis whitespace-nowrap">
+              {product.title}
+            </h5>
           </div>
 
           {/* Etiqueta de prelanzamiento */}
@@ -212,24 +225,27 @@ export function ProductCard({
         {/* Precio en la parte inferior */}
         {priceDisplay && (
           <div className="mt-auto pt-4">
-            <div className="font-lato-thin flex items-center gap-2">
-              {showSaleBadge ? (
-                <>
-                  <span className="text-base font-medium text-black">{priceDisplay}</span>
-                  <span className="text-sm text-gray-400 line-through">
-                    {formatPrice(lowestPrice * (1 + salePercentage / 100))}
-                  </span>
-                </>
-              ) : (
-                <span className="text-sm font-medium text-black">{priceDisplay}</span>
+            <div className="flex items-baseline gap-2 mt-1">
+              <span className="text-lg font-lato-bold text-pink-500">{priceDisplay}</span>
+              {showSaleBadge && (
+                <span className="text-sm text-gray-400 line-through">
+                  {formatPrice(lowestPrice * (1 + salePercentage / 100))}
+                </span>
               )}
             </div>
           </div>
         )}
+        {/* Stock */}
+        <div className="flex items-center gap-2 mt-2">
+          <span className="h-2 w-2 rounded-full bg-green-500"></span>
+          <p className="text-muted-foreground text-sm font-lato-light">
+            {stockCount} en stock
+          </p>
+        </div>
       </Link>
       <motion.div>
         {/* Ver Producto Button - Ahora fuera del contenido principal */}
-        <div className="absolute inset-x-4 bottom-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        {/* <div className="absolute inset-x-4 bottom-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <Button
             className="w-full gap-2 bg-white text-primary hover:bg-white h-7 text-xs shadow-none border-0"
             disabled={false}
@@ -241,7 +257,7 @@ export function ProductCard({
             <Eye className="w-4 h-4" />
             {hasUpcomingRelease ? "Ver Prelanzamiento" : "Ver Producto"}
           </Button>
-        </div>
+        </div> */}
       </motion.div>
     </div>
   )

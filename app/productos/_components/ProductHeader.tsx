@@ -9,6 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Grid, List, ChevronLeft, ChevronRight, Filter, X } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 interface ProductHeaderProps {
   currentItems: number
@@ -27,7 +29,8 @@ export default function ProductHeader({
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [sortBy, setSortBy] = useState<string>(() => searchParams.get("sort") || "createdAt")
-
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+  
   // Update URL when sort changes
   const handleSortChange = (value: string) => {
     setSortBy(value)
@@ -50,15 +53,10 @@ export default function ProductHeader({
   const endItem = Math.min(currentPage * itemsPerPage, totalItems)
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-      {/* Product count */}
-      <div className="text-sm text-gray-600">
-        Mostrando {startItem}-{endItem} de {totalItems} productos
-      </div>
-      
+    <div className="hidden md:flex flex-col md:flex-row items-center justify-between gap-4">
       {/* Sort selector */}
-      <div className="flex items-center gap-2">
-        <label htmlFor="sortBy" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+      <div className="flex items-center space-x-2 w-full md:w-auto">
+        <label htmlFor="sortBy" className="text-sm text-muted-foreground whitespace-nowrap">
           Ordenar por:
         </label>
         <Select value={sortBy} onValueChange={handleSortChange}>
@@ -72,6 +70,31 @@ export default function ProductHeader({
             <SelectItem value="viewCount">Más vistos</SelectItem>
           </SelectContent>
         </Select>
+      </div>
+
+      {/* Product count */}
+      <div className="flex items-center justify-between w-full md:w-auto space-x-4">
+        <span className="text-sm text-muted-foreground whitespace-nowrap">
+          Mostrando {startItem}-{endItem} de {totalItems} productos
+        </span>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setViewMode("grid")}
+            className={viewMode === "grid" ? "text-pink-500" : ""}
+          >
+            <Grid className="h-4 w-4" />
+          </Button>
+          {/* <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setViewMode("list")}
+            className={viewMode === "list" ? "text-pink-500" : ""}
+          >
+            <List className="h-4 w-4" />
+          </Button> */}
+        </div>
       </div>
     </div>
   )

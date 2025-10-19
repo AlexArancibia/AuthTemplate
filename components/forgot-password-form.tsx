@@ -152,7 +152,7 @@ export default function ForgotPasswordForm() {
         </Card>
 
         <div className="mt-8 text-center text-xs text-slate-400">
-          © {new Date().getFullYear()} ANJ. Todos los derechos reservados.
+          © {new Date().getFullYear()} SPORTT PERU. Todos los derechos reservados.
         </div>
       </div>
     </div>

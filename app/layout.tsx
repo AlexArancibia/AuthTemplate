@@ -27,51 +27,52 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
 	title: {
-		default: "ANJ SPORTs - Detergentes Ecológicos Industriales | Perú",
-		template: "%s | ANJ SPORTs - Detergentes Ecológicos",
+		default: "SPORTT PERU - Tienda de Ping Pong y Tenis de Mesa | Perú",
+		template: "%s | SPORTT PERU - Ping Pong y Tenis de Mesa",
 	},
 	description:
-		"ANJ SPORTs es líder en detergentes ecológicos industriales en Perú. Ofrecemos soluciones de limpieza profesional eco-amigables y biodegradables para empresas, hoteles, restaurantes y centros de salud.",
+		"SPORTT PERU es la tienda líder en tenis de mesa en Perú. Venta de mesas, raquetas, pelotas, redes y accesorios profesionales para jugadores y clubes de ping pong.",
 	keywords: [
-		"detergentes ecológicos",
-		"detergentes industriales",
-		"limpieza ecológica",
-		"productos biodegradables",
-		"detergentes eco-amigables",
-		"limpieza profesional",
-		"productos de limpieza",
-		"detergentes comerciales",
-		"limpieza industrial",
-		"desinfectantes ecológicos",
-		"productos químicos verdes",
-		"limpieza hospitalaria",
-		"limpieza hotelera",
-		"detergentes biodegradables",
-		"ANJ",
+		"ping pong",
+		"tenis de mesa",
+		"raquetas de ping pong",
+		"mesas de tenis de mesa",
+		"accesorios de ping pong",
+		"pelotas de ping pong",
+		"redes de ping pong",
+		"tienda de tenis de mesa",
+		"equipos deportivos",
+		"ping pong profesional",
+		"clubes de tenis de mesa",
+		"deporte de mesa",
+		"mesas deportivas",
+		"paletas de ping pong",
+		"SPORTT PERU",
 	],
-	metadataBase: new URL("https://anjsports.com"),
+	metadataBase: new URL("https://sporttperu.com"),
 	openGraph: {
 		type: "website",
 		locale: "es_PE",
-		url: "https://anjsports.com/",
-		title: "ANJ SPORTs",
-		description: "",
-		siteName: "ANJ SPORTs",
+		url: "https://sporttperu.com",
+		title: "SPORTT PERU - Tienda de Ping Pong y Tenis de Mesa",
+		description:
+			"Compra online mesas, raquetas y accesorios de tenis de mesa en SPORTT PERU. Productos de calidad para jugadores, clubes y colegios.",
+		siteName: "SPORTT PERU",
 		images: [
 			{
-				url: "/fotoportada.jpg", // Imagen principal para compartir
+				url: "/fotoportada.jpg",
 				width: 1200,
 				height: 630,
-				alt: "ANJ SPORTs - Detergentes Industriales Ecológicos",
+				alt: "SPORTT PERU - Tienda de Ping Pong y Tenis de Mesa",
 			},
 		],
 	},
 	twitter: {
 		card: "summary_large_image",
-		title: "ANJ SPORTs - Detergentes Industriales Ecológicos",
+		title: "SPORTT PERU - Ping Pong y Tenis de Mesa en Perú",
 		description:
-			"Líder en detergentes industriales. Soluciones de limpieza profesional certificadas y eco-amigables.",
-		images: ["/fotoportada.jpg"], // Misma imagen para Twitter
+			"Encuentra todo para el tenis de mesa: mesas, paletas, pelotas y accesorios en SPORTT PERU.",
+		images: ["/fotoportada.jpg"],
 	},
 	icons: {
 		icon: [
@@ -133,12 +134,12 @@ export default async function RootLayout({
 						__html: JSON.stringify({
 							"@context": "https://schema.org",
 							"@type": "Organization",
-							name: "ANJ",
-							url: "https://anjsports.com/",
+							name: "Sportt Peru",
+							url: "https://sporttperu.com//",
 							logo: "",
 							sameAs: [
-								"https://www.facebook.com/TenisdeMesaAnjSports",
-								"https://www.instagram.com/anj.sports",
+								"",
+								"",
 							],
 						}),
 					}}
