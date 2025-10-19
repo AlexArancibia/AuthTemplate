@@ -1,4 +1,5 @@
 import { create } from "zustand"
+import { persist } from 'zustand/middleware'
 import apiClient from "@/lib/axiosConfig"
 import { extractApiData, extractPaginatedData } from "@/lib/apiHelpers"
 import type { Product } from "@/types/product"
@@ -815,17 +816,27 @@ export const useMainStore = create<MainStore>((set, get) => ({
   },
 
   updateOrder: async (id: string, data: any) => {
+    if (!STORE_ID) {
+      throw new Error("No store ID provided in environment variables")
+    }
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.put<Order>(`/orders/${id}`, data)
+      const response = await apiClient.put<Order>(`/orders/${STORE_ID}/${id}`, data)
       const updatedOrder = extractApiData<Order>(response)
       set((state) => ({
         orders: state.orders.map((order) => (order.id === id ? { ...order, ...updatedOrder } : order)),
         loading: false,
       }))
       return updatedOrder
-    } catch (error) {
-      set({ error: "Failed to update order", loading: false })
+    } catch (error: any) {
+      let errorMsg = "Failed to update order"
+      if (error.response) {
+        errorMsg += `: ${error.response.status} - ${JSON.stringify(error.response.data)}`
+      } else if (error.message) {
+        errorMsg += `: ${error.message}`
+      }
+      set({ error: errorMsg, loading: false })
+      console.error("[updateOrder] Error details:", error)
       throw error
     }
   },

@@ -17,6 +17,12 @@ import { PaymentProvider } from "@/types/payments"
 import { ShippingMethod } from "@/types/shippingMethod"
 import Image from "next/image"
 import { loadCulqiScript, openCulqiCheckout, setCulqiCallback } from "@/components/checkout/cuqui-checkout";
+import { useEffect, useRef } from "react";
+import { initMercadoPago, Wallet } from "@mercadopago/sdk-react";
+import { getPublicKey } from "@/lib/mercadopago-ac"
+
+const publicKey = await getPublicKey();
+initMercadoPago(publicKey, {locale: "es-PE"});
 
 export function watchCulqiClose(onClose: () => void) {
   const observer = new MutationObserver(() => {
@@ -37,6 +43,7 @@ interface ShippingPaymentStepProps {
   handleSelectChange: (name: string, value: string) => void
   prevStep: () => void
   submitOrder: () => void
+  submitOrderMP: () => void
   isSubmitting: boolean
   isLoading: boolean
   shippingMethods: ShippingMethod[]
@@ -45,6 +52,7 @@ interface ShippingPaymentStepProps {
   total: number // Subtotal después de descuentos (sin envío)
   resumeItems: string
   orderId: string | null
+  temporalOrderId: string | null
 }
 
 export function ShippingPaymentStep({
@@ -53,6 +61,7 @@ export function ShippingPaymentStep({
   handleSelectChange,
   prevStep,
   submitOrder,
+  submitOrderMP,
   isSubmitting,
   isLoading,
   shippingMethods,
@@ -61,12 +70,107 @@ export function ShippingPaymentStep({
   total, // Este es el subtotal después de descuentos (sin incluir envío)
   resumeItems,
   orderId,
+  temporalOrderId,
 }: ShippingPaymentStepProps) {
   const selectedProvider = paymentProviders.find(
     (p) => p.id === formData.paymentMethod
   );
   const isCulqui = selectedProvider?.name?.toLowerCase() === "culqui";
+  const isMercadoPago = selectedProvider?.name?.toLowerCase() === "mercadopago";
   const [isOpeningCulqi, setIsOpeningCulqi] = useState(false);
+
+  const [mpPreferenceId, setMpPreferenceId] = useState<string | null>(null);
+  const [mpLoading, setMpLoading] = useState(false);
+  const mpInitialized = useRef(false);
+
+  // useEffect(() => {
+  //   if (!(window as any).MercadoPago) {
+  //     const script =document.createElement("script");
+  //     script.src = "https://sdk.mercadopago.com/js/v2"
+  //     script.async = true;
+  //     script.onload = () =>{
+  //       console.log("Ya se inicializo Mercado Pago")
+  //     }
+  //     document.body.appendChild(script);
+
+  //     return () => {
+  //         document.body.removeChild(script);
+  //     }
+  //   }
+  // }, []);
+  
+  useEffect(() => {
+    if (!isMercadoPago) {
+      setMpPreferenceId(null);
+    } else {
+      if(!(window as any).MercadoPago){
+        initMercadoPago(publicKey, {locale: "es-PE"});
+      } else {
+        console.log("Ya se inicializo")
+      }
+      (async () => {
+        setMpLoading(true);
+        setMpPreferenceId(null);
+        try {
+          createPreferenceIdFromEndpoint()
+        } catch (err) {
+          toast.error("Error de conexión con MercadoPago");
+        } finally {
+          setMpLoading(false);
+        }
+      })();
+    }
+  }, [isMercadoPago, total, resumeItems, formData, orderId]);
+
+  const createPreferenceIdFromEndpoint = async () => {
+    const res = await fetch("/api/payments/mercadopago", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amount: Math.round(Number(total) * 100),
+        currency: "PEN",
+        description: resumeItems,
+        email: formData.email,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phone,
+        address: formData.address,
+        city: formData.city,
+        countryCode: "PE",
+        temporalOrderId: temporalOrderId,
+      }),
+    });
+    const data = await res.json();
+    console.log("dataendpoint", data);
+    
+    if (data.success && data.preference_id) {
+      console.log("data: ", data)
+      setMpPreferenceId(data.preference_id);
+      // OpenMPCheckout()
+    } else {
+      toast.error(data.error || "No se pudo crear la preferencia de MercadoPago");
+    }
+  }
+
+  const OpenMPCheckout = () => {
+    if((window as any).MercadoPago) {
+      const mp = new (window as any).MercadoPago(publicKey, {
+        locale: "es-PE",
+      }) 
+
+      mp.checkout({
+        preference: {id: mpPreferenceId},
+        autoOpen: true,
+        iframe: true,
+        render: {
+          container: "mp-checkout",
+          label: "pagar",
+        },
+      });
+    } else {
+      console.log("No se ha inicializado")
+    }
+  }
 
   // Función para detectar el tipo de días disponibles
   const getDayType = (availableDays: string[]) => {
@@ -479,25 +583,51 @@ export function ShippingPaymentStep({
           <ArrowLeft className="mr-2 h-4 w-4" />
           Atrás
         </Button>
-        <Button
-          onClick={isCulqui ? handleCulqiPay : submitOrder}
-          disabled={isSubmitting}
-          className="px-8 py-2.5 bg-primary hover:bg-primary/90 transition-all shadow-md shadow-primary/10 hover:shadow-primary/20"
-        >
-          {isOpeningCulqi ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Cargando Culqi...
-            </>
-          ) : isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Procesando...
-            </>
-          ) : (
-            <>{isCulqui ? "Pagar" : "Finalizar compra"}</>
-          )}
-        </Button>
+        {/* Botón de pago MercadoPago */}
+        {isMercadoPago && mpPreferenceId ? (
+          <div className="">
+            {mpLoading ? (
+              <Button disabled className="px-8 py-2.5 bg-primary">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Cargando MercadoPago...
+              </Button>
+            ) : (
+              // <button
+              //   onClick={createPreferenceIdFromEndpoint}
+              //   className="inline-flex items-center cursor-pointer justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 h-9 px-4 py-2 has-[>svg]:px-3"
+              // >
+              //   Pagar con Mercado Pago
+              // </button>
+              <div onClick={submitOrderMP} style={{ cursor: "pointer" }}>
+                <Wallet initialization={{ preferenceId: mpPreferenceId! }} />
+              </div>
+            )}
+            <div
+              className="mp-checkout"
+            >
+            </div>
+          </div>
+        ) : (
+          <Button
+            onClick={isCulqui ? handleCulqiPay : submitOrder}
+            disabled={isSubmitting}
+            className="px-8 py-2.5 bg-primary hover:bg-primary/90 transition-all shadow-md shadow-primary/10 hover:shadow-primary/20"
+          >
+            {isOpeningCulqi ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Cargando Culqi...
+              </>
+            ) : isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Procesando...
+              </>
+            ) : (
+              <>{isCulqui ? "Pagar" : "Finalizar compra"}</>
+            )}
+          </Button>
+        )}
       </div>
     </motion.div>
   )

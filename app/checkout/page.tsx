@@ -27,6 +27,9 @@ import { useMainStore } from "@/stores/mainStore"
 import { AddressType } from "@/types/auth"
 import { User } from "@/types/user"
 import { Address } from "@/stores/userStore"
+import { usePersistedMainStore } from '@/stores/persistedMainStore'
+import { usePersistedCheckoutFormDataStore } from '@/stores/persistedCheckoutFormDataStore'
+import { useEmailOrderDataStore } from '@/stores/emailOrderDataStore'
 
 // Helper function to safely get price from variant with currency support
 const getSafePrice = (variant: { prices?: Array<{ price: number; currencyId?: string }> }, currencyId?: string): number => {
@@ -71,7 +74,10 @@ const STEPS = {
 
 export default function CheckoutPage() {
   const { items, clearCart, getTotal } = useCartStore()
+  const { setFormDataPersist } = usePersistedCheckoutFormDataStore()
   const { shopSettings, shippingMethods, paymentProviders, coupons, couponCode, createOrder } = useMainStore()
+  const { setShopSettings } = usePersistedMainStore()
+  const { setEmailOrderDataPersist } = useEmailOrderDataStore();
   const { currentUser, loading: userLoading, fetchUserByEmail, createAddress, deleteAddress } = useUserStore()
   const { sendOrderEmails } = useEmailStore()
   const searchParams = useSearchParams()
@@ -95,6 +101,18 @@ export default function CheckoutPage() {
   }
   
   const [currentStep, setCurrentStep] = useState(getInitialStep())
+  
+  // Listener para MercadoPago: avanzar a confirmación tras pago exitoso
+  useEffect(() => {
+    function handleMPMessage(event: MessageEvent) {
+      // Puedes restringir el origin si lo deseas
+      if (event?.data?.type === 'MP_PAYMENT_SUCCESS') {
+        setCurrentStep(STEPS.CONFIRMATION)
+      }
+    }
+    window.addEventListener('message', handleMPMessage)
+    return () => window.removeEventListener('message', handleMPMessage)
+  }, [])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [pageLoading, setPageLoading] = useState(true)
@@ -102,6 +120,32 @@ export default function CheckoutPage() {
   const [orderId, setOrderId] = useState<string | null>(null)
   const [shippingAddressId, setShippingAddressId] = useState<string | null>(null)
   const [billingAddressId, setBillingAddressId] = useState<string | null>(null)
+
+  const getOrCreateTemporalOrderId = () => {
+    if (typeof window !== 'undefined') {
+      // Si ya existe en sessionStorage, úsalo
+      let id = sessionStorage.getItem('temporalOrderId');
+      if (!id) {
+        id = 'tmpOrderId_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+        sessionStorage.setItem('temporalOrderId', id);
+      }
+      return id;
+    }
+    // SSR fallback
+    return 'tmpOrderId_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+  };
+
+  const [temporalOrderId, setTemporalOrderId] = useState(getOrCreateTemporalOrderId);
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      sessionStorage.removeItem('temporalOrderId');
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -142,6 +186,10 @@ export default function CheckoutPage() {
     preferredDeliveryDate: new Date().toISOString(),
   })
 
+  useEffect(() => {
+    setShopSettings(shopSettings)
+    setFormDataPersist(formData)
+  }, [shopSettings, formData, setShopSettings, setFormDataPersist])
 
   useEffect(() => {
     if (couponCode && couponCode.trim() !== "") {
@@ -805,161 +853,147 @@ const applyCouponIfExists = () => {
   setAppliedCoupon(foundCoupon);
   return foundCoupon;
 };
+  // Construcción reutilizable de orderData
+  const buildOrderData = async () => {
+    // 1. Prepare customer and address data
+    let calculatedShippingAddressId = shippingAddressId
+    let calculatedBillingAddressId = billingAddressId
+    let customer = { id: customerId || "guest" }
+
+    if (isAuthenticated && currentUser) {
+      // For authenticated users
+      customer = { id: currentUser.id }
+
+      // Initialize with selected address IDs if they exist
+      if (selectedShippingAddressId) {
+        calculatedShippingAddressId = selectedShippingAddressId
+      }
+      if (selectedBillingAddressId) {
+        calculatedBillingAddressId = selectedBillingAddressId
+      }
+
+      // Save any new addresses using the intelligent logic
+      if (showNewShippingAddress || showNewBillingAddress) {
+        const addressResult = await saveNewAddresses()
+        if (addressResult.shippingAddressId) {
+          calculatedShippingAddressId = addressResult.shippingAddressId
+        }
+        if (addressResult.billingAddressId) {
+          calculatedBillingAddressId = addressResult.billingAddressId
+        }
+      }
+    } else {
+      // For guest users, we'll use the form data directly in the order
+    }
+
+    // 2. Verify we have the required address IDs for authenticated users
+    if (isAuthenticated && (!calculatedShippingAddressId || !calculatedBillingAddressId)) {
+      throw new Error("Please select or create shipping and billing addresses")
+    }
+
+    // 3. Prepare line items from cart
+    const coupon = applyCouponIfExists();
+    const lineItems = prepareLineItems();
+
+    // 4. Calculate totals
+    const subtotalPrice = getTotal(selectedCurrencyId);
+    const totalDiscounts = lineItems.reduce((sum, item) => sum + item.totalDiscount, 0);
+    const subtotalAfterDiscount = subtotalPrice - totalDiscounts;
+
+    // Calcular IGV basado en configuración de la tienda
+    const taxesIncluded = shopSettings?.[0]?.taxesIncluded || false
+    const taxRate = Number(shopSettings?.[0]?.taxValue || 18) / 100
+    let totalTax = 0;
+    let totalPrice = 0;
+
+    if (taxesIncluded) {
+      // Si los impuestos están incluidos en el precio:
+      const taxDivisor = 1 + taxRate
+      totalTax = subtotalAfterDiscount - subtotalAfterDiscount / taxDivisor
+      totalPrice = subtotalAfterDiscount + Number(getShippingCost())
+    } else {
+      // Si los impuestos NO están incluidos:
+      totalTax = subtotalAfterDiscount * taxRate
+      totalPrice = subtotalAfterDiscount + totalTax + Number(getShippingCost())
+    }
+
+    const shippingCost = Number(getShippingCost())
+    const currencyId = activeCurrency?.id || shopSettings?.[0]?.defaultCurrency?.id || "curr_0536edd0-2193"
+    const orderNumber = Math.floor(Math.random() * 1000) + 1
+
+    const orderData = {
+      storeId: process.env.NEXT_PUBLIC_STORE_ID || "store_default",
+      temporalOrderId: temporalOrderId,
+      orderNumber: orderNumber,
+      currencyId: currencyId,
+      totalPrice,
+      subtotalPrice,
+      totalTax,
+      totalDiscounts,
+      lineItems,
+      customerInfo: (() => {
+        const { firstName, lastName } = formatUserName({
+          firstName: formData.firstName || currentUser?.firstName || null,
+          lastName: formData.lastName || currentUser?.lastName || null,
+          name: currentUser?.name || null,
+        })
+        return {
+          firstName,
+          lastName,
+          email: formData.email || currentUser?.email || "",
+          phone: formData.phone || currentUser?.phone || "",
+          company: formData.company || currentUser?.company || "",
+          isAuthenticated: isAuthenticated,
+          userId: currentUser?.id || null,
+        }
+      })(),
+      shippingAddress:
+        isAuthenticated && calculatedShippingAddressId
+          ? { id: calculatedShippingAddressId }
+          : {
+              address1: formData.address,
+              address2: formData.apartment || undefined,
+              city: formData.city,
+              province: formData.state,
+              zip: formData.zipCode,
+              country: "PE",
+              phone: formData.shippingPhone,
+            },
+      billingAddress: formData.sameBillingAddress
+        ? undefined
+        : isAuthenticated && calculatedBillingAddressId
+          ? { id: calculatedBillingAddressId }
+          : {
+              address1: formData.billingAddress,
+              address2: formData.billingApartment || undefined,
+              city: formData.billingCity,
+              province: formData.billingState,
+              zip: formData.billingZipCode,
+              country: "PE",
+              phone: formData.billingPhone,
+            },
+      couponId: coupon?.id || undefined,
+      paymentProviderId: formData.paymentMethod || undefined,
+      shippingMethodId: formData.shippingMethod || undefined,
+      financialStatus:
+        formData.paymentMethod === "pp_9c77d30e-6d2b"
+          ? OrderFinancialStatus.PAID
+          : OrderFinancialStatus.PENDING,
+      fulfillmentStatus: OrderFulfillmentStatus.UNFULFILLED,
+      shippingStatus: ShippingStatus.PENDING,
+      customerNotes: formData.notes || "",
+      internalNotes: "",
+      source: "web",
+      preferredDeliveryDate: new Date(formData.preferredDeliveryDate),
+    }
+    return orderData;
+  }
 
   // Submit the order
   const submitOrder = async () => {
     setIsSubmitting(true)
-
     try {
-      // 1. Prepare customer and address data
-      let calculatedShippingAddressId = shippingAddressId
-      let calculatedBillingAddressId = billingAddressId
-      let customer = { id: customerId || "guest" }
-
-      if (isAuthenticated && currentUser) {
-        // For authenticated users
-        customer = { id: currentUser.id }
-
-        // Initialize with selected address IDs if they exist
-        if (selectedShippingAddressId) {
-          calculatedShippingAddressId = selectedShippingAddressId
-        }
-        if (selectedBillingAddressId) {
-          calculatedBillingAddressId = selectedBillingAddressId
-        }
-
-        // Save any new addresses using the intelligent logic
-        if (showNewShippingAddress || showNewBillingAddress) {
-          const addressResult = await saveNewAddresses()
-          if (addressResult.shippingAddressId) {
-            calculatedShippingAddressId = addressResult.shippingAddressId
-          }
-          if (addressResult.billingAddressId) {
-            calculatedBillingAddressId = addressResult.billingAddressId
-          }
-        }
-
-      } else {
-        // For guest users, we'll use the form data directly in the order
-      }
-
-      // 2. Verify we have the required address IDs for authenticated users
-      if (isAuthenticated && (!calculatedShippingAddressId || !calculatedBillingAddressId)) {
-        throw new Error("Please select or create shipping and billing addresses")
-      }
-
-      // 3. Prepare line items from cart
-      const coupon = applyCouponIfExists();
-
-// Preparar line items con descuentos
-const lineItems = prepareLineItems()
-
-// Calcular el total de descuentos
-
-      // 4. Calculate totals
-      const subtotalPrice = getTotal(selectedCurrencyId);
-      const totalDiscounts = lineItems.reduce((sum, item) => sum + item.totalDiscount, 0);
-      const subtotalAfterDiscount = subtotalPrice - totalDiscounts;
-
-      // Calcular IGV basado en configuración de la tienda
-      const taxesIncluded = shopSettings?.[0]?.taxesIncluded || false
-      const taxRate = Number(shopSettings?.[0]?.taxValue || 18) / 100
-      
-      let totalTax = 0;
-      let totalPrice = 0;
-
-      if (taxesIncluded) {
-        // Si los impuestos están incluidos en el precio:
-        const taxDivisor = 1 + taxRate
-        totalTax = subtotalAfterDiscount - subtotalAfterDiscount / taxDivisor
-        totalPrice = subtotalAfterDiscount + Number(getShippingCost())
-      } else {
-        // Si los impuestos NO están incluidos:
-        totalTax = subtotalAfterDiscount * taxRate
-        totalPrice = subtotalAfterDiscount + totalTax + Number(getShippingCost())
-      }
-
-      const shippingCost = Number(getShippingCost())
-
-      // Get currency information
-      const currencyId = activeCurrency?.id || shopSettings?.[0]?.defaultCurrency?.id || "curr_0536edd0-2193"
-
-      // 5. Prepare order data
-      // Generate a random order number between 1 and 1000
-      const orderNumber = Math.floor(Math.random() * 1000) + 1
-
-      const orderData = {
-        storeId: process.env.NEXT_PUBLIC_STORE_ID || "store_default", // Use environment variable with fallback
-        orderNumber: orderNumber, // Add the orderNumber field
-        currencyId: currencyId,
-        totalPrice,
-        subtotalPrice,
-        totalTax,
-        totalDiscounts,
-        
-        lineItems,
-        // Create customerInfo JSON object with properly formatted name
-        customerInfo: (() => {
-          // Use the formatUserName utility function
-          const { firstName, lastName } = formatUserName({
-            firstName: formData.firstName || currentUser?.firstName || null,
-            lastName: formData.lastName || currentUser?.lastName || null,
-            name: currentUser?.name || null,
-          })
-
-          return {
-            firstName,
-            lastName,
-            email: formData.email || currentUser?.email || "",
-            phone: formData.phone || currentUser?.phone || "",
-            company: formData.company || currentUser?.company || "",
-            isAuthenticated: isAuthenticated,
-            userId: currentUser?.id || null,
-          }
-        })(),
-        // Create shippingAddress JSON object
-        shippingAddress:
-          isAuthenticated && calculatedShippingAddressId
-            ? { id: calculatedShippingAddressId }
-            : {
-                address1: formData.address,
-                address2: formData.apartment || undefined,
-                city: formData.city,
-                province: formData.state,
-                zip: formData.zipCode,
-                country: "PE",
-                phone: formData.shippingPhone,
-              },
-        // Create billingAddress JSON object
-        billingAddress: formData.sameBillingAddress
-          ? undefined
-          : isAuthenticated && calculatedBillingAddressId
-            ? { id: calculatedBillingAddressId }
-            : {
-                address1: formData.billingAddress,
-                address2: formData.billingApartment || undefined,
-                city: formData.billingCity,
-                province: formData.billingState,
-                zip: formData.billingZipCode,
-                country: "PE",
-                phone: formData.billingPhone,
-              },
-        couponId: coupon?.id || undefined,
-        paymentProviderId: formData.paymentMethod || undefined, // Set to undefined when no payment method
-        shippingMethodId: formData.shippingMethod || undefined, // Set to undefined when no shipping method
-        financialStatus:
-          formData.paymentMethod === "pp_9c77d30e-6d2b"
-            ? OrderFinancialStatus.PAID
-            : OrderFinancialStatus.PENDING,
-        fulfillmentStatus: OrderFulfillmentStatus.UNFULFILLED,
-        shippingStatus: ShippingStatus.PENDING,
-        customerNotes: formData.notes || "",
-        internalNotes: "",
-        source: "web",
-        preferredDeliveryDate: new Date(formData.preferredDeliveryDate),
-      }
-
-      // 6. Create the order
+      let orderData = await buildOrderData();
       let orderCreationSuccess = false
       let retryCount = 0
       const maxRetries = 3
@@ -980,11 +1014,13 @@ const lineItems = prepareLineItems()
             const emailOrderData: Order = {
               id: order.id,
               storeId: order.storeId || process.env.NEXT_PUBLIC_STORE_ID || "store_default",
-              orderNumber: order.orderNumber || orderNumber,
-              currencyId: currencyId,
               // Use the complete Currency object from activeCurrency or shopSettings
+              orderNumber: order.orderNumber || orderData.orderNumber,
+              currencyId: orderData.currencyId,
+            // Guardar emailOrderData en el store persistente
+
               currency: {
-                id: currencyId,
+                id: orderData.currencyId,
                 code: activeCurrency?.code || shopSettings?.[0]?.defaultCurrency?.code || "PEN",
                 name: activeCurrency?.name || shopSettings?.[0]?.defaultCurrency?.name || "Nuevo Sol Peruano",
                 symbol: activeCurrency?.symbol || shopSettings?.[0]?.defaultCurrency?.symbol || "S/",
@@ -1029,7 +1065,7 @@ const lineItems = prepareLineItems()
                     country: "PE",
                     phone: formData.billingPhone || formData.phone || currentUser?.phone || "",
                   },
-              lineItems: lineItems.map((item) => ({
+              lineItems: orderData.lineItems.map((item) => ({
                 id: `item_${Date.now()}_${Math.random()}`,
                 orderId: order.id,
                 variantId: item.variantId,
@@ -1041,10 +1077,10 @@ const lineItems = prepareLineItems()
                 createdAt: new Date(),
                 updatedAt: new Date(),
               })),
-              subtotalPrice: subtotalPrice,
-              totalTax: totalTax,
-              totalDiscounts: totalDiscounts, // ✅ CORREGIDO: usar valor real
-              totalPrice: totalPrice,
+              subtotalPrice: orderData.subtotalPrice,
+              totalTax: orderData.totalTax,
+              totalDiscounts: orderData.totalDiscounts,
+              totalPrice: orderData.totalPrice,
               financialStatus: OrderFinancialStatus.PENDING,
               fulfillmentStatus: OrderFulfillmentStatus.UNFULFILLED,
               shippingStatus: ShippingStatus.PENDING,
@@ -1058,8 +1094,7 @@ const lineItems = prepareLineItems()
               refunds: [],
               createdAt: new Date(),
               updatedAt: new Date(),
-              // Optional fields that might be needed
-              couponId: coupon?.id || null, // ✅ CORREGIDO: usar coupon real
+              couponId: orderData.couponId || null,
               paymentStatus: null,
               paymentDetails: null,
               trackingUrl: null,
@@ -1104,6 +1139,147 @@ const lineItems = prepareLineItems()
     }
   }
 
+  const submitOrderMP = async () => {
+    setIsSubmitting(true)
+    setFormData(formData);
+    try {
+      let orderData = await buildOrderData();
+      let orderCreationSuccess = false
+      let retryCount = 0
+      const maxRetries = 3
+
+      while (!orderCreationSuccess && retryCount < maxRetries) {
+        try {
+          const order = await createOrder(orderData)
+
+          if (!order || !order.id) {
+            throw new Error("Failed to create order")
+          }
+          setOrderId(order.id)
+          orderCreationSuccess = true
+
+          try {
+            // Prepare order data for email templates using the Order schema
+            const emailOrderData: Order = {
+              id: order.id,
+              storeId: order.storeId || process.env.NEXT_PUBLIC_STORE_ID || "store_default",
+              // Use the complete Currency object from activeCurrency or shopSettings
+              orderNumber: order.orderNumber || orderData.orderNumber,
+              currencyId: orderData.currencyId,
+            // Guardar emailOrderData en el store persistente
+
+              currency: {
+                id: orderData.currencyId,
+                code: activeCurrency?.code || shopSettings?.[0]?.defaultCurrency?.code || "PEN",
+                name: activeCurrency?.name || shopSettings?.[0]?.defaultCurrency?.name || "Nuevo Sol Peruano",
+                symbol: activeCurrency?.symbol || shopSettings?.[0]?.defaultCurrency?.symbol || "S/",
+                decimalPlaces: shopSettings?.[0]?.defaultCurrency?.decimalPlaces ?? 2,
+                symbolPosition: shopSettings?.[0]?.defaultCurrency?.symbolPosition || "before",
+                isActive: shopSettings?.[0]?.defaultCurrency?.isActive ?? true,
+                createdAt: shopSettings?.[0]?.defaultCurrency?.createdAt || new Date(),
+                updatedAt: shopSettings?.[0]?.defaultCurrency?.updatedAt || new Date(),
+              },
+              // customerInfo as Record<string, any> to match schema
+              customerInfo: {
+                name:
+                  `${formData.firstName || currentUser?.firstName || ""} ${formData.lastName || currentUser?.lastName || ""}`.trim() ||
+                  "Cliente",
+                email: formData.email || currentUser?.email || "",
+                phone: formData.phone || currentUser?.phone || "",
+                company: formData.company || currentUser?.company || "",
+                userId: currentUser?.id || null,
+                isAuthenticated: isAuthenticated,
+              },
+              // shippingAddress as Record<string, any> to match schema
+              shippingAddress: {
+                name: `${formData.firstName || currentUser?.firstName || ""} ${formData.lastName || currentUser?.lastName || ""}`.trim(),
+                address1: formData.address,
+                address2: formData.apartment || "",
+                city: formData.city,
+                state: formData.state || "",
+                postalCode: formData.zipCode,
+                country: "PE",
+                phone: formData.shippingPhone || formData.phone || currentUser?.phone || "",
+              },
+              // billingAddress as Record<string, any> to match schema
+              billingAddress: formData.sameBillingAddress
+                ? null
+                : {
+                    name: `${formData.firstName || currentUser?.firstName || ""} ${formData.lastName || currentUser?.lastName || ""}`.trim(),
+                    address1: formData.billingAddress,
+                    address2: formData.billingApartment || "",
+                    city: formData.billingCity,
+                    state: formData.billingState || "",
+                    postalCode: formData.billingZipCode,
+                    country: "PE",
+                    phone: formData.billingPhone || formData.phone || currentUser?.phone || "",
+                  },
+              lineItems: orderData.lineItems.map((item) => ({
+                id: `item_${Date.now()}_${Math.random()}`,
+                orderId: order.id,
+                variantId: item.variantId,
+                title: item.title,
+                quantity: item.quantity,
+                price: item.price,
+                totalDiscount: item.totalDiscount || 0,
+                refundLineItems: [],
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              })),
+              subtotalPrice: orderData.subtotalPrice,
+              totalTax: orderData.totalTax,
+              totalDiscounts: orderData.totalDiscounts,
+              totalPrice: orderData.totalPrice,
+              financialStatus: OrderFinancialStatus.PENDING,
+              fulfillmentStatus: OrderFulfillmentStatus.UNFULFILLED,
+              shippingStatus: ShippingStatus.PENDING,
+              paymentProvider: paymentProviders.find((p) => p.id === formData.paymentMethod) || null,
+              paymentProviderId: formData.paymentMethod || null,
+              shippingMethod: shippingMethods.find((m) => m.id === formData.shippingMethod) || null,
+              shippingMethodId: formData.shippingMethod || null,
+              customerNotes: formData.notes || "",
+              trackingNumber: null,
+              estimatedDeliveryDate: null,
+              refunds: [],
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              couponId: orderData.couponId || null,
+              paymentStatus: null,
+              paymentDetails: null,
+              trackingUrl: null,
+              shippedAt: null,
+              deliveredAt: null,
+              internalNotes: "",
+              source: "web",
+              preferredDeliveryDate: formData.preferredDeliveryDate ? new Date(formData.preferredDeliveryDate) : null,
+              paymentTransactions: [],
+            }
+
+            setEmailOrderDataPersist(emailOrderData);
+
+          } catch (emailError) {
+            console.error("Error enviando emails:", emailError)
+            // El pedido se creó exitosamente, el error de email no es crítico
+          }
+        } catch (error) {
+          retryCount++
+          if (retryCount < maxRetries) {
+            // Generate a new orderNumber for the retry
+            orderData.orderNumber = Math.floor(Math.random() * 1000) + 1
+          } else {
+            toast.error("Error al procesar el pedido. Por favor, intenta nuevamente.")
+            setIsSubmitting(false)
+            return
+          }
+        }
+      }
+    } catch (error) {
+      toast.error("Error al procesar el pedido. Por favor, intenta nuevamente.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   // Get the appropriate icon for payment methods
   const getPaymentIcon = (paymentName: string) => {
     const name = paymentName.toLowerCase()
@@ -1125,8 +1301,6 @@ const lineItems = prepareLineItems()
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
             strokeLinejoin="round"
           >
             <path d="M4 17h16"></path>
@@ -1463,6 +1637,7 @@ if (taxesIncluded) {
                     handleSelectChange={handleSelectChange}
                     prevStep={prevStep}
                     submitOrder={submitOrder}
+                    submitOrderMP={submitOrderMP}
                     isSubmitting={isSubmitting}
                     isLoading={isLoading}
                     shippingMethods={shippingMethods}
@@ -1471,6 +1646,7 @@ if (taxesIncluded) {
                     total={subtotalAfterDiscount}
                     resumeItems={resumeItems}
                     orderId={orderId}
+                    temporalOrderId={temporalOrderId}
                   />
                 )}
 

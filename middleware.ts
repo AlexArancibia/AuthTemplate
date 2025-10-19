@@ -17,6 +17,8 @@ const publicRoutes = [
   "/api/email/send-to-admin",
   "/api/email/send-verification", // Esta ya estaba, es para la verificación de email
   "/api/payments/culqui",
+  "/api/payments/mercadopago",
+  "/api/webhooks/mercadopago",
   "/terminos-y-condiciones",
   "/politica-de-privacidad",
   "/libro-de-reclamaciones",
