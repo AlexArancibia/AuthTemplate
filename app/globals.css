@@ -174,8 +174,19 @@ html { scroll-behavior: smooth; }
   * {
     @apply border-border outline-ring/50;
   }
+  
+  /* Force light theme */
+  html {
+    color-scheme: light only !important;
+  }
+  
+  html.dark {
+    color-scheme: light only !important;
+  }
+  
   body {
     @apply bg-background text-foreground;
+    color-scheme: light only !important;
   }
   
   /* Force primary color to be black */
@@ -234,6 +245,7 @@ html { scroll-behavior: smooth; }
   h3 {
     @apply text-lg       /* Móvil por defecto */
            md:text-xl   /* Tablets y pantallas medianas */
+           font-semibold
 
            tracking-tight 
            leading-[1.1];

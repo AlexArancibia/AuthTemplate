@@ -78,7 +78,7 @@ export function ProductSidebar({ product, selectedCurrencyId, acceptedCurrencies
 
       {/* Métodos de pago */}
       <div className="border rounded-lg p-4 shadow-md bg-gray-50/90 shadow-slate-200/30">
-          <h3 className="font-normal text-base mb-3 flex items-center gap-2">
+          <h3 className="font-light text-base mb-3 flex items-center gap-2">
             <CreditCard className="w-5 h-5" />
             Métodos de pago
           </h3>

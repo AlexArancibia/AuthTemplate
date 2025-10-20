@@ -116,18 +116,18 @@ export function PreFooterContact() {
   return (
     <>
     <motion.section
-      className="bg-[url('/light3colors.jpg')] bg-top bg-cover py-24 relative overflow-hidden"
+      className="bg-[url('/light3colors.jpg')] bg-top bg-cover py-12 relative overflow-hidden"
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true }}
       variants={containerVariants}
     >
       <div className="container-section relative z-10">
-        <div className="content-section flex flex-col md:flex-row gap-8 items-center">
+        <div className="content-section flex flex-col md:flex-row gap-6 items-center">
           {/* Left column with company info */}
           <motion.div className="w-full md:w-1/2" variants={itemVariants}>
-            <h2 className="text-white mb-4">¡REGÍSTRATE Y AHORRA!</h2>
-            <p className="text-white mb-6">
+            <h2 className="text-white mb-3">¡REGÍSTRATE Y AHORRA!</h2>
+            <p className="text-white mb-4">
               {shopInfo?.description ||
                 "Estamos aquí para ayudarte. Contáctanos para obtener más información sobre nuestros productos y servicios de limpieza industrial."}
             </p>
@@ -176,7 +176,7 @@ export function PreFooterContact() {
 
           {/* Right column with form */}
           <motion.div className="w-full md:w-[400px]" variants={itemVariants}>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
               {/* Campo de correo */}
               <div>
                 <Input
@@ -184,7 +184,7 @@ export function PreFooterContact() {
                   placeholder="Tu Correo"
                   {...register("email")}
                   disabled={isSubmitting}
-                  className="w-full h-12 px-4 rounded-[3px] border border-gray-300 text-sm text-white placeholder-white bg-white"
+                  className="w-full h-10 px-4 rounded-[3px] border border-gray-300 text-sm text-white placeholder-white bg-white"
                 />
                 {errors.email && (
                   <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>

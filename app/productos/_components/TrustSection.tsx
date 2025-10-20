@@ -52,7 +52,7 @@ export default function TrustSection() {
                 <Icon size={40} strokeWidth={1.75} aria-hidden="true" />
               </div>
 
-              <h3 className="text-lg font-semibold mb-2">{title}</h3>
+              <h4 className="text-lg font-semibold mb-2">{title}</h4>
 
               <p className="text-sm leading-6 text-muted-foreground max-w-[260px]">
                 {text}

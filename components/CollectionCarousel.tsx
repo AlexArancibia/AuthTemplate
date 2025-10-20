@@ -130,20 +130,20 @@ export function CollectionCarousel({
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="w-full flex items-center gap-1 sm:gap-2 px-2 sm:px-0"
+          className="w-full relative"
         >
-          {/* Botón izquierda */}
+          {/* Botón izquierda (posición absoluta) */}
           <button
             onClick={scrollPrev}
             disabled={!canScrollPrev}
-            className="p-1 sm:p-2 disabled:opacity-30 hover:opacity-80 transition-opacity flex-shrink-0"
+            className="absolute left-2 sm:left-3 md:left-4 top-1/2 -translate-y-1/2 disabled:opacity-30 transition-opacity z-10 w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-black/10 hover:bg-black/15 cursor-pointer"
             aria-label="Anterior"
             style={{ background: "none", border: "none", outline: "none", boxShadow: "none" }}
           >
-            <ChevronLeft className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-gray-700" />
+            <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-gray-700" />
           </button>
 
-          <div className="overflow-hidden flex-1" ref={emblaRef}>
+          <div className="overflow-hidden w-full" ref={emblaRef}>
             <div className="flex gap-2 sm:gap-4 lg:gap-6">
               {loading ? (
                 <div className="py-10 w-full text-center">
@@ -153,9 +153,9 @@ export function CollectionCarousel({
                 </div>
               ) : products.length > 0 ? (
                 products.map((product) => (
-                  <div
+                <div
                     key={product.id}
-                    className="flex-none w-full sm:w-1/2 lg:w-1/3 px-2 sm:px-0"
+                    className="flex-none w-full lg:w-[32%]"
                   >
                     <ProductCard
                       product={product}
@@ -174,15 +174,15 @@ export function CollectionCarousel({
             </div>
           </div>
 
-          {/* Botón derecha */}
+          {/* Botón derecha (posición absoluta) */}
           <button
             onClick={scrollNext}
             disabled={!canScrollNext}
-            className="p-1 sm:p-2 disabled:opacity-30 hover:opacity-80 transition-opacity flex-shrink-0"
+            className="absolute right-2 sm:right-3 md:right-4 top-1/2 -translate-y-1/2 disabled:opacity-30 transition-opacity z-10 w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full bg-black/10 hover:bg-black/15 cursor-pointer"
             aria-label="Siguiente"
             style={{ background: "none", border: "none", outline: "none", boxShadow: "none" }}
           >
-            <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-gray-700" />
+            <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7 text-gray-700" />
           </button>
         </motion.div>
 

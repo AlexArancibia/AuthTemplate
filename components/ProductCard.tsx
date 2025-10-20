@@ -10,6 +10,7 @@ import { Clock, Eye, ShoppingCart } from "lucide-react"
 import type { Product } from "@/types/product"
 import type { CurrencyOption } from "@/stores/currency";
 import { useMainStore } from "@/stores/mainStore"
+import { useCartStore } from "@/stores/cartStore"
 
 interface ProductCardProps {
   product: Product
@@ -79,6 +80,7 @@ export function ProductCard({
   salePercentage = 10 
 }: ProductCardProps) {
   const { shopSettings } = useMainStore()
+  const { addItem } = useCartStore()
   const [isPulsing, setIsPulsing] = useState(false)
 
   // Efecto para la animación de pulso
@@ -148,18 +150,30 @@ export function ProductCard({
   
   const secondaryImage = getSecondaryImage(product)
 
+  // Función para manejar agregar al carrito
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    // Obtener la primera variación del producto
+    const firstVariant = product.variants?.[0]
+    if (firstVariant) {
+      addItem(product, firstVariant, 1)
+    }
+  }
+
   return (
-    <div className="group relative bg-white rounded-none p-6 sm:p-8 flex flex-col h-full">
+    <div className="group relative bg-white rounded-none p-0 flex flex-col h-full">
       <Link href={`/productos/${product.slug}`} className="flex flex-col h-full">
         {/* Badges */}
-        <div className="absolute top-6 left-6 flex flex-col gap-2 z-10">
+        <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
           {isNew && (
-            <Badge variant="secondary" className="bg-white hover:bg-accent text-secondary">
+            <Badge variant="secondary" className="bg-white hover:bg-accent text-secondary text-xs">
               Nuevo
             </Badge>
           )}
           {product.status === "DRAFT" && (
-            <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+            <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs">
               Borrador
             </Badge>
           )}
@@ -167,15 +181,15 @@ export function ProductCard({
 
         {/* Sale Badge */}
         {showSaleBadge && (
-          <div className="absolute top-6 right-6 z-10">
+          <div className="absolute top-4 right-4 z-10">
             <Badge className="font-adi-regular bg-red-500 text-white text-xs px-2 py-1">
               SALE
             </Badge>
           </div>
         )}
 
-        {/* Image Container - Ahora más grande */}
-        <div className="relative aspect-square mb-6 sm:mb-8 bg-gray-50 rounded-xl overflow-hidden flex-shrink-0">
+        {/* Image Container */}
+        <div className="relative aspect-square mb-4 bg-gray-50 rounded-xl overflow-hidden flex-shrink-0">
           {/* Primary Image */}
           <Image
             src={image || "/placeholder.png"}
@@ -197,16 +211,35 @@ export function ProductCard({
           )}
           
           {/* Shopping Cart Icon */}
-          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="bg-white/90 backdrop-blur-sm rounded-full p-2 shadow-lg">
+          <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
+            <motion.button 
+              onClick={handleAddToCart}
+              className="bg-white backdrop-blur-sm rounded-full p-2 hover:bg-white transition-all duration-200 cursor-pointer relative"
+              whileTap={{ scale: 0.95 }}
+            >
               <ShoppingCart className="w-4 h-4 text-gray-700" />
-            </div>
+              
+              {/* Efecto de pulso animado similar al WhatsApp */}
+              <motion.div
+                className="absolute inset-0 rounded-full bg-gray-400 opacity-30"
+                animate={{
+                  scale: [1, 1.2, 1],
+                  opacity: [0.3, 0.5, 0.3],
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Number.POSITIVE_INFINITY,
+                  repeatType: "reverse",
+                }}
+              />
+            </motion.button>
           </div>
 
-          {/* Contador de lanzamiento - Diseño refinado */}
+
+          {/* Contador de lanzamiento */}
           {hasUpcomingRelease && (
             <motion.div
-              className="absolute top-3 right-3 bg-blue-950 backdrop-blur-sm text-white px-3 py-1.5 rounded-full border border-white/20 shadow-lg"
+              className="absolute top-3 right-3 bg-blue-950 backdrop-blur-sm text-white px-3 py-1.5 rounded-full border border-white/20"
               animate={{
                 boxShadow: isPulsing ? "0 0 0 0 rgba(255, 255, 255, 0.7)" : "0 0 0 10px rgba(255, 255, 255, 0)",
               }}
@@ -222,54 +255,38 @@ export function ProductCard({
           )}
         </div>
 
-        {/* Product Info - Ahora con espacio fijo */}
+        {/* Product Info */}
         <div className="flex-grow flex flex-col">
-          <div className="mb-3 sm:mb-4">
-            <p className="font-adi-regular text-sm sm:text-base font-medium text-gray-900 line-clamp-2 uppercase tracking-wide">{product.title}</p>
+          <div className="mb-1">
+            <span className="font-bold text-sm text-gray-900 line-clamp-2 uppercase tracking-wide">{product.title}</span>
           </div>
 
           {/* Etiqueta de prelanzamiento */}
           {hasUpcomingRelease && (
-            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 mb-2 w-fit">
+            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 mb-1 w-fit">
               Prelanzamiento
             </Badge>
           )}
-        </div>
 
-        {/* Precio en la parte inferior */}
-        {priceDisplay && (
-          <div className="mt-auto pt-6 sm:pt-8">
-            <div className="font-adi-regular flex items-center gap-2">
-              {showSaleBadge ? (
-                <>
-                  <span className="text-base font-medium text-black">{priceDisplay}</span>
-                  <span className="text-sm text-gray-400 line-through">
-                    {formatPrice(lowestPrice * (1 + salePercentage / 100))}
-                  </span>
-                </>
-              ) : (
-                <span className="text-sm sm:text-base font-medium text-black">{priceDisplay}</span>
-              )}
+          {/* Precio pegado al título */}
+          {priceDisplay && (
+            <div className="mt-1">
+              <div className="font-adi-regular flex items-center gap-2">
+                {showSaleBadge ? (
+                  <>
+                    <span className="text-base font-bold text-black">{priceDisplay}</span>
+                    <span className="text-sm text-gray-400 line-through">
+                      {formatPrice(lowestPrice * (1 + salePercentage / 100))}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-sm font-bold text-black">{priceDisplay}</span>
+                )}
+              </div>
             </div>
-          </div>
-        )}
-      </Link>
-      <motion.div>
-        {/* Ver Producto Button - Ahora fuera del contenido principal */}
-        <div className="absolute inset-x-4 bottom-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <Button
-            className="w-full gap-2 bg-white text-primary hover:bg-white h-7 text-xs shadow-none border-0"
-            disabled={false}
-            onClick={(e) => {
-              e.stopPropagation()
-              window.location.href = `/productos/${product.slug}`
-            }}
-          >
-            <Eye className="w-4 h-4" />
-            {hasUpcomingRelease ? "Ver Prelanzamiento" : "Ver Producto"}
-          </Button>
+          )}
         </div>
-      </motion.div>
+      </Link>
     </div>
   )
 }

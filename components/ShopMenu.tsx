@@ -73,6 +73,11 @@ export default function ShopMenu({ categories, collections, isActive }: ShopMenu
 
   // Filtrar colecciones destacadas
   const featuredCollections = collections.filter(collection => collection.isFeatured)
+  
+  // Dividir colecciones destacadas en columnas si son muchas
+  const featuredPerColumn = Math.ceil(featuredCollections.length / 2)
+  const leftColumnFeatured = featuredCollections.slice(0, featuredPerColumn)
+  const rightColumnFeatured = featuredCollections.slice(featuredPerColumn)
 
   // Obtener imagen para mostrar
   const getDisplayImage = () => {
@@ -130,18 +135,35 @@ export default function ShopMenu({ categories, collections, isActive }: ShopMenu
                 </div>
                 <h3 className="font-bold text-sm uppercase tracking-wider text-foreground">DESTACADOS</h3>
               </div>
-              <div className="space-y-1">
-                {featuredCollections.slice(0, 3).map((collection) => (
-                  <CollectionItem 
-                    key={collection.id} 
-                    collection={collection}
-                    onHover={() => {
-                      setHoveredItem({ type: 'collection', item: collection })
-                      setLastSelectedItem({ type: 'collection', item: collection })
-                    }}
-                    onLeave={() => setHoveredItem(null)}
-                  />
-                ))}
+              <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                {/* Columna izquierda */}
+                <div className="space-y-1">
+                  {leftColumnFeatured.map((collection) => (
+                    <CollectionItem 
+                      key={collection.id} 
+                      collection={collection}
+                      onHover={() => {
+                        setHoveredItem({ type: 'collection', item: collection })
+                        setLastSelectedItem({ type: 'collection', item: collection })
+                      }}
+                      onLeave={() => setHoveredItem(null)}
+                    />
+                  ))}
+                </div>
+                {/* Columna derecha */}
+                <div className="space-y-1">
+                  {rightColumnFeatured.map((collection) => (
+                    <CollectionItem 
+                      key={collection.id} 
+                      collection={collection}
+                      onHover={() => {
+                        setHoveredItem({ type: 'collection', item: collection })
+                        setLastSelectedItem({ type: 'collection', item: collection })
+                      }}
+                      onLeave={() => setHoveredItem(null)}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
 

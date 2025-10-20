@@ -63,15 +63,11 @@ function ProductsContent() {
   })
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className=" bg-white">
       {/* Sección de encabezado con efecto de fade-in */}
       <motion.section
-        className="relative py-24 sm:py-32 px-4 text-center bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage: `url('/productsBanner.jpg')`,
-          backgroundSize: '105%',
-          backgroundPosition: 'center 19%',
-        }}
+        className="relative h-[500px] md:h-[500px] sm:py-24 md:py-32 px-4 text-center bg-[url('/productsBanner.jpg')] bg-cover bg-center md:bg-top bg-no-repeat"
+
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
@@ -79,26 +75,19 @@ function ProductsContent() {
         <div className="absolute inset-0 z-0 bg-blue-600/20"></div>
         <div className="absolute inset-0 z-0 bg-gradient-to-t from-black/100 via-black/40 to-black/30"></div>
 
-        <div className="relative z-10 w-full max-w-[1600px] mx-auto flex flex-col items-center gap-6">
-          <h1 className="font-druk text-4xl sm:text-5xl font-bold text-white text-center mb-6">
-            Descubre Nuestras
-            <br className="hidden sm:inline" />
-            Ofertas
+        <div className="relative z-10 w-full max-w-[1600px] mx-auto flex flex-col items-center justify-center h-full gap-6">
+          <h1 className="font-druk font-bold text-white text-center mb-6 pt-8">
+            Descubre Nuestras Ofertas
           </h1>
 
           {/* Botón */}
-          <Link href="/productos">
-            <button className="font-adi-regular bg-white text-black text-sm font-medium px-6 py-3 rounded-xs cursor-pointer">
-              Ver más
-            </button>
-          </Link>
 
           {/* Logos */}
-          <div className="mt-6 flex flex-wrap justify-center items-center gap-24 px-4">
-            <img src="/xiom.png" alt="Xiom" className="h-8 w-auto" />
-            <img src="/sanwei.png" alt="Sanwei" className="h-8 w-auto" />
-            <img src="/butter2.png" alt="Butterfly" className="h-8 w-auto" />
-            <img src="/victas_logo2.png" alt="Victas" className="h-8 w-auto" />
+          <div className="mt-6 grid grid-cols-2 md:flex md:flex-wrap justify-center items-center gap-8 md:gap-24 px-4">
+            <img src="/xiom.png" alt="Xiom" className="h-5 md:h-8 w-auto" />
+            <img src="/sanwei.png" alt="Sanwei" className="h-5 md:h-8 w-auto" />
+            <img src="/butter2.png" alt="Butterfly" className="h-5 md:h-8 w-auto" />
+            <img src="/victas_logo2.png" alt="Victas" className="h-5 md:h-8 w-auto" />
           </div>
         </div>
       </motion.section>

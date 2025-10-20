@@ -21,7 +21,6 @@ import { ProductCard } from "@/components/ProductCard"
 import { toast } from "sonner"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import FrequentlyBoughtTogetherComponent from "./frequentlyBoughtTogether"
 
 interface ProductDetailsProps {
   slug: string
@@ -372,8 +371,8 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
       className="min-h-screen"
     >
       {/* Header Section */}
-      <div className="bg-black bg-cover py-8">
-        <div className="container mx-auto px-4">
+      <div className="bg-[url('/FONDO-TEXTURA.jpg')] bg-cover py-12 pt-24 container-section">
+        <div className="content-section mx-auto">
           <div className="py-6">
             <motion.div
               initial={{ y: -20, opacity: 0 }}
@@ -404,8 +403,8 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
       </div>
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-[auto_300px] gap-8 lg:gap-12">
+      <div className="container-section mx-auto py-8 md:py-12">
+        <div className="content-section grid grid-cols-1 lg:grid-cols-[auto_300px] gap-8 lg:gap-12">
           {/* Product Content */}
           <div className="space-y-8">
             {/* Product Images and Purchase Options */}
@@ -501,11 +500,15 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                 transition={{ delay: 0.5, duration: 0.5 }}
                 className="space-y-6"
               >
-                <label className="text-lg font-medium mb-1.5 block">Descripción</label>
-                <ProductSimpleDescription description={product.description ?? ""} />
-                <Link href="#detalles">
-                  <p className="text-xs text-blue-800 font-semibold mt-2">Ver todas las características</p>
-                </Link>
+                {product.description && product.description.trim() && (
+                  <>
+                    <label className="text-lg font-medium mb-1.5 block">Descripción</label>
+                    <ProductSimpleDescription description={product.description} />
+                    <Link href="#detalles">
+                      <p className="text-xs text-blue-800 font-semibold mt-2">Ver todas las características</p>
+                    </Link>
+                  </>
+                )}
 
                 {optionKeys.map((optionKey, index) => (
                   <div key={optionKey} className="space-y-2">
@@ -642,16 +645,18 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
             </motion.div>
 
             {/* Product Description Tabs - New Section */}
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.55, duration: 0.5 }}
-              className="border-t pt-8"
-              id="detalles"
-            >
-              <h2 className="text-xl font-semibold mb-4">Detalles del Producto</h2>
-              <ProductTabsDescription description={product.description ?? ""} />
-            </motion.div>
+            {product.description && product.description.trim() && (
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.55, duration: 0.5 }}
+                className="border-t pt-8"
+                id="detalles"
+              >
+                <h2 className="text-xl font-semibold mb-4">Detalles del Producto</h2>
+                <ProductTabsDescription description={product.description} />
+              </motion.div>
+            )}
 
             {/* Carrusel de productos relacionados */}
             {relatedProducts.length > 0 && (

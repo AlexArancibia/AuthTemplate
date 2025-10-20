@@ -105,7 +105,7 @@ export function BrandsCarousel() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="w-full max-w-[100rem] mx-auto bg-white rounded-xl p-4 sm:p-6 lg:p-8"
+              className="w-full max-w-[100rem] mx-auto bg-white rounded-xl"
             >
             <div
               ref={carouselRef}
@@ -123,7 +123,7 @@ export function BrandsCarousel() {
                   style={{ userSelect: "none" }}
                 >
                   <div className="text-center">
-                    <div className="w-24 h-24 sm:w-32 sm:h-32 md:w-36 md:h-36 lg:w-40 lg:h-40 mx-auto mb-2 sm:mb-4 flex items-center justify-center">
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32 mx-auto mb-1 sm:mb-2 flex items-center justify-center">
                       <Image
                         src={brand.logo}
                         alt={brand.name}

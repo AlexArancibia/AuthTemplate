@@ -91,16 +91,16 @@ export default function HomePage() {
         showExploreButton={false}
         fallbackTitle="ÚLTIMOS PRODUCTOS"
         emptyMessage="Aún no hay productos recientes para mostrar."
-        className="pt-4 sm:pt-6 lg:pt-8"
+        className="pt-4 sm:pt-6 lg:pt-8 "
       />
       {/* <DeliveryHeroSection /> */}
       <PublishBanner />
       <BrandsCarousel />
       
-      <Sponsors />
 
       {/* <BlogSection /> */}
       <Testimonials />
+      <Sponsors />
       
     </>
   )

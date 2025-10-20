@@ -14,7 +14,7 @@ export function Sponsors() {
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
             transition={{ duration: 0.6 }}
-            className="container-section bg-white w-full mt-16"
+            className="container-section bg-white w-full "
         >
             <div className="content-section">
                 {/* Footer alineado y responsive */}

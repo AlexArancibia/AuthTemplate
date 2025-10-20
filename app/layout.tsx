@@ -13,11 +13,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   userScalable: true,
-  colorScheme: "light dark",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
-  ],
+  colorScheme: "light",
+  themeColor: "#ffffff",
 };
 
 export const metadata: Metadata = {
@@ -86,12 +83,31 @@ export default async function RootLayout({
   const session = await auth();
 
   return (
-    <html lang="es">
+    <html lang="es" className="light">
       <head>
         {/* Fuentes personalizadas - Druk Wide Bold y AdihausDIN */}
         <link href="https://fonts.cdnfonts.com/css/druk-wide-bold" rel="stylesheet"/>
         <link href="https://db.onlinewebfonts.com/c/c2001d0359daadcd014fba0e808555d0?family=AdihausDIN+Bold" rel="stylesheet"/>
         <script src="https://c.webfontfree.com/c.js?f=AdihausDIN-Regular" type="text/javascript"></script>
+        {/* Force Light Theme */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              // Force light theme and prevent dark mode
+              document.documentElement.classList.add('light');
+              document.documentElement.classList.remove('dark');
+              localStorage.setItem('theme', 'light');
+              
+              // Override system preference
+              const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+              mediaQuery.addEventListener('change', () => {
+                document.documentElement.classList.add('light');
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+              });
+            `,
+          }}
+        />
         {/* Structured Data */}
         <script
           type="application/ld+json"

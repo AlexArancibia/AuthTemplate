@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
-import { X, Filter, ChevronDown, ChevronUp } from "lucide-react"
+import { X, Filter, ChevronDown, ChevronUp, ChevronRight } from "lucide-react"
 import { useCurrencyStore } from "@/stores/currency"
 
 interface ProductFilterSidebarProps {
@@ -48,6 +48,41 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
       fetchCollections({ limit: 100 })
     }
   }, [categories.length, collections.length, fetchCategories, fetchCollections])
+
+  // Organizar categorías en jerarquía padre-hijo
+  const organizeCategories = (categories: any[]) => {
+    const categoryMap = new Map<string, any & { children: any[] }>()
+    const rootCategories: (any & { children: any[] })[] = []
+
+    // Crear mapa de categorías
+    categories.forEach(category => {
+      categoryMap.set(category.id, { ...category, children: [] })
+    })
+
+    // Organizar jerarquía
+    categories.forEach(category => {
+      const categoryWithChildren = categoryMap.get(category.id)!
+      if (category.parentId) {
+        const parent = categoryMap.get(category.parentId)
+        if (parent) {
+          parent.children.push(categoryWithChildren)
+        }
+      } else {
+        rootCategories.push(categoryWithChildren)
+      }
+    })
+
+    // Ordenar por prioridad
+    const sortByPriority = (cats: (any & { children: any[] })[]) => {
+      return cats.sort((a, b) => {
+        const priorityA = a.priority ?? Number.MAX_SAFE_INTEGER
+        const priorityB = b.priority ?? Number.MAX_SAFE_INTEGER
+        return priorityA - priorityB
+      })
+    }
+
+    return sortByPriority(rootCategories)
+  }
 
   // State for filters - initialized directly from URL
   // Convert old category IDs to slugs if needed
@@ -227,18 +262,35 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     searchTerm !== ""
 
   const containerClasses = isMobile
-    ? "bg-gray-50 p-6 space-y-6 h-full"
+    ? "bg-white p-6 space-y-6 h-full"
     : "bg-gray-50 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-gray-200 p-6 space-y-6 sticky top-24"
 
   return (
     <div className={containerClasses}>
-      {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-          <Filter className="w-5 h-5" />
-          Filtros
-        </h3>
-        {hasActiveFilters && (
+      {/* Header - Solo mostrar en desktop */}
+      {!isMobile && (
+        <div className="flex items-center justify-between pb-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Filter className="w-5 h-5" />
+            Filtros
+          </h3>
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearFilters}
+              className="text-xs text-gray-500 hover:text-gray-700"
+            >
+              <X className="w-4 h-4 mr-1" />
+              Limpiar
+            </Button>
+          )}
+        </div>
+      )}
+      
+      {/* Botón de limpiar para móvil - Solo mostrar si hay filtros activos */}
+      {isMobile && hasActiveFilters && (
+        <div className="flex justify-end pb-3">
           <Button
             variant="ghost"
             size="sm"
@@ -246,10 +298,10 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
             className="text-xs text-gray-500 hover:text-gray-700"
           >
             <X className="w-4 h-4 mr-1" />
-            Limpiar
+            Limpiar filtros
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Search */}
       <div className="space-y-2">
@@ -281,26 +333,17 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
         </button>
         
         {showCategories && (
-          <div className="max-h-64 overflow-y-auto pr-2 space-y-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 transition-colors">
+          <div className="max-h-64 overflow-y-auto pr-2 space-y-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 transition-colors">
             {categories.length > 0 ? (
               <>
-                {/* Category options con checkboxes para selección múltiple - usando slugs */}
-                {categories.map((category) => (
-                  <div key={category.id} className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id={`category-${category.slug}`}
-                      checked={selectedCategories.includes(category.slug)}
-                      onChange={() => handleCategoryChange(category.slug)}
-                      className="w-4 h-4 text-blue-600 cursor-pointer rounded border-gray-300 focus:ring-blue-500"
-                    />
-                    <label
-                      htmlFor={`category-${category.slug}`}
-                      className="text-sm text-gray-600 cursor-pointer hover:text-gray-900 flex-1"
-                    >
-                      {category.name}
-                    </label>
-                  </div>
+                {/* Organizar categorías en jerarquía padre-hijo */}
+                {organizeCategories(categories).map((category) => (
+                  <CategoryFilterItem 
+                    key={category.id} 
+                    category={category}
+                    selectedCategories={selectedCategories}
+                    onCategoryChange={handleCategoryChange}
+                  />
                 ))}
               </>
             ) : (
@@ -395,6 +438,81 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// Componente para mostrar una categoría con sus subcategorías
+function CategoryFilterItem({ 
+  category, 
+  selectedCategories,
+  onCategoryChange
+}: { 
+  category: any & { children: any[] }
+  selectedCategories: string[]
+  onCategoryChange: (slug: string) => void
+}) {
+  const [showSubcategories, setShowSubcategories] = useState(false)
+
+  const handleArrowClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setShowSubcategories(!showSubcategories)
+  }
+
+  return (
+    <div className="space-y-1">
+      {/* Categoría padre */}
+      <div className="flex items-center space-x-2">
+        <input
+          type="checkbox"
+          id={`category-${category.slug}`}
+          checked={selectedCategories.includes(category.slug)}
+          onChange={() => onCategoryChange(category.slug)}
+          className="w-4 h-4 text-blue-600 cursor-pointer rounded border-gray-300 focus:ring-blue-500"
+        />
+        <label
+          htmlFor={`category-${category.slug}`}
+          className="text-sm text-gray-600 cursor-pointer hover:text-gray-900 flex-1"
+        >
+          {category.name}
+        </label>
+        {category.children.length > 0 && (
+          <button
+            onClick={handleArrowClick}
+            className="p-1 rounded-sm hover:bg-gray-100 transition-colors"
+          >
+            <ChevronRight 
+              className={`h-3 w-3 opacity-60 hover:opacity-100 transition-all duration-200 ${
+                showSubcategories ? "rotate-90" : ""
+              }`} 
+            />
+          </button>
+        )}
+      </div>
+
+      {/* Subcategorías */}
+      {category.children.length > 0 && showSubcategories && (
+        <div className="ml-6 space-y-1 animate-in slide-in-from-top-1 duration-200">
+          {category.children.map((child: any) => (
+            <div key={child.id} className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id={`category-${child.slug}`}
+                checked={selectedCategories.includes(child.slug)}
+                onChange={() => onCategoryChange(child.slug)}
+                className="w-4 h-4 text-blue-600 cursor-pointer rounded border-gray-300 focus:ring-blue-500"
+              />
+              <label
+                htmlFor={`category-${child.slug}`}
+                className="text-sm text-gray-500 cursor-pointer hover:text-gray-700 flex-1"
+              >
+                {child.name}
+              </label>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

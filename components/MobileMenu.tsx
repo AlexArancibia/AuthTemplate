@@ -7,8 +7,6 @@ import {
   ChevronUp, 
   User, 
   Grid3X3,
-  Star,
-  Package,
   Menu
 } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from "@/components/ui/sheet"
@@ -36,7 +34,7 @@ export default function MobileMenu({
   shopLogo,
   shopName = "Tienda"
 }: MobileMenuProps) {
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['categories']))
 
   // Organizar categorías en jerarquía padre-hijo
   const organizeCategories = (categories: Category[]) => {
@@ -67,7 +65,6 @@ export default function MobileMenu({
   }
 
   const organizedCategories = organizeCategories(categories)
-  const featuredCollections = collections.filter(collection => collection.isFeatured)
 
   const toggleSection = (sectionId: string) => {
     setExpandedSections(prev => {
@@ -115,77 +112,27 @@ export default function MobileMenu({
 
         {/* Navigation Content */}
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-          {/* Featured Collections */}
-          {featuredCollections.length > 0 && (
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Star className="h-3 w-3 text-primary" />
-                <h2 className="text-xs font-bold uppercase tracking-wider text-gray-600">DESTACADOS</h2>
-              </div>
-              <div className="space-y-1">
-                {featuredCollections.slice(0, 3).map((collection) => (
-                  <SheetClose asChild key={collection.id}>
-                    <Link
-                      href={`/productos?collections=${collection.id}`}
-                      className="block px-2 py-1.5 bg-white rounded-md hover:bg-gray-50 transition-colors border border-gray-200"
-                    >
-                      <div className="flex items-center gap-2">
-                        {collection.imageUrl ? (
-                          <div className="w-6 h-6 rounded overflow-hidden flex-shrink-0">
-                            <img
-                              src={collection.imageUrl}
-                              alt={collection.title}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ) : (
-                          <div className="w-6 h-6 rounded bg-gray-100 flex items-center justify-center flex-shrink-0">
-                            <Package className="h-3 w-3 text-gray-400" />
-                          </div>
-                        )}
-                        <span className="text-gray-900 text-sm font-medium">{collection.title}</span>
-                      </div>
-                    </Link>
-                  </SheetClose>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Categories */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Grid3X3 className="h-3 w-3 text-primary" />
-                <h2 className="text-xs font-bold uppercase tracking-wider text-gray-600">CATEGORÍAS</h2>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => toggleSection('categories')}
-                className="text-gray-500 hover:text-gray-700 p-1 h-6 w-6"
-              >
-                {expandedSections.has('categories') ? (
-                  <ChevronUp className="h-3 w-3" />
-                ) : (
-                  <ChevronDown className="h-3 w-3" />
-                )}
-              </Button>
+            <div className="flex items-center gap-2 mb-2">
+              <Grid3X3 className="h-3 w-3 text-primary" />
+              <h2 className="text-xs font-bold uppercase tracking-wider text-gray-600">CATEGORÍAS</h2>
             </div>
             
-            {expandedSections.has('categories') && (
-              <div className="space-y-1">
-                {organizedCategories.map((category) => (
-                  <CategoryMobileItem 
-                    key={category.id} 
-                    category={category} 
-                    expandedSections={expandedSections}
-                    toggleSection={toggleSection}
-                  />
-                ))}
-              </div>
-            )}
+            <div className="space-y-1">
+              {organizedCategories.map((category) => (
+                <CategoryMobileItem 
+                  key={category.id} 
+                  category={category} 
+                  expandedSections={expandedSections}
+                  toggleSection={toggleSection}
+                />
+              ))}
+            </div>
           </div>
+
+          {/* Separator */}
+          <div className="border-t border-gray-200 my-4"></div>
 
           {/* Main Navigation */}
           <div className="space-y-1">
@@ -198,17 +145,6 @@ export default function MobileMenu({
                 )}
               >
                 Todos los Productos
-              </Link>
-            </SheetClose>
-            <SheetClose asChild>
-              <Link
-                href="/ofertas"
-                className={cn(
-                  "block px-2 py-2 text-sm font-medium text-gray-900 hover:bg-gray-100 rounded-md transition-colors",
-                  pathname === "/ofertas" && "bg-primary/10 text-primary"
-                )}
-              >
-                Ofertas
               </Link>
             </SheetClose>
             <SheetClose asChild>

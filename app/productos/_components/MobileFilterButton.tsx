@@ -17,20 +17,27 @@ export default function MobileFilterButton() {
       <SheetTrigger asChild>
         <Button
           variant="outline"
-          className="lg:hidden w-full mb-4 flex items-center justify-center gap-2"
+          className="lg:hidden w-full mb-4 flex items-center justify-center gap-2 text-sm px-4 py-2.5"
         >
           <Filter className="w-4 h-4" />
-          Filtrar productos
+          <span className="hidden xs:inline">Filtrar productos</span>
+          <span className="xs:hidden">Filtros</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-full sm:w-96 p-0">
-        <SheetHeader className="px-6 pt-6 pb-4 border-b">
-          <SheetTitle className="flex items-center gap-2">
-            <Filter className="w-5 h-5" />
-            Filtros de productos
+      <SheetContent 
+        side="left" 
+        className="w-full xs:w-80 sm:w-96 p-0 bg-white"
+      >
+        <SheetHeader className="px-4 xs:px-6 pt-4 xs:pt-6 pb-3 xs:pb-4 border-b">
+          <SheetTitle className="flex items-center gap-2 text-base xs:text-lg">
+            <Filter className="w-4 h-4 xs:w-5 xs:h-5" />
+            <span className="hidden xs:inline">Filtros de productos</span>
+            <span className="xs:hidden">Filtros</span>
           </SheetTitle>
         </SheetHeader>
-        <ProductFilterSidebar isMobile />
+        <div className="overflow-y-auto h-full">
+          <ProductFilterSidebar isMobile />
+        </div>
       </SheetContent>
     </Sheet>
   )
