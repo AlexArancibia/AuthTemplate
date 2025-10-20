@@ -18,8 +18,10 @@ interface FilterDrawerProps {
 interface Filters {
   searchTerm: string
   categories: string[]
+  collectionIds: string[]
   variants: Record<string, string[]>
   priceRange: [number, number]
+  brand?: string | null
 }
 
 export function FilterDrawer({ onFilterChange, initialFilters, minPrice, maxPrice, selectedCurrencyId, acceptedCurrencies }: FilterDrawerProps) {
