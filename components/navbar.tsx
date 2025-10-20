@@ -30,6 +30,8 @@ import { useCartStore } from "@/stores/cartStore"
 import { useCookieConsent } from "@/hooks/useCookieConsent"
 import CookieConsentDialog from "./CookieConsentDialog"
 import { useUserStore } from "@/stores/userStore"
+import ShopMenu from "./ShopMenu"
+import MobileMenu from "./MobileMenu"
 
 interface NavbarProps {
   // user?: {
@@ -63,6 +65,7 @@ export default function Navbar() {
     loading,
     error,
     categories,
+    collections,
   } = useMainStore()
 const { 
     showDialog, 
@@ -78,7 +81,7 @@ const {
   const [searchTerm, setSearchTerm] = useState("")
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [showInitialLoading, setShowInitialLoading] = useState(true)
-  const [shopOpen, setShopOpen] = useState(false)
+  const [isScrolled, setIsScrolled] = useState(false)
 
   const sortedCategories = useMemo(() => {
     if (!categories) return []
@@ -130,6 +133,21 @@ const {
   // Handle hydration
   useEffect(() => {
     setMounted(true)
+  }, [])
+
+  // Handle scroll effect for navbar background
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY
+      setIsScrolled(scrollTop >= 100) // 100vh = 100px
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+    }
   }, [])
 
   // Show loading screen immediately and hide after 700ms
@@ -269,9 +287,9 @@ const {
   // Si no está montado, no renderizamos nada o un placeholder simple
   if (!mounted) {
     return (
-      <nav className="bg-background/95 backdrop-blur-md border-b sticky top-0 z-[180]">
+      <nav className="bg-background backdrop-blur-md border-b border-border sticky top-0 z-[180] h-16 -mb-16 transition-all duration-300">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-14">
+          <div className="flex items-center justify-between h-16">
             <div className="w-1/4 lg:w-1/4">
               <Skeleton className="h-6 w-32" />
             </div>
@@ -295,16 +313,21 @@ const {
   return (
     <>
 
-    <nav className="bg-background/95 backdrop-blur-md border-b sticky top-0 z-[180] font-adi-regular font-light uppercase">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-18">
+    <nav className={cn(
+      "backdrop-blur-md border-b border-border sticky top-0 z-[180] font-adi-regular font-light uppercase h-16 -mb-16 transition-all duration-300",
+      isScrolled 
+        ? "bg-background/10" 
+        : "bg-background"
+    )}>
+      <div className="container-section mx-auto ">
+        <div className="flex items-center justify-between content-section h-16">
           {/* Logo */}
           <div className="w-1/2 lg:w-1/4">
             <Link href="/" aria-label="Ir a la página de inicio" className="flex items-center">
               {loading ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : shopLogo ? (
-                <img src={shopLogo || "/placeholder.svg"} alt={shopName} className="h-10 lg:h-7 w-auto mr-2" />
+                <img src={shopLogo || "/placeholder.svg"} alt={shopName} className="h-6 lg:h-7 w-auto mr-2" />
               ) : (
                 <Store className="h-5 w-5 mr-2" />
               )}
@@ -330,46 +353,14 @@ const {
                 )
               }
 
-              // --- Tienda con dropdown ---
+              // --- Tienda con HoverCard ---
               return (
-                <div
-                  key="tienda"
-                  className="px-6 xl:px-12 py-1 text-sm relative"
-                  onMouseEnter={() => setShopOpen(true)}
-                  onMouseLeave={() => setShopOpen(false)}
-                >
-                  <Link
-                    href="/productos"
-                    className={cn(
-                      "flex items-center gap-1 transition-colors hover:text-primary",
-                      pathname.startsWith("/productos") ? "text-primary" : "text-secondary",
-                    )}
-                  >
-                    Tienda
-                    <ChevronDown className={cn("h-4 w-4 transition-transform", shopOpen ? "rotate-180" : "rotate-0")} />
-                  </Link>
-
-                  {shopOpen && (
-                    <div
-                      role="menu"
-                      className="absolute left-0 top-full -mt-px w-48 bg-white border border-gray-200 shadow-md rounded-none flex flex-col z-[500]"
-                    >
-                      {sortedCategories.length === 0 ? (
-                        <div className="text-sm text-muted-foreground p-2">Cargando...</div>
-                      ) : (
-                        sortedCategories.map((category: any) => (
-                          <Link
-                            key={category.id}
-                            href={`/productos?category=${category.slug}`}
-                            className="text-sm px-4 py-2 hover:bg-gray-100"
-                            role="menuitem"
-                          >
-                            {category.name}
-                          </Link>
-                        ))
-                      )}
-                    </div>
-                  )}
+                <div key="tienda" className="px-6 xl:px-12 py-1 text-sm">
+                  <ShopMenu
+                    categories={sortedCategories}
+                    collections={collections || []}
+                    isActive={pathname.startsWith("/productos")}
+                  />
                 </div>
               )
             })}
@@ -489,12 +480,22 @@ const {
                             </div>
 
                             <p className="text-xs">
-                              {item.variant.prices && item.variant.prices.length > 0
-                                ? formatCurrency(
-                                    item.variant.prices.find(p => p.currency?.id === activeCurrency?.id)!.price * item.quantity,
-                                    activeCurrency,
-                                  )
-                                : "N/A"}
+                              {(() => {
+                                if (!item.variant.prices || item.variant.prices.length === 0) {
+                                  return "N/A"
+                                }
+                                
+                                const priceForCurrency = item.variant.prices.find(p => p.currency?.id === activeCurrency?.id)
+                                if (!priceForCurrency) {
+                                  // Fallback: usar el primer precio disponible si no hay precio para la moneda activa
+                                  const fallbackPrice = item.variant.prices[0]
+                                  return fallbackPrice 
+                                    ? formatCurrency(fallbackPrice.price * item.quantity, activeCurrency)
+                                    : "N/A"
+                                }
+                                
+                                return formatCurrency(priceForCurrency.price * item.quantity, activeCurrency)
+                              })()}
                             </p>
                           </div>
                           <Button
@@ -610,7 +611,7 @@ const {
             ) : (
               <Button
                 variant="ghost"
-                className="hidden sm:flex bg-primary text-white hover:text-primary text-xs hover:bg-secondary/10 px-2 h-8"
+                className="hidden sm:flex bg-primary text-primary-foreground hover:bg-primary/90 text-xs px-2 h-8"
                 asChild
               >
                 <Link href="/login">
@@ -621,49 +622,15 @@ const {
             )}
 
             {/* Mobile Menu */}
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 lg:hidden text-secondary hover:text-primary hover:bg-secondary/10"
-                  aria-label="Abrir menú"
-                >
-                  <Menu className="h-5 w-5" aria-hidden="true" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[300px] sm:w-[320px] bg-background p-4">
-                <SheetHeader className="pb-2">
-                  <SheetTitle className="text-lg">Menú</SheetTitle>
-                </SheetHeader>
-                <nav className="flex flex-col space-y-3 mt-4 font-adi-regular font-light uppercase">
-                  {navItems.map((item) => (
-                    <SheetClose asChild key={item.name}>
-                      <Link
-                        href={item.href}
-                        className={cn(
-                          "text-sm font-adi-regular font-light uppercase transition-colors hover:text-primary py-1.5",
-                          pathname === item.href ? "text-primary" : "text-secondary",
-                        )}
-                      >
-                        {item.name}
-                      </Link>
-                    </SheetClose>
-                  ))}
-                  {!currentUser && (
-                    <SheetClose asChild>
-                      <Link
-                        href="/login"
-                        className="text-sm transition-colors hover:text-primary py-1.5 flex items-center lg:hidden"
-                      >
-                        <User className="h-4 w-4 mr-2" />
-                        Iniciar Sesión
-                      </Link>
-                    </SheetClose>
-                  )}
-                </nav>
-              </SheetContent>
-            </Sheet>
+            <MobileMenu
+              categories={sortedCategories}
+              collections={collections || []}
+              currentUser={currentUser}
+              pathname={pathname}
+              onSignOut={handleSignOut}
+              shopLogo={shopLogo}
+              shopName={shopName}
+            />
           </div>
         </div>
       </div>

@@ -61,10 +61,10 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
 
   // Clases para el contenedor principal
   const containerClasses = `
-    relative w-full 
-    ${styles.height?.mobile || "h-[500px]"} 
-    md:${styles.height?.tablet || "h-[600px]"} 
-    lg:${styles.height?.desktop || "h-[670px]"}
+    relative w-full h-full
+    ${styles.height?.mobile || ""} 
+    md:${styles.height?.tablet || ""} 
+    lg:${styles.height?.desktop || ""}
   `;
 
   // Clases para la imagen de fondo
@@ -76,7 +76,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
   }`
 
   // Clases para el contenedor de contenido
-  const contentContainerClasses = `absolute inset-0 flex w-full h-full ${styles.verticalAlign || "items-center"}`
+  const contentContainerClasses = `absolute container-section inset-0 flex w-full h-full ${styles.verticalAlign || "items-center"}`
 
   // Clases para la alineación del contenido
   const contentAlignClasses = `w-full flex h-full ${
@@ -90,9 +90,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
   // Clases para el div de contenido
   const contentDivClasses = ` space-y-4 md:space-y-6 ${styles.textAlign || ""} ${styles.contentWidth?.mobile || ""} md:${
     styles.contentWidth?.tablet || ""
-  } lg:${styles.contentWidth?.desktop || ""} ${styles.contentPadding?.mobile || ""} md:${
-    styles.contentPadding?.tablet || ""
-  } lg:${styles.contentPadding?.desktop || ""} w-full  lg:w-1/2 `
+  } lg:${styles.contentWidth?.desktop || ""} w-full  lg:w-1/2 `
 
   // Clases para el título
   const titleClasses = `${styles.titleColor || ""} ${styles.titleSize?.mobile || ""} md:${
@@ -207,22 +205,22 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
 
       {/* Contenido */}
       <div className={contentContainerClasses}>
-        <div className="container mx-auto px-2 md:px-4 h-full flex">
-          <div className={`${contentAlignClasses} items-start lg:items-center pt-24 sm:pt-28 md:pt-32 lg:pt-0 lg:pb-16`}>
+        <div className="content-section mx-auto h-full flex pt-20 md:pt-32 lg:pt-0">
+          <div className={`${contentAlignClasses} items-start lg:items-center `}>
             <motion.div
               className={contentDivClasses}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: animationDelay }}
             >
-              <div className="w-full flex justify-start">
-                <div className="inline-block px-3 py-1 sm:px-5 sm:py-1 mb-3 sm:mb-4 lg:mb-6 rounded-full bg-gradient-to-r from-blue-400 to-fuchsia-500 text-white text-sm sm:text-base md:text-lg font-druk font-extrabold uppercase tracking-wide shadow-lg">
+              <div className="w-full flex justify-start mt-16">
+                <div className="inline-block px-3 py-1 sm:px-5 sm:py-1 mb-3 sm:mb-4 lg:mb-6 rounded-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white text-sm sm:text-base md:text-lg font-druk font-extrabold uppercase tracking-wide shadow-lg">
                   DESDE 2010
                 </div>
               </div>
               {title && (
                 <motion.h1
-                  className={`font-druk font-extrabold uppercase text-[2.5rem] sm:text-[3.5rem] md:text-[4.5rem] lg:text-[3.5em] mt-4 sm:mt-6 lg:mt-0 ${styles.titleColor || ""} `}
+                  className={`font-druk font-extrabold uppercase text-[2.5rem] md:text-[3.5rem] lg:text-[4.5rem] mt-4 sm:mt-6 lg:mt-0 md:pr-12 lg:pr-24 ${styles.titleColor || ""} `}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: animationDelay }}
@@ -234,7 +232,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
               {subtitle && (
                 <motion.div
                   className={cn(
-                    "font-lato font-light text-sm md:text-lg",
+                    "font-adi-regular text-sm md:text-lg",
                     styles?.subtitleChildrenSize ?? "[&_*]:text-sm md:[&_*]:text-lg",
                     "[&_*]:[font-family:inherit] [&_*]:text-[inherit]",
                     styles?.subtitleColor ?? ""
@@ -254,9 +252,9 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
                   className={buttonContainerClasses}
                 >
                   <Button
-                    variant={(styles.buttonVariant || "default") as any}
+                    variant={(styles.buttonVariant || "outline") as any}
                     size={(styles.buttonSize || "default") as any}
-                    className="px-4 py-3 sm:px-7 sm:py-5 rounded-xl bg-white text-neutral-800 text-xs font-light uppercase tracking-[0.2em] shadow-[0_0_10px_rgba(0,0,0,0.05)] hover:bg-white hover:text-neutral-800 hover:shadow-[0_0_12px_rgba(0,0,0,0.08)] transition-all duration-200"
+                    className="px-4 py-3 sm:px-7 sm:py-5 rounded-xl border-1 border-white text-white text-xs font-light uppercase tracking-[0.2em] shadow-[0_0_10px_rgba(0,0,0,0.05)] hover:bg-white hover:text-neutral-800 hover:shadow-[0_0_12px_rgba(0,0,0,0.08)] transition-all duration-200"
                   >
                     <Link href={buttonLink}>{buttonText}</Link>
                   </Button>

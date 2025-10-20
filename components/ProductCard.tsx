@@ -6,7 +6,7 @@ import Link from "next/link"
 import { motion } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Clock, Eye } from "lucide-react"
+import { Clock, Eye, ShoppingCart } from "lucide-react"
 import type { Product } from "@/types/product"
 import type { CurrencyOption } from "@/stores/currency";
 import { useMainStore } from "@/stores/mainStore"
@@ -138,9 +138,18 @@ export function ProductCard({
   const hasUpcomingRelease = timeLeft !== null
 
   const image = product.imageUrls && product.imageUrls.length > 0 ? product.imageUrls[0] : "/placeholder.png"
+  
+  // Get secondary image for hover effect
+  const getSecondaryImage = (product: Product) => {
+    return product.imageUrls && product.imageUrls.length > 1 
+      ? product.imageUrls[1] 
+      : null
+  }
+  
+  const secondaryImage = getSecondaryImage(product)
 
   return (
-    <div className="group relative bg-white rounded-none p-4 flex flex-col h-full">
+    <div className="group relative bg-white rounded-none p-6 sm:p-8 flex flex-col h-full">
       <Link href={`/productos/${product.slug}`} className="flex flex-col h-full">
         {/* Badges */}
         <div className="absolute top-6 left-6 flex flex-col gap-2 z-10">
@@ -159,15 +168,15 @@ export function ProductCard({
         {/* Sale Badge */}
         {showSaleBadge && (
           <div className="absolute top-6 right-6 z-10">
-            <Badge className="font-lato-thin bg-red-500 text-white text-xs px-2 py-1">
+            <Badge className="font-adi-regular bg-red-500 text-white text-xs px-2 py-1">
               SALE
             </Badge>
           </div>
         )}
 
         {/* Image Container - Ahora más grande */}
-        <div className="relative aspect-square mb-4 bg-gray-50 rounded-xl overflow-hidden flex-shrink-0">
-          
+        <div className="relative aspect-square mb-6 sm:mb-8 bg-gray-50 rounded-xl overflow-hidden flex-shrink-0">
+          {/* Primary Image */}
           <Image
             src={image || "/placeholder.png"}
             alt={product.title}
@@ -175,6 +184,24 @@ export function ProductCard({
             className="object-contain p-2"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
+          
+          {/* Secondary Image (if available) */}
+          {secondaryImage && (
+            <Image
+              src={secondaryImage}
+              alt={product.title}
+              fill
+              className="object-contain p-2 opacity-0 transition-opacity duration-500 ease-in-out group-hover:opacity-100 absolute top-0 left-0"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            />
+          )}
+          
+          {/* Shopping Cart Icon */}
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="bg-white/90 backdrop-blur-sm rounded-full p-2 shadow-lg">
+              <ShoppingCart className="w-4 h-4 text-gray-700" />
+            </div>
+          </div>
 
           {/* Contador de lanzamiento - Diseño refinado */}
           {hasUpcomingRelease && (
@@ -197,8 +224,8 @@ export function ProductCard({
 
         {/* Product Info - Ahora con espacio fijo */}
         <div className="flex-grow flex flex-col">
-          <div className="mb-2">
-            <p className="font-lato-thin text-sm font-medium text-gray-900 line-clamp-2 uppercase tracking-wide">{product.title}</p>
+          <div className="mb-3 sm:mb-4">
+            <p className="font-adi-regular text-sm sm:text-base font-medium text-gray-900 line-clamp-2 uppercase tracking-wide">{product.title}</p>
           </div>
 
           {/* Etiqueta de prelanzamiento */}
@@ -211,8 +238,8 @@ export function ProductCard({
 
         {/* Precio en la parte inferior */}
         {priceDisplay && (
-          <div className="mt-auto pt-4">
-            <div className="font-lato-thin flex items-center gap-2">
+          <div className="mt-auto pt-6 sm:pt-8">
+            <div className="font-adi-regular flex items-center gap-2">
               {showSaleBadge ? (
                 <>
                   <span className="text-base font-medium text-black">{priceDisplay}</span>
@@ -221,7 +248,7 @@ export function ProductCard({
                   </span>
                 </>
               ) : (
-                <span className="text-sm font-medium text-black">{priceDisplay}</span>
+                <span className="text-sm sm:text-base font-medium text-black">{priceDisplay}</span>
               )}
             </div>
           </div>

@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Poppins } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import Navbar from "@/components/navbar";
@@ -7,11 +6,6 @@ import { auth } from "@/auth";
 import { Footer } from "@/components/footer";
 import { PreFooterContact } from "@/components/PreFooter";
 import { WhatsAppButton } from "@/components/WhatsappButton";
-
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-});
 
 // Configuración de Viewport (Nuevo en Next.js 14)
 export const viewport: Viewport = {
@@ -94,17 +88,7 @@ export default async function RootLayout({
   return (
     <html lang="es">
       <head>
-        {/* Google Fonts - Lato */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap"
-          rel="stylesheet"
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap"
-          rel="stylesheet"
-        />
+        {/* Fuentes personalizadas - Druk Wide Bold y AdihausDIN */}
         <link href="https://fonts.cdnfonts.com/css/druk-wide-bold" rel="stylesheet"/>
         <link href="https://db.onlinewebfonts.com/c/c2001d0359daadcd014fba0e808555d0?family=AdihausDIN+Bold" rel="stylesheet"/>
         <script src="https://c.webfontfree.com/c.js?f=AdihausDIN-Regular" type="text/javascript"></script>
@@ -126,10 +110,10 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body className={`${poppins.className} overflow-x-hidden`}>
+      <body className="font-adi-regular overflow-x-hidden">
         <Toaster position="top-center" richColors />
         <Navbar />
-        <main className="min-h-[70vh] sm:min-h-[80vh]">{children}</main>
+        <main className=" ">{children}</main>
         <PreFooterContact />
         <Footer />
         <WhatsAppButton />

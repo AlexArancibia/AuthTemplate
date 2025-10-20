@@ -13,6 +13,7 @@ import type { SearchProductParams, ProductSortBy } from "@/types/pagination"
 interface ProductListProps {
   initialSearchTerm?: string
   initialCategories?: string[]
+  initialCollectionIds?: string[] // Add collection IDs support
   initialPage?: number
   initialSortBy?: ProductSortBy | string // Allow string for backward compatibility
   initialMinPrice?: number
@@ -26,6 +27,7 @@ interface ProductListProps {
 export default function ProductList({
   initialSearchTerm = "",
   initialCategories = [],
+  initialCollectionIds = [], // Add collection IDs support
   initialPage = 1,
   initialSortBy = "createdAt",
   initialMinPrice,
@@ -45,6 +47,7 @@ export default function ProductList({
   const prevFiltersRef = useRef({
     searchTerm: initialSearchTerm,
     categories: initialCategories,
+    collectionIds: initialCollectionIds, // Add collection IDs tracking
     sortBy: initialSortBy,
     minPrice: initialMinPrice,
     maxPrice: initialMaxPrice
@@ -60,6 +63,7 @@ export default function ProductList({
     const filtersChanged = 
       prevFiltersRef.current.searchTerm !== initialSearchTerm ||
       JSON.stringify(prevFiltersRef.current.categories) !== JSON.stringify(initialCategories) ||
+      JSON.stringify(prevFiltersRef.current.collectionIds) !== JSON.stringify(initialCollectionIds) ||
       prevFiltersRef.current.sortBy !== initialSortBy ||
       prevFiltersRef.current.minPrice !== initialMinPrice ||
       prevFiltersRef.current.maxPrice !== initialMaxPrice
@@ -69,6 +73,7 @@ export default function ProductList({
       prevFiltersRef.current = {
         searchTerm: initialSearchTerm,
         categories: initialCategories,
+        collectionIds: initialCollectionIds, // Add collection IDs tracking
         sortBy: initialSortBy,
         minPrice: initialMinPrice,
         maxPrice: initialMaxPrice
@@ -95,7 +100,7 @@ export default function ProductList({
         })
       }
     }
-  }, [initialSearchTerm, initialCategories, initialSortBy, initialMinPrice, initialMaxPrice, currentPage, pathname, router])
+  }, [initialSearchTerm, initialCategories, initialCollectionIds, initialSortBy, initialMinPrice, initialMaxPrice, currentPage, pathname, router])
 
   // Fetch products when parameters change
   useEffect(() => {
@@ -121,6 +126,10 @@ export default function ProductList({
           params.categorySlugs = initialCategories
         }
 
+        if (initialCollectionIds && initialCollectionIds.length > 0) {
+          params.collectionIds = initialCollectionIds
+        }
+
         await fetchProducts(params)
       } catch (error) {
         console.error("Error fetching products:", error)
@@ -132,6 +141,7 @@ export default function ProductList({
     currentPage,
     initialSearchTerm,
     initialCategories,
+    initialCollectionIds,
     initialSortBy,
     initialMinPrice,
     initialMaxPrice,

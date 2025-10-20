@@ -1,68 +1,34 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import useEmblaCarousel from "embla-carousel-react"
-import Autoplay from "embla-carousel-autoplay"
-import { useMainStore } from "@/stores/mainStore"
+import { useRef } from "react"
+import { motion, useInView } from "framer-motion"
 import Image from "next/image"
 
 export function Sponsors() {
-    const { cardSections } = useMainStore()
-
-    const [emblaRef, emblaApi] = useEmblaCarousel(
-        {
-        align: "start",
-        loop: true,
-        },
-        [
-        Autoplay({
-            delay: 3000, // tiempo entre slides
-            stopOnInteraction: false,
-        }),
-        ]
-    )
-
-    // Buscar sección de auspicios
-    const sponsorSection = cardSections.find(
-        (section) => section.id === "cs_249659cf-2b11" && section.isActive
-    )
-
-    const cards = sponsorSection?.cards
-        ?.filter((card) => card.isActive)
-        .sort((a, b) => a.position - b.position) || []
+    const ref = useRef(null)
+    const isInView = useInView(ref, { once: true, amount: 0.3 })
 
     return (
-        <section className="bg-white w-full px-5 sm:px-10 md:px-20 lg:px-32">
-            {/* Carrusel */}
-            <div className="overflow-hidden" ref={emblaRef}>
-                <div className="flex gap-5">
-                {cards.map((card) => (
-                    <div
-                    key={card.id}
-                    className="shrink-0 w-full sm:w-1/2 md:w-1/3 flex items-center justify-center"
-                    >
-                    <div className="aspect-[3/4] w-full bg-white flex items-center justify-center">
-                        <div className="relative w-full h-full">
-                        <Image
-                            src={card.imageUrl || "/placeholder.png"}
-                            alt={card.title || "Auspiciador"}
-                            fill
-                            className="object-contain"
-                        />
-                        </div>
-                    </div>
-                    </div>
-                ))}
-                </div>
-            </div>
-
-            {/* Footer alineado y responsive */}
-            <div className="bg-black h-32 sm:h-40 md:h-48 flex items-center justify-center gap-4 sm:gap-6 md:gap-10 px-4 mb-20">
-                <span className="text-white text-xl sm:text-3xl md:text-5xl font-semibold">
+        <motion.section 
+            ref={ref}
+            initial={{ opacity: 0, y: 20 }}
+            animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+            transition={{ duration: 0.6 }}
+            className="container-section bg-white w-full mt-16"
+        >
+            <div className="content-section">
+                {/* Footer alineado y responsive */}
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.6, delay: 0.2 }}
+                    className="bg-black h-20 sm:h-24 md:h-28 flex items-center justify-center gap-4 sm:gap-6 md:gap-12 px-4 mb-10"
+                >
+                <span className="text-white text-lg sm:text-2xl md:text-3xl font-semibold">
                     POWERED BY
                 </span>
 
-                <div className="relative w-[120px] sm:w-[200px] md:w-[300px] h-auto aspect-[5/2]">
+                <div className="relative w-[100px] sm:w-[150px] md:w-[180px] h-auto aspect-[5/2]">
                     <Image
                     src="/xiom.png"
                     alt="Xiom"
@@ -71,11 +37,11 @@ export function Sponsors() {
                     />
                 </div>
 
-                <span className="text-white text-xl sm:text-3xl md:text-5xl font-semibold">
+                <span className="text-white text-lg sm:text-2xl md:text-3xl font-semibold">
                     &
                 </span>
 
-                <div className="relative w-[120px] sm:w-[200px] md:w-[300px] h-auto aspect-[5/2]">
+                <div className="relative w-[100px] sm:w-[150px] md:w-[220px] h-auto aspect-[5/2]">
                     <Image
                     src="/sanwei.png"
                     alt="Sanwei"
@@ -83,7 +49,8 @@ export function Sponsors() {
                     className="object-contain"
                     />
                 </div>
+                </motion.div>
             </div>
-        </section>
+        </motion.section>
     )
 }

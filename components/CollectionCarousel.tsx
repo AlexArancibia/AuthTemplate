@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
+import { motion, useInView } from "framer-motion"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import useEmblaCarousel from "embla-carousel-react"
 
@@ -16,6 +17,7 @@ interface CollectionCarouselProps {
   showExploreButton?: boolean
   fallbackTitle?: string
   emptyMessage?: string
+  className?: string
 }
 
 const STORE_ID = process.env.NEXT_PUBLIC_STORE_ID
@@ -26,16 +28,26 @@ export function CollectionCarousel({
   acceptedCurrencies,
   showExploreButton = false,
   fallbackTitle = "PRODUCTOS",
-  emptyMessage = "No hay productos para mostrar."
+  emptyMessage = "No hay productos para mostrar.",
+  className = "bg-white"
 }: CollectionCarouselProps) {
   const [products, setProducts] = useState<Product[]>([])
   const [collectionTitle, setCollectionTitle] = useState<string>(fallbackTitle)
   const [loading, setLoading] = useState(true)
+  const ref = useRef(null)
+  const isInView = useInView(ref, { once: true, amount: 0.3 })
   const [emblaRef, emblaApi] = useEmblaCarousel({
-    align: "start",
+    align: "center",
     loop: false,
     skipSnaps: false,
     dragFree: true,
+    containScroll: "trimSnaps",
+    slidesToScroll: 1,
+    breakpoints: {
+      '(min-width: 1024px)': { slidesToScroll: 3, align: "start" }, // lg: 3 productos, alineación izquierda
+      '(min-width: 768px)': { slidesToScroll: 2, align: "start" },  // md: 2 productos, alineación izquierda
+      '(max-width: 767px)': { slidesToScroll: 1, align: "center" }   // sm y menor: 1 producto, centrado
+    }
   })
 
   const [canScrollPrev, setCanScrollPrev] = useState(false)
@@ -99,33 +111,43 @@ export function CollectionCarousel({
   }
 
   return (
-    <section className="py-12 lg:py-16 bg-white w-full">
-      <div className="w-full px-4 sm:px-6 lg:px-8">
+    <section ref={ref} className={`container-section  w-full py-16 sm:py-20 lg:py-24 ${className}`}>
+      <div className="content-section">
         {/* Título principal centrado */}
-        <div className="text-center mb-8">
-          <h2 className="font-druk text-4xl lg:text-2xl font-archivo-black text-gray-900 mb-4">
+        <div className="text-center mb-6 sm:mb-8">
+          <motion.h2 
+            initial={{ opacity: 0, y: 20 }}
+            animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+            transition={{ duration: 0.5 }}
+            className="font-druk text-gray-900 mb-16"
+          >
             {collectionTitle}
-          </h2>
+          </motion.h2>
         </div>
 
         {/* Carrusel de productos con navegación */}
-        <div className="w-full flex items-center gap-2">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="w-full flex items-center gap-1 sm:gap-2 px-2 sm:px-0"
+        >
           {/* Botón izquierda */}
           <button
             onClick={scrollPrev}
             disabled={!canScrollPrev}
-            className="p-2 disabled:opacity-30"
+            className="p-1 sm:p-2 disabled:opacity-30 hover:opacity-80 transition-opacity flex-shrink-0"
             aria-label="Anterior"
             style={{ background: "none", border: "none", outline: "none", boxShadow: "none" }}
           >
-            <ChevronLeft className="w-10 h-10 text-gray-700" />
+            <ChevronLeft className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-gray-700" />
           </button>
 
           <div className="overflow-hidden flex-1" ref={emblaRef}>
-            <div className="flex gap-6">
+            <div className="flex gap-2 sm:gap-4 lg:gap-6">
               {loading ? (
                 <div className="py-10 w-full text-center">
-                  <p className="font-lato-thin text-sm text-gray-500">
+                  <p className="font-adi-regular text-sm text-gray-500">
                     Cargando productos...
                   </p>
                 </div>
@@ -133,7 +155,7 @@ export function CollectionCarousel({
                 products.map((product) => (
                   <div
                     key={product.id}
-                    className="flex-none w-[446px] sm:w-[498px] lg:w-[446px]"
+                    className="flex-none w-full sm:w-1/2 lg:w-1/3 px-2 sm:px-0"
                   >
                     <ProductCard
                       product={product}
@@ -144,7 +166,7 @@ export function CollectionCarousel({
                 ))
               ) : (
                 <div className="py-10 w-full text-center">
-                  <p className="font-lato-thin text-sm text-gray-500">
+                  <p className="font-adi-regular text-sm text-gray-500">
                     {emptyMessage}
                   </p>
                 </div>
@@ -156,25 +178,30 @@ export function CollectionCarousel({
           <button
             onClick={scrollNext}
             disabled={!canScrollNext}
-            className="p-2 disabled:opacity-30"
+            className="p-1 sm:p-2 disabled:opacity-30 hover:opacity-80 transition-opacity flex-shrink-0"
             aria-label="Siguiente"
             style={{ background: "none", border: "none", outline: "none", boxShadow: "none" }}
           >
-            <ChevronRight className="w-10 h-10 text-gray-700" />
+            <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-gray-700" />
           </button>
-        </div>
+        </motion.div>
 
         {/* CTA explorar tienda (condicional) */}
         {showExploreButton && (
-          <div className="text-center mt-8">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+            className="text-center mt-6 sm:mt-8"
+          >
             <button
               onClick={handleExploreStore}
-              className="border border-black bg-white text-black hover:bg-gray-100 px-6 py-2 text-sm font-light uppercase tracking-widest rounded-none font-['Roboto_Condensed']"
+              className="border border-black bg-white text-black hover:bg-gray-100 px-4 sm:px-6 py-2 text-xs sm:text-sm font-light uppercase tracking-widest rounded-none font-['Roboto_Condensed'] transition-colors"
               aria-label="Explorar tienda"
             >
               EXPLORAR TIENDA
             </button>
-          </div>
+          </motion.div>
         )}
       </div>
     </section>

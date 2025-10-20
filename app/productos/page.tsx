@@ -41,6 +41,8 @@ function ProductsContent() {
   const searchTerm = searchParams.get("search") || ""
   const categoryParam = searchParams.get("category")
   const categories = categoryParam ? categoryParam.split(",") : []
+  const collectionParam = searchParams.get("collections")
+  const collectionIds = collectionParam ? collectionParam.split(",") : []
   const page = Number.parseInt(searchParams.get("page") || "1", 10)
   // Valid sortBy values: createdAt, updatedAt, title, price, viewCount
   const sortBy = searchParams.get("sort") || "createdAt"
@@ -86,7 +88,7 @@ function ProductsContent() {
 
           {/* Botón */}
           <Link href="/productos">
-            <button className="font-lato-thin bg-white text-black text-sm font-medium px-6 py-3 rounded-xs cursor-pointer">
+            <button className="font-adi-regular bg-white text-black text-sm font-medium px-6 py-3 rounded-xs cursor-pointer">
               Ver más
             </button>
           </Link>
@@ -134,6 +136,7 @@ function ProductsContent() {
               <ProductList
                 initialSearchTerm={searchTerm}
                 initialCategories={categories}
+                initialCollectionIds={collectionIds}
                 initialPage={page}
                 initialSortBy={sortBy}
                 initialMinPrice={minPrice}

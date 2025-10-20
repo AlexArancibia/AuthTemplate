@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { useMainStore } from "@/stores/mainStore"
+import type { Collection } from "@/types/collection"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -25,7 +26,7 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const { categories, fetchCategories, shopSettings } = useMainStore()
+  const { categories, collections, fetchCategories, fetchCollections, shopSettings } = useMainStore()
   const { selectedCurrencyId, acceptedCurrencies } = useCurrencyStore()
   const isInitialMount = useRef(true)
   const previousCurrencyId = useRef(selectedCurrencyId)
@@ -38,12 +39,15 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
   // Fixed price range (simple solution until backend provides min/max endpoint)
   const productPriceRange = { min: 0, max: 1000 }
 
-  // Load categories on mount
+  // Load categories and collections on mount
   useEffect(() => {
     if (categories.length === 0) {
       fetchCategories({ limit: 100 })
     }
-  }, [categories.length, fetchCategories])
+    if (collections.length === 0) {
+      fetchCollections({ limit: 100 })
+    }
+  }, [categories.length, collections.length, fetchCategories, fetchCollections])
 
   // State for filters - initialized directly from URL
   // Convert old category IDs to slugs if needed
@@ -71,12 +75,18 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     return [min, max]
   })
   const [searchTerm, setSearchTerm] = useState<string>(() => searchParams.get("search") || "")
+  const [selectedCollections, setSelectedCollections] = useState<string[]>(() => {
+    const collectionParam = searchParams.get("collections")
+    return collectionParam ? collectionParam.split(",") : []
+  })
   const [showCategories, setShowCategories] = useState(true)
+  const [showCollections, setShowCollections] = useState(true)
   const [showPriceFilter, setShowPriceFilter] = useState(true)
 
   // Update URL whenever filters change
   const updateURL = useCallback((
     categories: string[],
+    collections: string[],
     price: [number, number],
     search: string
   ) => {
@@ -85,6 +95,11 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     // Add selected categories (comma-separated format)
     if (categories.length > 0) {
       params.set("category", categories.join(","))
+    }
+
+    // Add selected collections (comma-separated format)
+    if (collections.length > 0) {
+      params.set("collections", collections.join(","))
     }
 
     // Add price range (only if different from default range)
@@ -119,7 +134,7 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
   useEffect(() => {
     if (previousCurrencyId.current !== selectedCurrencyId && previousCurrencyId.current !== undefined) {
       setPriceRange([productPriceRange.min, productPriceRange.max])
-      updateURL(selectedCategories, [productPriceRange.min, productPriceRange.max], searchTerm)
+      updateURL(selectedCategories, selectedCollections, [productPriceRange.min, productPriceRange.max], searchTerm)
     }
     previousCurrencyId.current = selectedCurrencyId
   }, [selectedCurrencyId, productPriceRange])
@@ -148,7 +163,7 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
       return
     }
     const timer = setTimeout(() => {
-      updateURL(selectedCategories, priceRange, searchTerm)
+      updateURL(selectedCategories, selectedCollections, priceRange, searchTerm)
     }, 500)
     return () => clearTimeout(timer)
   }, [searchTerm])
@@ -158,12 +173,21 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     if (isInitialMount.current) {
       return
     }
-    updateURL(selectedCategories, priceRange, searchTerm)
+    updateURL(selectedCategories, selectedCollections, priceRange, searchTerm)
   }, [selectedCategories])
+
+  // Immediate update for collections
+  useEffect(() => {
+    if (isInitialMount.current) {
+      return
+    }
+    updateURL(selectedCategories, selectedCollections, priceRange, searchTerm)
+  }, [selectedCollections])
 
   // Clear all filters
   const clearFilters = () => {
     setSelectedCategories([])
+    setSelectedCollections([])
     setPriceRange([productPriceRange.min, productPriceRange.max])
     setSearchTerm("")
     router.push(pathname, { scroll: false })
@@ -178,16 +202,26 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     )
   }
 
+  // Handle collection selection (toggle multiple collections by ID)
+  const handleCollectionChange = (collectionId: string) => {
+    setSelectedCollections(prev => 
+      prev.includes(collectionId) 
+        ? prev.filter(id => id !== collectionId)
+        : [...prev, collectionId]
+    )
+  }
+
   // Handle price change on slider release
   const handlePriceChange = (value: number[]) => {
     const newPriceRange = value as [number, number]
     // Note: setPriceRange is already called by onValueChange, no need to call it again
-    updateURL(selectedCategories, newPriceRange, searchTerm)
+    updateURL(selectedCategories, selectedCollections, newPriceRange, searchTerm)
   }
 
   // Check if any filter is active
   const hasActiveFilters =
     selectedCategories.length > 0 ||
+    selectedCollections.length > 0 ||
     priceRange[0] > productPriceRange.min ||
     priceRange[1] < productPriceRange.max ||
     searchTerm !== ""
@@ -275,6 +309,52 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
           </div>
         )}
       </div>
+
+      {/* Collections */}
+      {collections.length > 0 && (
+        <div className="space-y-3">
+          <button
+            onClick={() => setShowCollections(!showCollections)}
+            className="flex items-center justify-between w-full text-sm font-medium text-gray-700 hover:text-gray-900"
+          >
+            <span>Colecciones</span>
+            {showCollections ? (
+              <ChevronUp className="w-4 h-4" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </button>
+          
+          {showCollections && (
+            <div className="max-h-64 overflow-y-auto pr-2 space-y-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 transition-colors">
+              {collections.length > 0 ? (
+                <>
+                  {/* Collection options con checkboxes para selección múltiple - usando IDs */}
+                  {collections.map((collection) => (
+                    <div key={collection.id} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={`collection-${collection.id}`}
+                        checked={selectedCollections.includes(collection.id)}
+                        onChange={() => handleCollectionChange(collection.id)}
+                        className="w-4 h-4 text-blue-600 cursor-pointer rounded border-gray-300 focus:ring-blue-500"
+                      />
+                      <label
+                        htmlFor={`collection-${collection.id}`}
+                        className="text-sm text-gray-600 cursor-pointer hover:text-gray-900 flex-1"
+                      >
+                        {collection.title}
+                      </label>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <p className="text-sm text-gray-500">Cargando colecciones...</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Price Range */}
       <div className="space-y-3">

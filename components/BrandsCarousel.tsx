@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { motion, useInView } from "framer-motion"
 import Image from "next/image"
 
 export function BrandsCarousel() {
@@ -13,6 +14,8 @@ export function BrandsCarousel() {
   ]
 
   const carouselRef = useRef<HTMLDivElement>(null)
+  const sectionRef = useRef(null)
+  const isInView = useInView(sectionRef, { once: true, amount: 0.3 })
   const [isDragging, setIsDragging] = useState(false)
   const [startX, setStartX] = useState(0)
   const [scrollLeft, setScrollLeft] = useState(0)
@@ -89,10 +92,21 @@ export function BrandsCarousel() {
   }
 
   return (
-    <section className="w-full flex flex-col items-center justify-center py-0 bg-transparent">
+    <motion.section 
+      ref={sectionRef}
+      initial={{ opacity: 0, y: 20 }}
+      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+      transition={{ duration: 0.6 }}
+      className="w-full flex flex-col items-center justify-center py-0 bg-transparent"
+    >
       <div className="container-section">
         <div className="content-section">
-            <div className="w-full max-w-[100rem] mx-auto bg-white rounded-xl p-4 sm:p-6 lg:p-8">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={isInView ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="w-full max-w-[100rem] mx-auto bg-white rounded-xl p-4 sm:p-6 lg:p-8"
+            >
             <div
               ref={carouselRef}
               className="flex gap-4 sm:gap-6 lg:gap-8 overflow-x-auto scrollbar-hide select-none"
@@ -130,7 +144,7 @@ export function BrandsCarousel() {
                 </div>
               ))}
             </div>
-          </div>
+            </motion.div>
 
           <style jsx>{`
             .scrollbar-hide::-webkit-scrollbar {
@@ -143,6 +157,6 @@ export function BrandsCarousel() {
           `}</style>
         </div>
       </div>
-    </section>
+    </motion.section>
   )
 }

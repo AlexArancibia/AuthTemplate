@@ -65,10 +65,10 @@ function FeatureCard({ card, index, isInView }: { card: Card; index: number; isI
       </div>
 
       {/* Título */}
-      <div className="p-0 pt-4 text-center">
-        <h3 className="font-adi-bold text-base font-semibold uppercase text-black tracking-wide text-left">
+      <div className="p-4 text-center">
+        <p className="text-lg font-semibold text-gray-900">
           {card.title}
-        </h3>
+        </p>
 
         {/* Secciones reservadas para futuro uso */}
         {card.description && (
@@ -115,7 +115,7 @@ function CardSectionRenderer({ cardSection }: { cardSection: CardSection }) {
               initial={{ opacity: 0, y: 20 }}
               animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
               transition={{ duration: 0.5 }}
-              className="font-druk text-secondary tracking-tight font-bold text-xl sm:text-2xl md:text-3xl lg:text-4xl uppercase"
+              className="font-druk text-secondary tracking-tight font-bold  uppercase"
             >
               {cardSection.title}
             </motion.h2>
@@ -223,7 +223,7 @@ export default function FeaturesSection({ id, metadata }: FeaturesSectionProps =
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 " />
         <div className="container-section relative py-16 lg:py-24 flex justify-center items-center min-h-[400px]">
-          <div className="text-red-500">{error}</div>
+          <div className="text-red-500"></div>
         </div>
       </div>
     )
@@ -234,7 +234,7 @@ export default function FeaturesSection({ id, metadata }: FeaturesSectionProps =
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 " />
         <div className="container-section relative py-16 lg:py-24 flex justify-center items-center min-h-[400px]">
-          <div className="text-gray-500">No se encontraron secciones de tarjetas.</div>
+          <div className="text-gray-500"></div>
         </div>
       </div>
     )

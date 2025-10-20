@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Slider } from "@/components/ui/slider"
 import { Separator } from "@/components/ui/separator"
 import type { Category } from "@/types/category"
+import type { Collection } from "@/types/collection"
 import type { Product } from "@/types/product"
 import type { CurrencyOption } from "@/stores/currency";
 import { useMainStore } from "@/stores/mainStore"
@@ -25,6 +26,7 @@ interface ProductFiltersProps {
 interface Filters {
   searchTerm: string
   categories: string[]
+  collectionIds: string[] // Add collection IDs support
   variants: Record<string, string[]>
   priceRange: [number, number]
   brand?: string | null;
@@ -39,7 +41,7 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const { categories, products, shopSettings } = useMainStore()
+  const { categories, collections, products, shopSettings } = useMainStore()
 
   // Usar refs para evitar comparaciones innecesarias - con valores iniciales correctos
   const lastFiltersRef = useRef<string>("")
@@ -56,6 +58,8 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
     }
     return categories
   })
+  // Add collection IDs state
+  const [selectedCollections, setSelectedCollections] = useState<string[]>(initialFilters.collectionIds || [])
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string[]>>(initialFilters.variants)
   const [priceRange, setPriceRange] = useState<[number, number]>(initialFilters.priceRange)
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm)
@@ -111,6 +115,7 @@ const filteredProducts = products
     const currentFilters = {
       searchTerm: debouncedSearchTerm,
       categories: selectedCategories,
+      collectionIds: selectedCollections, // Add collection IDs
       variants: selectedVariants,
       priceRange,
       brand: selectedBrand,
@@ -120,6 +125,7 @@ const filteredProducts = products
     const filtersKey = JSON.stringify({
       searchTerm: currentFilters.searchTerm,
       categories: [...currentFilters.categories].sort(),
+      collectionIds: [...currentFilters.collectionIds].sort(), // Add collection IDs to comparison
       variants: Object.fromEntries(
         Object.entries(currentFilters.variants).map(([key, values]) => [key, [...values].sort()]),
       ),
@@ -149,7 +155,7 @@ const filteredProducts = products
         updateTimeoutRef.current = null
       }, 100)
     }
-  }, [debouncedSearchTerm, selectedCategories, selectedVariants, priceRange, selectedBrand, onFilterChange])
+  }, [debouncedSearchTerm, selectedCategories, selectedCollections, selectedVariants, priceRange, selectedBrand, onFilterChange])
 
   // Función separada para actualizar URL
   const updateURL = useCallback(
@@ -169,6 +175,10 @@ const filteredProducts = products
 
       if (filters.categories.length > 0) {
         params.set("categories", filters.categories.join(","))
+      }
+
+      if (filters.collectionIds.length > 0) {
+        params.set("collections", filters.collectionIds.join(","))
       }
 
       if (filters.priceRange[0] !== minPrice || filters.priceRange[1] !== maxPrice) {
@@ -294,6 +304,12 @@ const filteredProducts = products
     )
   }, [])
 
+  const handleCollectionChange = useCallback((collectionId: string) => {
+    setSelectedCollections((prev) =>
+      prev.includes(collectionId) ? prev.filter((id) => id !== collectionId) : [...prev, collectionId],
+    )
+  }, [])
+
   const handleVariantChange = useCallback((attribute: string, value: string) => {
     setSelectedVariants((prev) => {
       const currentValues = prev[attribute] || []
@@ -317,6 +333,7 @@ const filteredProducts = products
   const resetFilters = useCallback(() => {
     setSearchTerm("")
     setSelectedCategories([])
+    setSelectedCollections([]) // Reset collections
     setSelectedVariants({})
     setPriceRange([minPrice, maxPrice])
     setSelectedBrand(null)
@@ -328,6 +345,7 @@ const filteredProducts = products
     const resetFiltersData = {
       searchTerm: "",
       categories: [],
+      collectionIds: [], // Reset collections
       variants: {},
       priceRange: [minPrice, maxPrice] as [number, number],
       brand: null,
@@ -339,7 +357,7 @@ const filteredProducts = products
   }, [minPrice, maxPrice, pathname, router, onFilterChange])
 
   return (
-    <div className="font-lato-bold w-72 bg-white space-y-6">
+    <div className="font-adi-bold w-72 bg-white space-y-6">
       {/* Search */}
       <Input
         type="text"
@@ -367,6 +385,27 @@ const filteredProducts = products
           ))}
         </div>
       </div>
+
+      {/* Collections */}
+      {collections.length > 0 && (
+        <div>
+          <h3 className="text-lg font-medium mb-4">Colecciones</h3>
+          <div className="space-y-2">
+            {collections.map((collection: Collection) => (
+              <div key={collection.id} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`collection-${collection.id}`}
+                  checked={selectedCollections.includes(collection.id)}
+                  onCheckedChange={() => handleCollectionChange(collection.id)}
+                />
+                <label htmlFor={`collection-${collection.id}`} className="text-sm text-gray-700 cursor-pointer">
+                  {collection.title}
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Price Range */}
       <div>

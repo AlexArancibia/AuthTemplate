@@ -74,7 +74,7 @@ function CategorySection({
       <div className="mx-auto px-4 sm:px-6 lg:px-8">
         {/* Título principal centrado */}
         <div className="text-center mb-8">
-          <h2 className="font-druk text-xl sm:text-2xl md:text-3xl lg:text-4xl font-archivo-black text-gray-900 mb-4">
+          <h2 className="font-druk text-xl sm:text-2xl md:text-3xl lg:text-4xl text-gray-900 mb-4">
             {title}
           </h2>
         </div>
@@ -89,7 +89,7 @@ function CategorySection({
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
-                className={`font-lato-thin text-sm font-medium transition-all duration-200 ${
+                className={`font-adi-regular text-sm font-medium transition-all duration-200 ${
                   selectedCategory === category
                     ? "text-black"
                     : "text-gray-500 hover:text-gray-700"

@@ -18,6 +18,7 @@ import { useCurrencyStore, CurrencyOption } from "@/stores/currency"
 import { PublishBanner } from "@/components/PublishBanner"
 import { BrandsCarousel } from "@/components/BrandsCarousel"
 import { CollectionCarousel } from "@/components/CollectionCarousel"
+import { FeatureCollection } from "@/components/FeatureCollection"
 import { Testimonials } from "@/components/Testimonials"
 import { Sponsors } from "@/components/Sponsors"
 
@@ -64,10 +65,13 @@ export default function HomePage() {
     <>
     
     <HeroSection />
+
     <Suspense fallback={<div className="h-96 bg-muted animate-pulse" />}>
         <FeaturesSection id="cs_5c596d6f-a27c" />
       </Suspense>
-      <ProductCarousel
+
+      <FeatureCollection
+        collectionId="col_306ba7b1-08a8"
         selectedCurrencyId={selectedCurrencyId}
         acceptedCurrencies={acceptedCurrencies}
       />
@@ -78,21 +82,26 @@ export default function HomePage() {
         showExploreButton={false}
         fallbackTitle="PRODUCTOS DESTACADOS"
         emptyMessage="No hay productos destacados para mostrar."
+        className="bg-white"
+      />
+      <CollectionCarousel
+        collectionId="col_952bd8f7-4633"
+        selectedCurrencyId={selectedCurrencyId}
+        acceptedCurrencies={acceptedCurrencies}
+        showExploreButton={false}
+        fallbackTitle="ÚLTIMOS PRODUCTOS"
+        emptyMessage="Aún no hay productos recientes para mostrar."
+        className="pt-4 sm:pt-6 lg:pt-8"
       />
       {/* <DeliveryHeroSection /> */}
       <PublishBanner />
       <BrandsCarousel />
-      <CollectionCarousel
-        collectionId="col_cb240586-77ae"
-        selectedCurrencyId={selectedCurrencyId}
-        acceptedCurrencies={acceptedCurrencies}
-        showExploreButton={true}
-        fallbackTitle="ÚLTIMOS PRODUCTOS"
-        emptyMessage="Aún no hay productos recientes para mostrar."
-      />
+      
+      <Sponsors />
+
       {/* <BlogSection /> */}
       <Testimonials />
-      <Sponsors />
+      
     </>
   )
 }

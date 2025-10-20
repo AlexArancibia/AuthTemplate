@@ -5,7 +5,7 @@ import type { ShopSettings } from "@/types/store"
 
 // Función para obtener colores de la tienda
 const getStoreColors = (shopSettings?: ShopSettings) => {
-  const primaryColor = shopSettings?.primaryColor || "#1e40af"
+  const primaryColor = shopSettings?.primaryColor || "#000000"
   const secondaryColor = shopSettings?.secondaryColor || "#64748b"
 
   return {
@@ -47,7 +47,7 @@ const baseTemplate = (content: string, title: string, shopSettings?: ShopSetting
 
     .header {
         background-color: ${colors.primary};
-        background-image: linear-gradient(135deg, ${colors.primary} 0%, #3b82f6 100%);
+        background-image: linear-gradient(135deg, ${colors.primary} 0%, #333333 100%);
         color: white;
         text-align: center;
         padding: 35px 30px;
@@ -148,7 +148,7 @@ const baseTemplate = (content: string, title: string, shopSettings?: ShopSetting
 
     .button {
         background-color: ${colors.primary};
-        background-image: linear-gradient(135deg, ${colors.primary} 0%, #3b82f6 100%);
+        background-image: linear-gradient(135deg, ${colors.primary} 0%, #333333 100%);
         color: white !important;
         padding: 16px 32px;
         border-radius: 8px;

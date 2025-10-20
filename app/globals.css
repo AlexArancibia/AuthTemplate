@@ -13,23 +13,6 @@ html { scroll-behavior: smooth; }
     @apply max-w-screen-2xl w-full mx-auto 
   }
 
-  .font-lato-light {
-    font-family: 'Lato', sans-serif;
-    font-weight: 300;
-  }
-  
-  .font-lato-thin {
-    font-family: 'Lato', sans-serif;
-    font-weight: 100;
-  }
-  
-  .font-lato-bold {
-    font-family: 'Lato', sans-serif;
-    font-weight: 700;
-  }
-  .font-archivo-black {
-    font-family: 'Archivo Black', sans-serif;
-  }
   .font-druk {
     font-family: var(--font-druk);
   }
@@ -126,8 +109,8 @@ html { scroll-behavior: smooth; }
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(58.25% 0.21657 260.303);
-  --primary-foreground: oklch(0.985 0 0);
+  --primary: #000000 !important;
+  --primary-foreground: #ffffff !important;
   --secondary: oklch(0.123 0.108 258);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -135,7 +118,7 @@ html { scroll-behavior: smooth; }
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
+  --border: oklch(0.922 0 0 / 0.4);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
   --chart-1: oklch(0.646 0.222 41.116);
@@ -160,8 +143,8 @@ html { scroll-behavior: smooth; }
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.6049 0.1765 146.74);
-  --primary-foreground: oklch(0.985 0 0);
+  --primary: #000000 !important;
+  --primary-foreground: #ffffff !important;
   --secondary: oklch(0.123 0.108 258);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
@@ -194,6 +177,30 @@ html { scroll-behavior: smooth; }
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Force primary color to be black */
+  .bg-primary,
+  [class*="bg-primary"],
+  .text-primary,
+  [class*="text-primary"],
+  .border-primary,
+  [class*="border-primary"] {
+    --tw-bg-opacity: 1;
+    --tw-text-opacity: 1;
+    --tw-border-opacity: 1;
+  }
+  
+  .bg-primary {
+    background-color: #000000 !important;
+  }
+  
+  .text-primary {
+    color: #000000 !important;
+  }
+  
+  .border-primary {
+    border-color: #000000 !important;
+  }
 }
 
 @layer base {
@@ -210,54 +217,54 @@ html { scroll-behavior: smooth; }
            lg:text-5xl 
            xl:text-6xl
 
-           font-bold 
            tracking-tight 
            leading-[1.1];
+    font-family: var(--font-druk);
   }
   
   h2 {
     @apply text-2xl       /* Móvil por defecto */
            md:text-2xl   /* Tablets y pantallas medianas */
            lg:text-3xl 
-           font-bold 
            tracking-tight 
            leading-[1.1];
+    font-family: var(--font-druk);
   }
   
   h3 {
     @apply text-lg       /* Móvil por defecto */
            md:text-xl   /* Tablets y pantallas medianas */
 
-           font-semibold 
            tracking-tight 
            leading-[1.1];
+    font-family: var(--font-druk);
   }
   
   h4 {
     @apply text-base     /* Móvil por defecto */
            md:text-xl    /* Tablets y pantallas medianas */
 
-           font-semibold 
            tracking-tight 
            leading-[1.2];
+    font-family: var(--font-druk);
   }
   
   h5 {
     @apply text-sm       /* Móvil por defecto */
            md:text-lg    /* Tablets y pantallas medianas */
 
-           font-semibold 
            tracking-tight 
            leading-[1.3];
+    font-family: var(--font-druk);
   }
   
   h6 {
     @apply text-xs       /* Móvil por defecto */
            md:text-sm  /* Tablets y pantallas medianas */
            lg:text-base    /* Pantallas grandes */
-           font-medium 
            tracking-tight 
            leading-[1.4];
+    font-family: var(--font-druk);
   }
   
 
@@ -265,9 +272,9 @@ html { scroll-behavior: smooth; }
     @apply  text-sm       /* Móvil por defecto */
               md:text-sm  /* Tablets y pantallas medianas */
               lg:text-sm     /* Pantallas grandes */
-              font-normal 
               tracking-tight 
               leading-[1.4];
+    font-family: var(--font-adi-regular);
   }
 }
 

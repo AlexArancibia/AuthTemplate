@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useMemo } from "react"
-import { motion, AnimatePresence, type PanInfo } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import type { HeroSection as HeroSectionType } from "@/types/heroSection"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react"
@@ -45,32 +45,28 @@ export function HeroCarouselBase({
   // Referencias para los timers
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const progressTimerRef = useRef<NodeJS.Timeout | null>(null)
-  const dragStartX = useRef<number>(0)
   const carouselRef = useRef<HTMLDivElement>(null)
 
   // Constantes
   const PROGRESS_UPDATE_INTERVAL = 30 // 30ms para actualización más suave
 
-  // Variantes para las animaciones de slide
+  // Variantes para las animaciones de slide (fade effect)
   const slideVariants = {
-    enter: (direction: number) => ({
-      x: direction > 0 ? "100%" : "-100%",
-      scale: 1.02,
+    enter: {
       opacity: 0,
-      zIndex: 0,
-    }),
-    center: {
-      x: 0,
       scale: 1,
+      zIndex: 2,
+    },
+    center: {
       opacity: 1,
+      scale: 1,
+      zIndex: 2,
+    },
+    exit: {
+      opacity: 0,
+      scale: 1,
       zIndex: 1,
     },
-    exit: (direction: number) => ({
-      x: direction < 0 ? "100%" : "-100%",
-      scale: 0.98,
-      opacity: 0,
-      zIndex: 0,
-    }),
   }
 
   // Función para avanzar al siguiente slide
@@ -132,47 +128,6 @@ export function HeroCarouselBase({
     }
   }
 
-  // Manejadores para el arrastre (drag)
-  const handleDragStart = (_: any, info: PanInfo) => {
-    dragStartX.current = info.point.x
-
-    // Pausar el autoplay durante el arrastre
-    if (timerRef.current) {
-      clearInterval(timerRef.current)
-      timerRef.current = null
-    }
-
-    // Pausar la actualización de progreso
-    if (progressTimerRef.current) {
-      clearInterval(progressTimerRef.current)
-      progressTimerRef.current = null
-    }
-  }
-
-  const handleDragEnd = (_: any, info: PanInfo) => {
-    if (isTransitioning || sortedHeroSections.length <= 1) return
-
-    const dragEndX = info.point.x
-    const diff = dragStartX.current - dragEndX
-    const threshold = window.innerWidth * 0.15 // 15% del ancho de la pantalla
-
-    // Si el arrastre es significativo, cambiar de slide
-    if (Math.abs(diff) > threshold) {
-      if (diff > 0) {
-        nextSlide()
-      } else {
-        prevSlide()
-      }
-    } else {
-      // Si el arrastre no es significativo, reiniciar el progreso
-      startProgressTimer()
-    }
-
-    // Reiniciar el autoplay si no está pausado
-    if (!isPaused) {
-      startAutoplay()
-    }
-  }
 
   // Función para iniciar el autoplay
   const startAutoplay = () => {
@@ -280,14 +235,14 @@ export function HeroCarouselBase({
     <div className="w-full overflow-hidden relative" ref={carouselRef}>
       {/* Carrusel principal */}
       <div
-        className="relative h-[500px] md:h-[600px] lg:h-[700px] min-h-[500px] "
-        // style={{
-        //   height: containerHeight,
-        //   willChange: "transform", // Optimización de rendimiento
-        // }}
+        className="relative w-full"
+        style={{
+          height: containerHeight,
+          willChange: "transform", // Optimización de rendimiento
+        }}
       >
-        {/* Cambiamos el modo de "wait" a "sync" para que los slides se superpongan durante la transición */}
-        <AnimatePresence initial={false} custom={direction} mode="sync">
+        {/* Modo "sync" para evitar flash blanco entre transiciones */}
+        <AnimatePresence initial={false} mode="sync">
           <motion.div
             key={currentIndex}
             custom={direction}
@@ -296,33 +251,18 @@ export function HeroCarouselBase({
             animate="center"
             exit="exit"
             transition={{
-              x: {
-                type: "spring",
-                stiffness: 200,
-                damping: 25,
-                duration: transitionDuration / 1000,
+              opacity: {
+                duration: (transitionDuration / 1000) * 0.8,
+                ease: "easeInOut",
               },
               scale: {
                 duration: (transitionDuration / 1000) * 0.8,
-              },
-              opacity: {
-                duration: (transitionDuration / 1000) * 0.5,
+                ease: "easeInOut",
               },
             }}
-            className="w-full cursor-grab active:cursor-grabbing absolute inset-0"
+            className="w-full absolute inset-0"
             style={{
-              touchAction: "pan-y",
-              willChange: "transform, opacity", // Optimización de rendimiento
-            }}
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.2} // Aumentado para una sensación más natural
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            dragTransition={{
-              power: 0.3,
-              timeConstant: 300,
-              modifyTarget: (target) => Math.round(target / window.innerWidth) * window.innerWidth,
+              willChange: "opacity, transform", // Optimización de rendimiento
             }}
           >
             <HeroSlide heroSection={sortedHeroSections[currentIndex]} />
@@ -366,17 +306,17 @@ export function HeroCarouselBase({
                 <button
                   key={index}
                   onClick={() => goToSlide(index)}
-                  className={`group relative h-1.5 rounded-full overflow-hidden transition-all duration-300 hover:bg-white/60 ${
+                  className={`group relative h-2 rounded-full overflow-hidden transition-all duration-300 backdrop-blur-sm shadow-lg ${
                     index === currentIndex
-                      ? "bg-primary/50 scale-[1.05] w-[50px] md:w-[80px]"
-                      : "bg-primary/30 w-[30px] md:w-[50px]"
+                      ? "bg-white/80 scale-[1.05] w-[50px] md:w-[80px] shadow-white/50"
+                      : "bg-white/40 w-[30px] md:w-[50px] hover:bg-white/60 shadow-white/30"
                   }`}
                   aria-label={`Ir a la diapositiva ${index + 1}`}
                   disabled={isTransitioning}
                 >
                   {index === currentIndex && (
                     <motion.div
-                      className="absolute inset-0 bg-primary"
+                      className="absolute inset-0 bg-white shadow-lg"
                       initial={{ width: 0 }}
                       animate={{ width: `${progress}%` }}
                       transition={{ duration: 0.1, ease: "linear" }}

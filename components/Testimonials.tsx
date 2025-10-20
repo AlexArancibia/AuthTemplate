@@ -1,14 +1,16 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import useEmblaCarousel from "embla-carousel-react"
 import { ChevronLeft, ChevronRight, Quote } from "lucide-react"
 import { useMainStore } from "@/stores/mainStore"
 import Image from "next/image"
-import { motion } from "framer-motion"
+import { motion, useInView } from "framer-motion"
 
 export function Testimonials() {
     const { cardSections } = useMainStore()
+    const ref = useRef(null)
+    const isInView = useInView(ref, { once: true, amount: 0.3 })
     const [emblaRef, emblaApi] = useEmblaCarousel({
         align: "start",
         loop: true,
@@ -42,13 +44,32 @@ export function Testimonials() {
         .sort((a, b) => a.position - b.position) || []
 
     return (
-        <section id="testimonios" className="py-16 bg-white w-full">
+        <motion.section 
+            ref={ref}
+            initial={{ opacity: 0, y: 20 }}
+            animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+            transition={{ duration: 0.6 }}
+            id="testimonios" 
+            className="py-16 bg-white w-full"
+        >
             <div className="w-full px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-10">
-                <h2 className="font-druk text-2xl sm:text-3xl md:text-4xl font-bold text-black">TESTIMONIOS</h2>
+                <motion.h2 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+                    transition={{ duration: 0.5 }}
+                    className="font-druk text-2xl sm:text-3xl md:text-4xl font-bold text-black"
+                >
+                    TESTIMONIOS
+                </motion.h2>
                 </div>
 
-                <div className="w-full flex items-center gap-2">
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+                    transition={{ duration: 0.6, delay: 0.2 }}
+                    className="w-full flex items-center gap-2"
+                >
                 {/* Botón izquierda */}
                 <button
                     onClick={scrollPrev}
@@ -70,8 +91,8 @@ export function Testimonials() {
                         <motion.div
                             className="relative bg-white rounded-xl shadow-md px-4 py-6 sm:px-6 sm:py-8 text-center flex flex-col items-center h-full"
                             initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5 }}
+                            animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+                            transition={{ duration: 0.5, delay: 0.4 + (cards.indexOf(card) * 0.1) }}
                         >
                             {/* Comilla decorativa */}
                             <Quote className="absolute top-4 right-4 w-8 h-8 text-gray-300 scale-x-[-1]" />
@@ -111,8 +132,8 @@ export function Testimonials() {
                 >
                     <ChevronRight className="w-10 h-10 text-gray-600" />
                 </button>
-                </div>
+                </motion.div>
             </div>
-        </section>
+        </motion.section>
     )
 }
