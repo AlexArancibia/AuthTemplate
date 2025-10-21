@@ -241,11 +241,8 @@ export default function SuccessPage() {
           <CheckoutSteps steps={checkoutSteps} currentStep={currentStep} />
         </div>
 
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main Content */}
-            <div className={currentStep === STEPS.CONFIRMATION ? "lg:col-span-3" : "lg:col-span-2"}>
-              <motion.div
+        <div className="max-w-4xl mx-auto">
+          <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
@@ -395,8 +392,6 @@ export default function SuccessPage() {
                   </div>
                 </motion.div>
               </motion.div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
