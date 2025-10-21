@@ -288,7 +288,7 @@ export function ContactForm({ id = "cs_eebba224-680f", metadata }: ContactFormPr
           </motion.h2>
           <motion.p
             variants={itemVariants}
-            className="font-lato-light text-sm md:text-base lg:text-lg text-white max-w-2xl mx-auto"
+            className="text-sm md:text-base lg:text-lg text-white max-w-2xl mx-auto"
             initial="hidden"
             animate="visible"
             transition={{ duration: 0.3, delay: 0.1 }}
@@ -298,7 +298,7 @@ export function ContactForm({ id = "cs_eebba224-680f", metadata }: ContactFormPr
           </motion.p>
         </div>
 
-        <div className="font-lato-light max-w-6xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <motion.div
             variants={containerVariants}
             initial="hidden"

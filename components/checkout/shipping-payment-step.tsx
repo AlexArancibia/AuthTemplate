@@ -416,7 +416,7 @@ export function ShippingPaymentStep({
                         
                         {/* Mostrar progreso hacia envío gratis (solo si NO es recojo) */}
                         {!isPickup && freeThreshold && !qualifiesForFreeShipping && (
-                          <p className="text-xs text-blue-600 mt-1">
+                          <p className="text-xs text-pink-600 mt-1">
                             ¡Envío gratis desde {paymentProviders[0]?.currency.symbol}{freeThreshold.toFixed(2)}!
                             {total > 0 && (
                               <span className="ml-1 text-gray-500">
@@ -437,7 +437,7 @@ export function ShippingPaymentStep({
                   </Label>
                   {/* Mostrar precio o badge de gratis */}
                   {isPickup ? (
-                    <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 font-medium px-3 py-1">
+                    <Badge variant="outline" className="bg-pink-50 text-pink-600 border-pink-200 font-medium px-3 py-1">
                       Gratis
                     </Badge>
                   ) : isFree ? (

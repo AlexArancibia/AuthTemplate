@@ -127,7 +127,7 @@ export function AddressCard({
             isSelected 
               ? "bg-primary text-white" 
               : isCompanyAddress 
-                ? "bg-blue-50 text-blue-600" 
+                ? "bg-pink-50 text-pink-600" 
                 : "bg-green-50 text-green-600"
           }`}>
             {isCompanyAddress ? (
@@ -187,7 +187,7 @@ export function AddressCard({
                     e.stopPropagation()
                     handleEditClick()
                   }}
-                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-1 h-8 w-8"
+                  className="text-pink-600 hover:text-pink-700 hover:bg-pink-50 p-1 h-8 w-8"
                 >
                   <Edit className="h-4 w-4" />
                 </Button>
@@ -244,7 +244,7 @@ export function AddressCard({
             variant="ghost"
             size="sm"
             onClick={handleEditClick}
-            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+            className="text-pink-600 hover:text-pink-700 hover:bg-pink-50"
           >
             <Edit className="h-4 w-4 mr-1" />
             Editar

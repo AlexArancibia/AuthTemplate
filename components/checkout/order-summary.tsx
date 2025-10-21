@@ -299,13 +299,13 @@ export function OrderSummary({
             id="coupon"
             value={inputValue}
             onChange={handleCouponChange}
-            className="flex-1 border border-gray-300 rounded-l-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="flex-1 border border-gray-300 rounded-l-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-pink-500"
             placeholder="Ingresa tu código"
           />
           <button
             type="button"
             onClick={handleApplyCoupon}
-            className="bg-primary cursor-pointer text-white px-4 py-2 rounded-r-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="bg-primary cursor-pointer text-white px-4 py-2 rounded-r-md text-sm focus:outline-none focus:ring-1 focus:ring-pink-500"
           >
             Aplicar
           </button>
@@ -375,7 +375,7 @@ export function OrderSummary({
             
             // Si es recojo, mostrar "Gratis" en azul
             if (isPickup) {
-              return <span className="text-blue-600 font-semibold">Gratis</span>
+              return <span className="text-pink-600 font-semibold">Gratis</span>
             }
             
             // Si el shipping es 0, mostrar "Gratis" en verde
@@ -409,7 +409,7 @@ export function OrderSummary({
           } else if (freeThreshold && subtotalAfterDiscount < freeThreshold) {
             const remaining = freeThreshold - subtotalAfterDiscount
             return (
-              <div className="text-xs text-blue-600 mt-1">
+              <div className="text-xs text-pink-600 mt-1">
                 Envío gratis desde {currency}{freeThreshold.toFixed(2)} (Te faltan {currency}{remaining.toFixed(2)})
               </div>
             )

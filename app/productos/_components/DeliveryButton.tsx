@@ -179,7 +179,7 @@ export function DeliveryButton({ id = "cs_89a37ac3-d83c", metadata }: DeliveryBu
         whileTap={{ scale: 0.98 }}
       >
         <motion.div
-          className="absolute inset-0 rounded-2xl bg-blue-400 opacity-10"
+          className="absolute inset-0 rounded-2xl bg-pink-400 opacity-10"
           animate={{ scale: [1, 1.15, 1], opacity: [0, 0.4, 0] }}
           transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY, repeatType: "reverse" }}
         />
@@ -187,15 +187,15 @@ export function DeliveryButton({ id = "cs_89a37ac3-d83c", metadata }: DeliveryBu
         <Button
           variant="ghost"
           onClick={() => setOpen(true)}
-          className="relative cursor-pointer flex justify-start items-start border border-blue-200 rounded-2xl p-4 bg-blue-50 hover:bg-blue-100 w-full h-auto transition-all"
+          className="relative cursor-pointer flex justify-start items-start border border-pink-200 rounded-2xl p-4 bg-pink-50 hover:bg-pink-100 w-full h-auto transition-all"
         >
           <div className="flex items-center gap-3">
             <div className="bg-white p-2 rounded-lg">
-              <Package className="w-6 h-6 text-blue-600" />
+              <Package className="w-6 h-6 text-pink-600" />
             </div>
             <div>
               <p className="font-bold text-gray-900 text-left">{deliverySection.title}</p>
-              <p className="text-blue-600 font-medium text-left">{deliverySection.subtitle}</p>
+              <p className="text-pink-600 font-medium text-left">{deliverySection.subtitle}</p>
             </div>
           </div>
         </Button>

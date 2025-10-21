@@ -64,7 +64,7 @@ function FAQItem({
         aria-controls={panelId}
         aria-expanded={isOpen}
         onClick={onToggle}
-        className="w-full flex items-center gap-4 text-left p-4 sm:p-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        className="w-full flex items-center gap-4 text-left p-4 sm:p-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-pink-500"
       >
         <span className="flex-1 text-base sm:text-lg font-medium text-gray-900">{q}</span>
         <motion.span

@@ -185,7 +185,7 @@ export function AboutSection({ contentId = "cnt_363018db-f61b" }: AboutSectionPr
             {content.sections.map((section, index) => (
               <motion.div key={index} className="space-y-2" variants={itemAnimation}>
                 <div className="flex items-center gap-2">
-                  <Check className="w-5 h-5 p-1 rounded-full bg-blue-100 text-blue-600 flex-shrink-0" />
+                  <Check className="w-5 h-5 p-1 rounded-full bg-pink-100 text-pink-600 flex-shrink-0" />
                   {/* Título de sección con estilos del HTML */}
                   <div 
                     className="[&>h3]:mb-0 [&>h3]:text-lg [&>h3]:font-semibold [&>h3]:text-gray-900"

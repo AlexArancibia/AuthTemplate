@@ -70,7 +70,7 @@ function ProductsContent() {
 
   return (
     <main className="container-section pt-8">
-      <div className="content-section">
+      <div className="content-section pl-6 md:pl-8 lg:pl-16 pb-2 md:pb-0">
         <Breadcrumb>
           <BreadcrumbList>
             <BreadcrumbItem>
@@ -98,7 +98,7 @@ function ProductsContent() {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
       >
-        <div className="absolute inset-0 z-0 bg-blue-600/20"></div>
+        <div className="absolute inset-0 z-0 bg-pink-600/20"></div>
         <div className="absolute inset-0 z-0 bg-gradient-to-t from-black/100 via-black/40 to-black/30"></div>
 
         <div className="relative z-10 w-full max-w-[1600px] mx-auto flex flex-col items-center gap-6">
@@ -109,7 +109,7 @@ function ProductsContent() {
           </h1>
 
           <Link href="/productos">
-            <button className="font-lato-thin bg-white text-black text-sm font-medium px-6 py-3 rounded-xs cursor-pointer">
+            <button className=" bg-white text-black text-sm font-medium px-6 py-3 rounded-xs cursor-pointer">
               Ver más
             </button>
           </Link>

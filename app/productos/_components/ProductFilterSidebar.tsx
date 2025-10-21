@@ -71,8 +71,8 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     return [min, max]
   })
   const [searchTerm, setSearchTerm] = useState<string>(() => searchParams.get("search") || "")
-  const [showCategories, setShowCategories] = useState(true)
-  const [showPriceFilter, setShowPriceFilter] = useState(true)
+  const [showCategories, setShowCategories] = useState(false)
+  const [showPriceFilter, setShowPriceFilter] = useState(false)
 
   // Update URL whenever filters change
   const updateURL = useCallback((
@@ -258,7 +258,7 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
                       id={`category-${category.slug}`}
                       checked={selectedCategories.includes(category.slug)}
                       onChange={() => handleCategoryChange(category.slug)}
-                      className="w-4 h-4 text-blue-600 cursor-pointer rounded border-gray-300 focus:ring-blue-500"
+                      className="w-4 h-4 text-pink-600 cursor-pointer rounded border-gray-300 focus:ring-pink-500"
                     />
                     <label
                       htmlFor={`category-${category.slug}`}

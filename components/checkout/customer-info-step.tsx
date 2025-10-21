@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Separator } from "@/components/ui/separator"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Card } from "@/components/ui/card"
 import { AddressCard } from "@/components/ui/address-card"
 import { AddressForm } from "@/components/dashboard/address-form"
 import {
@@ -320,11 +321,11 @@ export function CustomerInfoStep({
       )}
       
       {authCheckComplete && !isAuthenticated && (
-        <div className="bg-blue-50 p-4 rounded-lg mb-6">
+        <div className="bg-pink-50 p-4 rounded-lg mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-medium text-blue-800">¿Ya tienes una cuenta?</h3>
-              <p className="text-sm text-blue-700">Inicia sesión para agilizar el proceso de compra</p>
+              <h3 className="font-medium text-pink-800">¿Ya tienes una cuenta?</h3>
+              <p className="text-sm text-pink-700">Inicia sesión para agilizar el proceso de compra</p>
             </div>
             <Button variant="outline" className="bg-white" onClick={() => router.push("/login?redirect=/checkout&fromLogin=true")}>
               Iniciar sesión
@@ -333,46 +334,91 @@ export function CustomerInfoStep({
         </div>
       )}
 
-      <h2 className="text-xl font-semibold mb-4">Información de contacto</h2>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="firstName">Nombre</Label>
-          <Input id="firstName" name="firstName" value={formData.firstName} onChange={handleInputChange} required />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="lastName">Apellido</Label>
-          <Input id="lastName" name="lastName" value={formData.lastName} onChange={handleInputChange} required />
-        </div>
+      <div>
+        <h2 className="text-xl font-semibold mb-2">Información de contacto</h2>
+        <p className="text-sm text-muted-foreground">
+          Ingresa tus datos para el envío de tu pedido
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="email">Correo electrónico</Label>
-          <Input
-            id="email"
-            name="email"
-            type="email"
-            value={formData.email || currentUser?.email || ""}
-            onChange={handleInputChange}
-            required
-            disabled={!!currentUser?.email}
-          />
+      <Card className="p-4 md:p-6 space-y-6 rounded-xl shadow-sm">
+        <div>
+          <h3 className="font-medium text-base mb-4">Datos de contacto</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="firstName" className="text-sm font-medium">
+                Nombre <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="firstName"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleInputChange}
+                placeholder="Juan"
+                className="rounded-lg shadow-sm transition-all duration-300 focus:shadow-md"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastName" className="text-sm font-medium">
+                Apellido <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="lastName"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleInputChange}
+                placeholder="Pérez"
+                className="rounded-lg shadow-sm transition-all duration-300 focus:shadow-md"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm font-medium">
+                Correo electrónico <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                value={formData.email || currentUser?.email || ""}
+                onChange={handleInputChange}
+                placeholder="juan@ejemplo.com"
+                className="rounded-lg shadow-sm transition-all duration-300 focus:shadow-md"
+                required
+                disabled={!!currentUser?.email}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone" className="text-sm font-medium">
+                Teléfono de contacto <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="phone"
+                name="phone"
+                value={formData.phone}
+                onChange={handleInputChange}
+                placeholder="+51 999 999 999"
+                className="rounded-lg shadow-sm transition-all duration-300 focus:shadow-md"
+                required
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="company" className="text-sm font-medium">Empresa (opcional)</Label>
+              <Input
+                id="company"
+                name="company"
+                value={formData.company}
+                onChange={handleInputChange}
+                placeholder="Mi Empresa S.A."
+                className="rounded-lg shadow-sm transition-all duration-300 focus:shadow-md"
+              />
+            </div>
+          </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="phone">Teléfono de contacto</Label>
-          <Input id="phone" name="phone" value={formData.phone} onChange={handleInputChange} required />
-        </div>
-      </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="company">Empresa (opcional)</Label>
-        <Input id="company" name="company" value={formData.company} onChange={handleInputChange} />
-      </div>
-
-      <Separator className="my-6" />
-
-      <h2 className="text-xl font-semibold mb-4">Dirección de envío</h2>
+        <div>
+          <h3 className="font-medium text-base mb-4">Dirección de envío</h3>
 
       {/* Display existing addresses for authenticated users */}
       {isAuthenticated && currentUser && currentUser.addresses && currentUser.addresses.length > 0 && (
@@ -422,159 +468,185 @@ export function CustomerInfoStep({
         </div>
       )}
 
-      {/* New shipping address form */}
-      {(showNewShippingAddress || !isAuthenticated || !currentUser?.addresses?.length) && (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="address">Dirección</Label>
-              <Input
-                id="address"
-                name="address"
-                value={formData.address}
-                onChange={(e) => {
-                  handleInputChange(e);
-                  if (e.target.value.trim() !== "") setAddressError(false);
-                }}
-                required
-                className={addressError ? "border-red-500 focus-visible:ring-red-500" : ""}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="shippingPhone">Teléfono</Label>
-              <Input
-                id="shippingPhone"
-                name="shippingPhone"
-                value={formData.shippingPhone}
-                onChange={handleInputChange}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="apartment">Apartamento, suite, etc. (opcional)</Label>
-              <Input id="apartment" name="apartment" value={formData.apartment} onChange={handleInputChange} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="zipCode">Código postal (opcional)</Label>
-              <Input id="zipCode" name="zipCode" value={formData.zipCode} onChange={handleInputChange} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="country">País</Label>
-              <Select
-                value={formData.countryCode3 || ""}
-                onValueChange={handleCountryChange}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="-- Elija --" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[200px] overflow-y-auto">
-                  <div className="p-2">
+          {/* New shipping address form */}
+          {(showNewShippingAddress || !isAuthenticated || !currentUser?.addresses?.length) && (
+            <>
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="country" className="text-sm font-medium">
+                    País <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={formData.countryCode3 || ""}
+                    onValueChange={handleCountryChange}
+                  >
+                    <SelectTrigger className="rounded-lg shadow-sm transition-all duration-300 focus:shadow-md">
+                      <SelectValue placeholder="Perú" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[200px] overflow-y-auto">
+                      <div className="p-2">
+                        <Input
+                          placeholder="Buscar país..."
+                          value={countryFilter}
+                          onChange={e => setCountryFilter(e.target.value)}
+                          className="mb-2"
+                          onKeyDown={e => e.stopPropagation()}
+                        />
+                      </div>
+                      {/* {countries
+                        .filter(c => c.name.toLowerCase().includes(countryFilter.toLowerCase()))
+                        .filter(c => c.name.toLowerCase() === 'perú' || c.name.toLowerCase() === 'peru')
+                        .map(c => (
+                          <SelectItem key={c.code} value={c.code3}>{c.name}</SelectItem>
+                      ))} */}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="address" className="text-sm font-medium">
+                    Dirección <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="address"
+                    name="address"
+                    value={formData.address}
+                    onChange={(e) => {
+                      handleInputChange(e);
+                      if (e.target.value.trim() !== "") setAddressError(false);
+                    }}
+                    placeholder="Av. Principal 123"
+                    className={`rounded-lg shadow-sm transition-all duration-300 focus:shadow-md ${addressError ? "border-destructive" : ""}`}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="apartment" className="text-sm font-medium">Apartamento, suite, etc. (opcional)</Label>
+                  <Input
+                    id="apartment"
+                    name="apartment"
+                    value={formData.apartment}
+                    onChange={handleInputChange}
+                    placeholder="Apt. 4B"
+                    className="rounded-lg shadow-sm transition-all duration-300 focus:shadow-md"
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="city" className="text-sm font-medium">
+                      Ciudad <span className="text-destructive">*</span>
+                    </Label>
+                    <Select
+                      value={formData.cityId || ""}
+                      onValueChange={handleCityChange}
+                      disabled={!formData.stateId}
+                    >
+                      <SelectTrigger className="rounded-lg shadow-sm transition-all duration-300 focus:shadow-md">
+                        <SelectValue placeholder="Lima" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[200px] overflow-y-auto">
+                        <div className="p-2">
+                          <Input
+                            placeholder="Buscar ciudad..."
+                            value={cityFilter}
+                            onChange={e => setCityFilter(e.target.value)}
+                            className="mb-2"
+                            onKeyDown={e => e.stopPropagation()}
+                          />
+                        </div>
+                        {(cities[formData.stateId] || [])
+                          .filter(c => c.name.toLowerCase().includes(cityFilter.toLowerCase()))
+                          .map(c => (
+                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="state" className="text-sm font-medium">Provincia</Label>
+                    <Select
+                      value={formData.stateId || ""}
+                      onValueChange={handleStateChange}
+                      disabled={!formData.countryCode3}
+                    >
+                      <SelectTrigger className="rounded-lg shadow-sm transition-all duration-300 focus:shadow-md">
+                        <SelectValue placeholder="Lima" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[200px] overflow-y-auto">
+                        <div className="p-2">
+                          <Input
+                            placeholder="Buscar departamento..."
+                            value={stateFilter}
+                            onChange={e => setStateFilter(e.target.value)}
+                            className="mb-2"
+                            onKeyDown={e => e.stopPropagation()}
+                          />
+                        </div>
+                        {(states[formData.countryId] || [])
+                          .filter(s => s.name.toLowerCase().includes(stateFilter.toLowerCase()))
+                          .map(s => (
+                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="zipCode" className="text-sm font-medium">
+                      Código postal <span className="text-destructive">*</span>
+                    </Label>
                     <Input
-                      placeholder="Buscar país..."
-                      value={countryFilter}
-                      onChange={e => setCountryFilter(e.target.value)}
-                      className="mb-2"
-                      onKeyDown={e => e.stopPropagation()}
+                      id="zipCode"
+                      name="zipCode"
+                      value={formData.zipCode}
+                      onChange={handleInputChange}
+                      placeholder="15001"
+                      className="rounded-lg shadow-sm transition-all duration-300 focus:shadow-md"
                     />
                   </div>
-                  {countries
-                    .filter(c => c.name.toLowerCase().includes(countryFilter.toLowerCase()))
-                    .filter(c => c.name.toLowerCase() === 'perú' || c.name.toLowerCase() === 'peru')
-                    .map(c => (
-                      <SelectItem key={c.code} value={c.code3}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="state">Departamento/Estado</Label>
-              <Select
-                value={formData.stateId || ""}
-                onValueChange={handleStateChange}
-                disabled={!formData.countryCode3}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="-- Elija --" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[200px] overflow-y-auto">
-                  <div className="p-2">
-                    <Input
-                      placeholder="Buscar departamento..."
-                      value={stateFilter}
-                      onChange={e => setStateFilter(e.target.value)}
-                      className="mb-2"
-                      onKeyDown={e => e.stopPropagation()}
-                    />
-                  </div>
-                  {(states[formData.countryId] || [])
-                    .filter(s => s.name.toLowerCase().includes(stateFilter.toLowerCase()))
-                    .map(s => (
-                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="city">Ciudad/Distrito</Label>
-              <Select
-                value={formData.cityId || ""}
-                onValueChange={handleCityChange}
-                disabled={!formData.stateId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="-- Elija --" />
-                </SelectTrigger>
-                <SelectContent className="max-h-[200px] overflow-y-auto">
-                  <div className="p-2">
-                    <Input
-                      placeholder="Buscar ciudad..."
-                      value={cityFilter}
-                      onChange={e => setCityFilter(e.target.value)}
-                      className="mb-2"
-                      onKeyDown={e => e.stopPropagation()}
-                    />
-                  </div>
-                  {(cities[formData.stateId] || [])
-                    .filter(c => c.name.toLowerCase().includes(cityFilter.toLowerCase()))
-                    .map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </>
-      )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="shippingPhone" className="text-sm font-medium">
+                    Teléfono <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="shippingPhone"
+                    name="shippingPhone"
+                    value={formData.shippingPhone}
+                    onChange={handleInputChange}
+                    placeholder="+51 999 999 999"
+                    className="rounded-lg shadow-sm transition-all duration-300 focus:shadow-md"
+                    required
+                  />
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </Card>
 
-      <Separator className="my-6" />
-
-      <div className="flex items-center space-x-2 mb-4">
+      <div className="flex items-center space-x-2 py-2 p-4 bg-muted/20 rounded-lg">
         <Checkbox
           id="sameBillingAddress"
           checked={formData.sameBillingAddress}
           onCheckedChange={handleBillingAddressToggle}
+          className="rounded"
         />
-        <Label htmlFor="sameBillingAddress" className="cursor-pointer">
-          La dirección de facturación es la misma que la dirección de envío
+        <Label
+          htmlFor="sameBillingAddress"
+          className="text-sm font-normal cursor-pointer"
+        >
+          La dirección de facturación es la misma que la de envío
         </Label>
       </div>
 
       {!formData.sameBillingAddress && (
-        <div className="space-y-6 border-l-2 border-primary/20 pl-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Dirección de facturación</h2>
+        <Card className="p-4 md:p-6 space-y-6 rounded-xl shadow-sm">
+          <div>
+            <h3 className="font-medium text-base mb-4">Dirección de facturación</h3>
             {showNewBillingAddress && (
-              <Button type="button" variant="outline" size="sm" onClick={copyShippingToBilling}>
+              <Button type="button" variant="outline" size="sm" onClick={copyShippingToBilling} className="mb-4">
                 Copiar dirección de envío
               </Button>
             )}
-          </div>
 
           {/* Display existing addresses for billing */}
           {isAuthenticated && currentUser && currentUser.addresses && currentUser.addresses.length > 0 && (
@@ -624,142 +696,75 @@ export function CustomerInfoStep({
             </div>
           )}
 
-          {/* New billing address form */}
-          {(showNewBillingAddress || !isAuthenticated || !currentUser?.addresses?.length) && (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="billingAddress">Dirección</Label>
+            {/* New billing address form */}
+            {(showNewBillingAddress || !isAuthenticated || !currentUser?.addresses?.length) && (
+              <>
+                <div className="grid grid-cols-1 gap-4">
                   <Input
-                    id="billingAddress"
-                    name="billingAddress"
+                    value={formData.billingCountry || ""}
+                    onChange={(e) =>
+                      handleInputChange({ target: { name: "billingCountry", value: e.target.value } } as any)
+                    }
+                    placeholder="País"
+                    className="rounded-lg shadow-sm transition-all duration-300 focus:shadow-md"
+                  />
+                  <Input
                     value={formData.billingAddress}
-                    onChange={handleInputChange}
+                    onChange={(e) =>
+                      handleInputChange({ target: { name: "billingAddress", value: e.target.value } } as any)
+                    }
+                    placeholder="Dirección"
+                    className="rounded-lg shadow-sm transition-all duration-300 focus:shadow-md"
                     required={!formData.sameBillingAddress}
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="billingPhone">Teléfono</Label>
                   <Input
-                    id="billingPhone"
-                    name="billingPhone"
-                    value={formData.billingPhone}
-                    onChange={handleInputChange}
-                    required={!formData.sameBillingAddress}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="billingApartment">Apartamento, suite, etc. (opcional)</Label>
-                  <Input
-                    id="billingApartment"
-                    name="billingApartment"
                     value={formData.billingApartment}
-                    onChange={handleInputChange}
+                    onChange={(e) =>
+                      handleInputChange({ target: { name: "billingApartment", value: e.target.value } } as any)
+                    }
+                    placeholder="Apartamento, suite, etc. (opcional)"
+                    className="rounded-lg shadow-sm transition-all duration-300 focus:shadow-md"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="billingZipCode">Código postal (opcional)</Label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Input
+                      value={formData.billingCity}
+                      onChange={(e) =>
+                        handleInputChange({ target: { name: "billingCity", value: e.target.value } } as any)
+                      }
+                      placeholder="Ciudad"
+                      className="rounded-lg shadow-sm transition-all duration-300 focus:shadow-md"
+                    />
+                    <Input
+                      value={formData.billingState}
+                      onChange={(e) =>
+                        handleInputChange({ target: { name: "billingState", value: e.target.value } } as any)
+                      }
+                      placeholder="Provincia"
+                      className="rounded-lg shadow-sm transition-all duration-300 focus:shadow-md"
+                    />
+                    <Input
+                      value={formData.billingZipCode}
+                      onChange={(e) =>
+                        handleInputChange({ target: { name: "billingZipCode", value: e.target.value } } as any)
+                      }
+                      placeholder="Código postal"
+                      className="rounded-lg shadow-sm transition-all duration-300 focus:shadow-md"
+                    />
+                  </div>
                   <Input
-                    id="billingZipCode"
-                    name="billingZipCode"
-                    value={formData.billingZipCode}
-                    onChange={handleInputChange}
+                    value={formData.billingPhone}
+                    onChange={(e) =>
+                      handleInputChange({ target: { name: "billingPhone", value: e.target.value } } as any)
+                    }
+                    placeholder="Teléfono"
+                    className="rounded-lg shadow-sm transition-all duration-300 focus:shadow-md"
+                    required={!formData.sameBillingAddress}
                   />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="billingCountry">País</Label>
-                  <Select
-                    value={formData.billingCountryCode3 || ""}
-                    onValueChange={handleBillingCountryChange}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="-- Elija --" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[200px] overflow-y-auto">
-                      <div className="p-2">
-                        <Input
-                          placeholder="Buscar país..."
-                          value={billingCountryFilter}
-                          onChange={e => setBillingCountryFilter(e.target.value)}
-                          className="mb-2"
-                          onKeyDown={e => e.stopPropagation()}
-                        />
-                      </div>
-                      {countries
-                        .filter(c => c.name.toLowerCase().includes(billingCountryFilter.toLowerCase()))
-                        .filter(c => c.name.toLowerCase() === 'perú' || c.name.toLowerCase() === 'peru')
-                        .map(c => (
-                          <SelectItem key={c.code} value={c.code3}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="billingState">Departamento/Estado</Label>
-                  <Select
-                    value={formData.billingStateId || ""}
-                    onValueChange={handleBillingStateChange}
-                    disabled={!formData.billingCountryCode3}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="-- Elija --" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[200px] overflow-y-auto">
-                      <div className="p-2">
-                        <Input
-                          placeholder="Buscar departamento..."
-                          value={billingStateFilter}
-                          onChange={e => setBillingStateFilter(e.target.value)}
-                          className="mb-2"
-                          onKeyDown={e => e.stopPropagation()}
-                        />
-                      </div>
-                      {(states[formData.billingCountryId] || [])
-                        .filter(s => s.name.toLowerCase().includes(billingStateFilter.toLowerCase()))
-                        .map(s => (
-                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="billingCity">Ciudad/Distrito</Label>
-                  <Select
-                    value={formData.billingCityId || ""}
-                    onValueChange={handleBillingCityChange}
-                    disabled={!formData.billingStateId}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="-- Elija --" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[200px] overflow-y-auto">
-                      <div className="p-2">
-                        <Input
-                          placeholder="Buscar ciudad..."
-                          value={billingCityFilter}
-                          onChange={e => setBillingCityFilter(e.target.value)}
-                          className="mb-2"
-                          onKeyDown={e => e.stopPropagation()}
-                        />
-                      </div>
-                      {(cities[formData.billingStateId] || [])
-                        .filter(c => c.name.toLowerCase().includes(billingCityFilter.toLowerCase()))
-                        .map(c => (
-                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
+              </>
+            )}
+          </div>
+        </Card>
       )}
 
       <div className="flex justify-between pt-4">

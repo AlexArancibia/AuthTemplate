@@ -121,7 +121,7 @@ export function PublishBrands() {
               style={{ objectFit: 'cover', objectPosition: 'center top' }}
               priority
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-gray-900/90 via-purple-900/60 to-blue-900/80" />
+            <div className="absolute inset-0 bg-gradient-to-r from-gray-900/90 via-purple-900/60 to-pink-900/80" />
             <div className="relative z-10 p-10 md:p-16 flex flex-col justify-center h-full w-1/2">
               <h2
                 className="text-4xl md:text-5xl font-black text-white mb-6 uppercase tracking-wider"

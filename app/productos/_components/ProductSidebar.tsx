@@ -98,8 +98,8 @@ export function ProductSidebar({ product, selectedCurrencyId, acceptedCurrencies
                     />
                   </div>
                 ) : (
-                  <div className="w-6 h-6 flex-shrink-0 bg-gradient-to-br from-blue-100 to-blue-200 rounded flex items-center justify-center">
-                    <CreditCard className="w-3 h-3 text-blue-600" />
+                  <div className="w-6 h-6 flex-shrink-0 bg-gradient-to-br from-pink-100 to-pink-200 rounded flex items-center justify-center">
+                    <CreditCard className="w-3 h-3 text-pink-600" />
                   </div>
                 )}
                 <span className="text-gray-700 font-normal">{provider.name}</span>
@@ -159,7 +159,7 @@ export function ProductSidebar({ product, selectedCurrencyId, acceptedCurrencies
 
       <Button
         onClick={handleWhatsAppClick}
-        className="w-full bg-blue-50 font-normal shadow-none border border-blue-100 text-secondary hover:bg-blue-100 transition-colors flex items-center justify-center gap-2"
+        className="w-full bg-pink-50 font-normal shadow-none border border-pink-100 text-secondary hover:bg-pink-100 transition-colors flex items-center justify-center gap-2"
       >
         <Phone className="w-5 h-5" />
         Preguntar por este producto

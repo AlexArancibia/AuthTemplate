@@ -84,7 +84,7 @@ export function ProductCategoryCarousel({
             onClick={() => selectCategory(index)}
             className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
               selectedCategoryIndex === index
-                ? "bg-blue-600 text-white shadow-lg"
+                ? "bg-pink-600 text-white shadow-lg"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
@@ -144,7 +144,7 @@ export function ProductCategoryCarousel({
                   onClick={() => setCurrentProductIndex(index)}
                   className={`w-3 h-3 rounded-full transition-all duration-200 ${
                     index === currentProductIndex
-                      ? "bg-blue-600"
+                      ? "bg-pink-600"
                       : "bg-gray-300 hover:bg-gray-400"
                   }`}
                   aria-label={`Ir al producto ${index + 1}`}

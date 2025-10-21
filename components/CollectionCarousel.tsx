@@ -172,7 +172,7 @@ export function CollectionCarousel({
             <div className="flex">
               {loading ? (
                 <div className="py-10 w-full text-center">
-                  <p className="font-lato-thin text-sm text-gray-500">
+                  <p className="text-sm text-gray-500">
                     Cargando productos...
                   </p>
                 </div>
@@ -210,21 +210,21 @@ export function CollectionCarousel({
 
                             {/* Información del producto */}
                             <div className="p-4 w-full">
-                              <h5 className="text-sm font-lato-light truncate max-w-full overflow-hidden text-ellipsis whitespace-nowrap">
+                              <h5 className="text-sm truncate max-w-full overflow-hidden text-ellipsis whitespace-nowrap">
                                 {product.title}
                               </h5>
                               
                               {/* Precio */}
                               {price && (
                                 <div className="flex items-baseline gap-2 mt-1">
-                                  <span className="text-lg font-lato-bold text-pink-500">{price}</span>
+                                  <span className="text-lg text-pink-500">{price}</span>
                                 </div>
                               )}
                               
                               {/* Stock */}
                               <div className="flex items-center gap-2 mt-2">
                                 <span className="h-2 w-2 rounded-full bg-green-500"></span>
-                                <p className="text-muted-foreground text-sm font-lato-light">
+                                <p className="text-muted-foreground text-sm">
                                   {stockCount} en stock
                                 </p>
                               </div>
@@ -237,7 +237,7 @@ export function CollectionCarousel({
                 })
               ) : (
                 <div className="py-10 w-full text-center">
-                  <p className="font-lato-thin text-sm text-gray-500">
+                  <p className="text-sm text-gray-500">
                     {emptyMessage}
                   </p>
                 </div>
@@ -262,7 +262,7 @@ export function CollectionCarousel({
           <div className="flex justify-center">
             <Link
               href="/productos"
-              className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-lato-light focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 py-2 rounded-full transition-all mt-8 md:mt-16 px-8 bg-gradient-to-tr from-white to-gray-200 shadow-md shadow-slate-100 hover:to-gray-300"
+              className="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 py-2 rounded-full transition-all mt-8 md:mt-16 px-8 bg-gradient-to-tr from-white to-gray-200 shadow-md shadow-slate-100 hover:to-gray-300"
             >
               Explora
             </Link>

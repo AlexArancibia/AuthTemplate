@@ -81,7 +81,7 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
       )
     } else if (order.financialStatus === OrderFinancialStatus.REFUNDED) {
       return (
-        <Badge variant="outline" className="border-blue-500 text-blue-600">
+        <Badge variant="outline" className="border-pink-500 text-pink-600">
           Reembolsado
         </Badge>
       )
@@ -94,7 +94,7 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
       return <Badge className="bg-green-500">Completado</Badge>
     } else if (order.fulfillmentStatus === OrderFulfillmentStatus.PARTIALLY_FULFILLED) {
       return (
-        <Badge variant="outline" className="border-blue-500 text-blue-600">
+        <Badge variant="outline" className="border-pink-500 text-pink-600">
           Parcialmente enviado
         </Badge>
       )
@@ -112,7 +112,7 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
     if (order.shippingStatus === ShippingStatus.DELIVERED) {
       return <Package className="h-5 w-5 text-green-500" />
     } else if (order.shippingStatus === ShippingStatus.SHIPPED) {
-      return <Truck className="h-5 w-5 text-blue-500" />
+      return <Truck className="h-5 w-5 text-pink-500" />
     } else if (order.shippingStatus === ShippingStatus.PENDING) {
       return <Package className="h-5 w-5 text-amber-500" />
     }

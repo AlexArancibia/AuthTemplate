@@ -231,7 +231,7 @@ export function FeaturedProductsSection({
         {/* Background decorative elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
           <div className="absolute -top-[10%] -right-[5%] w-[40%] h-[50%] bg-gradient-to-br from-pink-50 to-gray-100 rounded-full blur-xl"></div>
-          <div className="absolute -bottom-[10%] -left-[5%] w-[30%] h-[40%] bg-gradient-to-tr from-blue-50 to-gray-100 rounded-full blur-xl"></div>
+          <div className="absolute -bottom-[10%] -left-[5%] w-[30%] h-[40%] bg-gradient-to-tr from-pink-50 to-gray-100 rounded-full blur-xl"></div>
         </div>
 
         <div className="container mx-auto px-4 sm:px-6 relative z-10">

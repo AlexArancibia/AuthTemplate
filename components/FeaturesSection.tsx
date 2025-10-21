@@ -20,8 +20,8 @@ const defaultFeatures = [
   },
   {
     icon: ShoppingBag,
-    iconColor: "text-blue-500",
-    iconBg: "bg-blue-50",
+    iconColor: "text-pink-500",
+    iconBg: "bg-pink-50",
   },
   {
     icon: Shield,

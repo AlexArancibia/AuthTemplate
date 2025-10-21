@@ -34,7 +34,7 @@ export function PublishBanner() {
               </h2>
 
               <p
-                className="font-lato font-light text-gray-200 mb-6 sm:mb-8 max-w-md text-sm sm:text-base md:text-lg"
+                className="font-light text-gray-200 mb-6 sm:mb-8 max-w-md text-sm sm:text-base md:text-lg"
               >
                 ¿No sabes qué elegir? Contáctanos para recibir recomendaciones personalizadas. ¡Estamos aquí para ayudarte!
               </p>

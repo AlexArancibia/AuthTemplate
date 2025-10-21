@@ -339,7 +339,7 @@ const filteredProducts = products
   }, [minPrice, maxPrice, pathname, router, onFilterChange])
 
   return (
-    <div className="font-lato-bold w-72 bg-white space-y-6">
+    <div className="w-72 bg-white space-y-6">
       {/* Search */}
       <Input
         type="text"
@@ -469,7 +469,7 @@ const filteredProducts = products
         </div>
       )}
 
-      <Button onClick={resetFilters} className="w-full bg-secondary text-white hover:bg-blue-700 transition">
+      <Button onClick={resetFilters} className="w-full bg-secondary text-white hover:bg-pink-700 transition">
         Resetear Filtros
       </Button>
     </div>

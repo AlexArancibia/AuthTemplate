@@ -194,7 +194,7 @@ export function PreFooterContact() {
               <div>
                 <Button
                   type="submit"
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md px-6 py-2"
+                  className="bg-pink-600 hover:bg-pink-700 text-white font-medium rounded-md px-6 py-2"
                   disabled={isSubmitting}
                 >
                   Enviar

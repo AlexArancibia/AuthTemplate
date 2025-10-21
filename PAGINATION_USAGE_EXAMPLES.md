@@ -62,7 +62,7 @@ export default function ProductList() {
         <button 
           onClick={handlePrevPage}
           disabled={!paginationMeta.products?.hasPrev}
-          className="px-4 py-2 bg-blue-500 text-white disabled:bg-gray-300"
+          className="px-4 py-2 bg-pink-500 text-white disabled:bg-gray-300"
         >
           Previous
         </button>
@@ -75,7 +75,7 @@ export default function ProductList() {
         <button 
           onClick={handleNextPage}
           disabled={!paginationMeta.products?.hasNext}
-          className="px-4 py-2 bg-blue-500 text-white disabled:bg-gray-300"
+          className="px-4 py-2 bg-pink-500 text-white disabled:bg-gray-300"
         >
           Next
         </button>
@@ -155,7 +155,7 @@ export default function ProductSearch() {
                   onClick={() => setCurrentPage(i + 1)}
                   className={`px-3 py-1 rounded ${
                     currentPage === i + 1
-                      ? 'bg-blue-500 text-white'
+                      ? 'bg-pink-500 text-white'
                       : 'bg-gray-200'
                   }`}
                 >
@@ -313,7 +313,7 @@ export default function OrdersWithFilters() {
               <button
                 onClick={() => handlePageChange(filters.page - 1)}
                 disabled={!paginationMeta.orders?.hasPrev}
-                className="px-3 py-1 bg-blue-500 text-white rounded disabled:bg-gray-300"
+                className="px-3 py-1 bg-pink-500 text-white rounded disabled:bg-gray-300"
               >
                 Previous
               </button>
@@ -325,7 +325,7 @@ export default function OrdersWithFilters() {
               <button
                 onClick={() => handlePageChange(filters.page + 1)}
                 disabled={!paginationMeta.orders?.hasNext}
-                className="px-3 py-1 bg-blue-500 text-white rounded disabled:bg-gray-300"
+                className="px-3 py-1 bg-pink-500 text-white rounded disabled:bg-gray-300"
               >
                 Next
               </button>
@@ -438,7 +438,7 @@ export default function Pagination({
               onClick={() => onPageChange(page as number)}
               className={`px-3 py-1 border rounded ${
                 currentPage === page
-                  ? 'bg-blue-500 text-white'
+                  ? 'bg-pink-500 text-white'
                   : 'hover:bg-gray-100'
               }`}
             >
@@ -657,7 +657,7 @@ export default function ProductListWithHook() {
         className="mb-4 px-4 py-2 border rounded w-full"
       />
 
-      <button onClick={refresh} className="mb-4 px-4 py-2 bg-blue-500 text-white rounded">
+      <button onClick={refresh} className="mb-4 px-4 py-2 bg-pink-500 text-white rounded">
         Refresh
       </button>
 

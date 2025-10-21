@@ -69,12 +69,12 @@ export default function TerminosYCondicionesPage() {
                   Al acceder y utilizar este sitio web, aceptas cumplir con estos términos y condiciones. Si no estás de
                   acuerdo con alguna parte de estos términos, no debes utilizar nuestro sitio web.
                 </p>
-                <div className="bg-blue-50 border-l-4 border-blue-400 p-4 my-6">
+                <div className="bg-pink-50 border-l-4 border-pink-400 p-4 my-6">
                   <div className="flex items-start">
-                    <AlertTriangle className="w-5 h-5 text-blue-400 mt-0.5 mr-3 flex-shrink-0" />
+                    <AlertTriangle className="w-5 h-5 text-pink-400 mt-0.5 mr-3 flex-shrink-0" />
                     <div>
-                      <p className="text-blue-800 font-medium">Información de contacto:</p>
-                      <p className="text-blue-700 text-sm mt-1">
+                      <p className="text-pink-800 font-medium">Información de contacto:</p>
+                      <p className="text-pink-700 text-sm mt-1">
                         <strong>Empresa:</strong> {shopInfo?.name || "Nombre de la empresa"}
                         <br />
                         {shopInfo?.email && (

@@ -136,7 +136,7 @@ export function QuienesSomosHero() {
                   </div>
                 </>
               ) : (
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-950 to-black/20" />
+                <div className="absolute inset-0 bg-gradient-to-r from-pink-950 to-black/20" />
               )}
             </div>
           )}
@@ -194,7 +194,7 @@ export function QuienesSomosHero() {
           )}
 
           {/* Overlay con gradiente */}
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-950 to-black/20 z-10" />
+          <div className="absolute inset-0 bg-gradient-to-r from-pink-950 to-black/20 z-10" />
         </div>
       ) : bgImage ? (
         <div className="absolute inset-0">
@@ -212,10 +212,10 @@ export function QuienesSomosHero() {
               className="w-full h-full object-cover"
             />
           </div>
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-950 to-black/20 z-10" />
+          <div className="absolute inset-0 bg-gradient-to-r from-pink-950 to-black/20 z-10" />
         </div>
       ) : (
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-950 to-black/20" />
+        <div className="absolute inset-0 bg-gradient-to-r from-pink-950 to-black/20" />
       )}
 
       {/* Contenido del Hero */}
@@ -228,7 +228,7 @@ export function QuienesSomosHero() {
         >
           {/* Icono superior */}
           <div className="mb-6 flex items-center">
-            <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mb-4">
+            <div className="w-12 h-12 bg-pink-500 rounded-full flex items-center justify-center mb-4">
               <BookOpen />
             </div>
           </div>

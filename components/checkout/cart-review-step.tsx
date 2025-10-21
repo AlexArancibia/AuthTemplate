@@ -3,8 +3,11 @@
 import { motion } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowLeft, ArrowRight } from "lucide-react"
+import { ArrowLeft, ArrowRight, Tag } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Input } from "@/components/ui/input"
 import { useCartStore } from "@/stores/cartStore"
 import { Minus, Plus, Trash2 } from "lucide-react"
 import type { Product } from "@/types/product"
@@ -55,107 +58,137 @@ export function CartReviewStep({ items, currency, nextStep, selectedCurrencyId }
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
-      <h2 className="text-xl font-semibold mb-4">Revisa tu carrito</h2>
+      <div>
+        <h2 className="text-xl font-semibold mb-2">Tu carrito</h2>
+        <p className="text-sm text-muted-foreground">
+          Revisa y edita tus productos antes de continuar
+        </p>
+      </div>
 
       {items.length === 0 ? (
         <div className="text-center py-8">
-          <p className="text-gray-500 mb-4">Tu carrito está vacío</p>
+          <p className="text-muted-foreground mb-4">Tu carrito está vacío</p>
           <Button asChild>
             <Link href="/products">Continuar comprando</Link>
           </Button>
         </div>
       ) : (
         <>
-          {items.map((item) => {
-            const itemPrice = getItemPrice(item.variant)
-            const itemTotal = getItemTotal(item.variant, item.quantity)
+          <Card className="overflow-hidden rounded-xl shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-muted/30 border-b">
+                  <tr>
+                    <th className="text-left p-4 font-medium text-xs uppercase tracking-wider text-muted-foreground">Producto</th>
+                    <th className="text-left p-4 font-medium text-xs uppercase tracking-wider text-muted-foreground hidden md:table-cell">
+                      Precio
+                    </th>
+                    <th className="text-center p-4 font-medium text-xs uppercase tracking-wider text-muted-foreground">Cantidad</th>
+                    <th className="text-right p-4 font-medium text-xs uppercase tracking-wider text-muted-foreground">Subtotal</th>
+                    <th className="w-10 p-4"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {items.map((item) => {
+                    const itemPrice = getItemPrice(item.variant)
+                    const itemTotal = getItemTotal(item.variant, item.quantity)
+                    const isBackorder = false // Puedes agregar lógica para determinar si es a pedido
 
-            return (
-              <motion.div
-                key={item.variant.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.3 }}
-                className="flex items-center gap-5 py-5 border-b last:border-b-0 group"
-              >
-                <div className="relative w-24 h-24 bg-gray-50 rounded-lg overflow-hidden transition-transform group-hover:scale-105">
-                  <Image
-                    src={item.product.imageUrls?.[0] || "/placeholder.svg?height=96&width=96&query=product"}
-                    alt={item.product.title || "Producto"}
-                    fill
-                    className="object-contain p-2"
-                  />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-medium text-gray-800 group-hover:text-primary transition-colors">
-                    {item.product.title || "Producto sin título"}
-                  </h3>
-                  {/* <p className="text-sm text-gray-500 mt-1">
-                    <span className="font-medium">Variante:</span> {item.variant.title || "Sin especificar"}
-                  </p> */}
-                  {item.variant.attributes && Object.entries(item.variant.attributes).length > 0 && (
-                    <p className="text-sm text-gray-500 mt-1">
-                      {Object.entries(item.variant.attributes || {})
-                        .map(([key, value]) => `${key}: ${value}`)
-                        .join(", ")}
-                    </p>
-                  )}
-
-                  {itemPrice === 0 && <p className="text-sm text-red-500 mt-1">Precio no disponible</p>}
-
-                  <div className="flex items-center mt-3 space-x-4">
-                    <div className="flex items-center border rounded-md">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-none"
-                        onClick={() => updateQuantity(item.variant.id, Math.max(1, item.quantity - 1))}
-                        disabled={item.quantity <= 1}
+                    return (
+                      <motion.tr
+                        key={item.variant.id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.3 }}
+                        className="group hover:bg-muted/10 transition-all duration-300"
                       >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <span className="w-8 text-center text-sm">{item.quantity}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-none"
-                        onClick={() => updateQuantity(item.variant.id, item.quantity + 1)}
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 text-red-500 hover:text-red-700 hover:bg-red-50 px-2"
-                      onClick={() => removeItem(item.variant.id)}
-                    >
-                      <Trash2 className="h-3 w-3 mr-1" />
-                      Eliminar
-                    </Button>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-medium text-gray-800">
-                    {currency}
-                    {Number(itemTotal).toFixed(2)}
-                  </p>
-                  {itemPrice > 0 && (
-                    <p className="text-sm text-gray-500">
-                      {currency}
-                      {Number(itemPrice).toFixed(2)} c/u
-                    </p>
-                  )}
-                </div>
-              </motion.div>
-            )
-          })}
+                        <td className="p-4">
+                          <div className="flex gap-3 items-start">
+                            <div className="relative w-16 h-16 rounded-lg overflow-hidden border bg-card shadow-sm">
+                              <Image
+                                src={item.product.imageUrls?.[0] || "/placeholder.svg?height=64&width=64&query=product"}
+                                alt={item.product.title || "Producto"}
+                                fill
+                                className="object-contain p-1"
+                              />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h3 className="font-medium text-sm truncate">
+                                {item.product.title || "Producto sin título"}
+                              </h3>
+                              {item.variant.attributes && Object.entries(item.variant.attributes).length > 0 && (
+                                <p className="text-xs text-muted-foreground mb-1">
+                                  {Object.entries(item.variant.attributes || {})
+                                    .map(([key, value]) => `${key}: ${value}`)
+                                    .join(", ")}
+                                </p>
+                              )}
+                              {isBackorder && (
+                                <span className="text-xs text-warning font-medium">
+                                  Producto a pedido
+                                </span>
+                              )}
+                              <p className="md:hidden text-sm font-medium mt-2 text-foreground">
+                                {currency} {itemPrice.toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-4 hidden md:table-cell">
+                          <span className="font-medium text-sm text-foreground">
+                            {currency} {itemPrice.toFixed(2)}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 rounded-full shadow-sm hover:shadow-md transition-all duration-300"
+                              onClick={() => updateQuantity(item.variant.id, Math.max(1, item.quantity - 1))}
+                              disabled={item.quantity <= 1}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="w-8 text-center font-medium text-sm">
+                              {item.quantity}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 rounded-full shadow-sm hover:shadow-md transition-all duration-300"
+                              onClick={() => updateQuantity(item.variant.id, item.quantity + 1)}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </td>
+                        <td className="p-4 text-right">
+                          <span className="font-semibold text-sm text-foreground">
+                            {currency} {itemTotal.toFixed(2)}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-full text-destructive hover:text-destructive hover:bg-destructive/10 transition-all duration-300"
+                            onClick={() => removeItem(item.variant.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Eliminar</span>
+                          </Button>
+                        </td>
+                      </motion.tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Card>
 
           {/* Resumen del total */}
-          <div className="border-t pt-4">
+          <Card className="p-4 md:p-6 rounded-xl shadow-sm">
             <div className="flex justify-between items-center">
               <span className="text-lg font-semibold">Subtotal:</span>
               <span className="text-xl font-bold text-primary">
@@ -163,14 +196,11 @@ export function CartReviewStep({ items, currency, nextStep, selectedCurrencyId }
                 {Number(cartTotal).toFixed(2)}
               </span>
             </div>
-          </div>
+          </Card>
 
-          <div className="flex justify-between pt-6 gap-3">
-            <Button variant="outline" asChild className="px-6 gap-2 border-gray-300 hover:bg-gray-50 transition-colors">
-              <Link href="/cart">
-                <ArrowLeft className="h-4 w-4" />
-                <span>Volver al carrito</span>
-              </Link>
+          <div className="flex flex-col sm:flex-row gap-3 justify-between pt-4">
+            <Button variant="ghost" asChild className="text-sm">
+              <Link href="/productos">Seguir comprando</Link>
             </Button>
             <Button
               onClick={nextStep}

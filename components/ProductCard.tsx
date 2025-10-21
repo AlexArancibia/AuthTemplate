@@ -170,7 +170,7 @@ export function ProductCard({
         {/* Sale Badge */}
         {showSaleBadge && (
           <div className="absolute top-6 right-6 z-10">
-            <Badge className="font-lato-thin bg-red-500 text-white text-xs px-2 py-1">
+            <Badge className="bg-red-500 text-white text-xs px-2 py-1">
               SALE
             </Badge>
           </div>
@@ -190,14 +190,14 @@ export function ProductCard({
           {/* Contador de lanzamiento - Diseño refinado */}
           {hasUpcomingRelease && (
             <motion.div
-              className="absolute top-3 right-3 bg-blue-950 backdrop-blur-sm text-white px-3 py-1.5 rounded-full border border-white/20 shadow-lg"
+              className="absolute top-3 right-3 bg-pink-950 backdrop-blur-sm text-white px-3 py-1.5 rounded-full border border-white/20 shadow-lg"
               animate={{
                 boxShadow: isPulsing ? "0 0 0 0 rgba(255, 255, 255, 0.7)" : "0 0 0 10px rgba(255, 255, 255, 0)",
               }}
               transition={{ duration: 1.5, ease: "easeOut" }}
             >
               <div className="flex items-center gap-1.5">
-                <Clock className="h-3 w-3 text-blue-200" />
+                <Clock className="h-3 w-3 text-pink-200" />
                 <span className="text-xs font-medium tracking-tight">
                   {timeLeft?.days}d {timeLeft?.hours}h {timeLeft?.minutes}m
                 </span>
@@ -209,14 +209,14 @@ export function ProductCard({
         {/* Product Info - Ahora con espacio fijo */}
         <div className="flex-grow flex flex-col">
           <div className="mb-2">
-            <h5 className="text-sm font-lato-light truncate max-w-full overflow-hidden text-ellipsis whitespace-nowrap">
+            <h5 className="text-sm truncate max-w-full overflow-hidden text-ellipsis whitespace-nowrap">
               {product.title}
             </h5>
           </div>
 
           {/* Etiqueta de prelanzamiento */}
           {hasUpcomingRelease && (
-            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 mb-2 w-fit">
+            <Badge variant="outline" className="text-xs bg-pink-50 text-pink-700 border-pink-200 mb-2 w-fit">
               Prelanzamiento
             </Badge>
           )}
@@ -226,7 +226,7 @@ export function ProductCard({
         {priceDisplay && (
           <div className="mt-auto pt-4">
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-lg font-lato-bold text-pink-500">{priceDisplay}</span>
+              <span className="text-lg text-pink-500">{priceDisplay}</span>
               {showSaleBadge && (
                 <span className="text-sm text-gray-400 line-through">
                   {formatPrice(lowestPrice * (1 + salePercentage / 100))}
@@ -238,7 +238,7 @@ export function ProductCard({
         {/* Stock */}
         <div className="flex items-center gap-2 mt-2">
           <span className="h-2 w-2 rounded-full bg-green-500"></span>
-          <p className="text-muted-foreground text-sm font-lato-light">
+          <p className="text-muted-foreground text-sm">
             {stockCount} en stock
           </p>
         </div>

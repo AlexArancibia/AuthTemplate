@@ -39,7 +39,7 @@ export function translateContentType(type: ContentType): string {
 export function getContentTypeBadgeVariant(type: ContentType): string {
   switch (type) {
     case ContentType.BLOG:
-      return "bg-blue-100 text-blue-800 hover:bg-blue-200"
+      return "bg-pink-100 text-pink-800 hover:bg-pink-200"
     case ContentType.ARTICLE:
       return "bg-purple-100 text-purple-800 hover:bg-purple-200"
     case ContentType.PAGE:

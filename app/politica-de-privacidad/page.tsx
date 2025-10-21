@@ -70,12 +70,12 @@ export default function PoliticaDePrivacidadPage() {
                   Al utilizar nuestro sitio web y servicios, aceptas las prácticas descritas en esta política de
                   privacidad.
                 </p>
-                <div className="bg-blue-50 border-l-4 border-blue-400 p-4 my-6">
+                <div className="bg-pink-50 border-l-4 border-pink-400 p-4 my-6">
                   <div className="flex items-start">
-                    <AlertTriangle className="w-5 h-5 text-blue-400 mt-0.5 mr-3 flex-shrink-0" />
+                    <AlertTriangle className="w-5 h-5 text-pink-400 mt-0.5 mr-3 flex-shrink-0" />
                     <div>
-                      <p className="text-blue-800 font-medium">Responsable del tratamiento:</p>
-                      <p className="text-blue-700 text-sm mt-1">
+                      <p className="text-pink-800 font-medium">Responsable del tratamiento:</p>
+                      <p className="text-pink-700 text-sm mt-1">
                         <strong>Empresa:</strong> {shopInfo?.name || "Nombre de la empresa"}
                         <br />
                         {shopInfo?.email && (
@@ -440,8 +440,8 @@ export default function PoliticaDePrivacidadPage() {
                   </div>
                 </div>
 
-                <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-blue-800 text-sm">
+                <div className="mt-6 p-4 bg-pink-50 rounded-lg border border-pink-200">
+                  <p className="text-pink-800 text-sm">
                     <strong>Tiempo de respuesta:</strong> Nos comprometemos a responder a tus solicitudes relacionadas
                     con privacidad dentro de 30 días calendario.
                   </p>

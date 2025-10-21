@@ -35,7 +35,7 @@ export default function OfertasPage() {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
       >
-        <div className="absolute inset-0 z-0 bg-blue-600/20"></div>
+        <div className="absolute inset-0 z-0 bg-pink-600/20"></div>
         <div className="absolute inset-0 z-0 bg-gradient-to-t from-black/100 via-black/40 to-black/30"></div>
 
         <div className="relative z-10 w-full max-w-[1600px] mx-auto flex flex-col items-center gap-6">

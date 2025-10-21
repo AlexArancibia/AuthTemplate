@@ -310,15 +310,15 @@ Hora: ${new Date().toLocaleTimeString("es-PE")}
                 <h3 className="font-semibold text-gray-900 mb-3">Información importante:</h3>
                 <ul className="text-sm text-gray-700 space-y-2">
                   <li className="flex items-start">
-                    <Clock className="w-4 h-4 mt-0.5 mr-2 text-blue-500 flex-shrink-0" />
+                    <Clock className="w-4 h-4 mt-0.5 mr-2 text-pink-500 flex-shrink-0" />
                     Recibirá respuesta en un plazo máximo de 30 días calendario.
                   </li>
                   <li className="flex items-start">
-                    <Mail className="w-4 h-4 mt-0.5 mr-2 text-blue-500 flex-shrink-0" />
+                    <Mail className="w-4 h-4 mt-0.5 mr-2 text-pink-500 flex-shrink-0" />
                     Se ha enviado una copia de su reclamo a su correo electrónico.
                   </li>
                   <li className="flex items-start">
-                    <Shield className="w-4 h-4 mt-0.5 mr-2 text-blue-500 flex-shrink-0" />
+                    <Shield className="w-4 h-4 mt-0.5 mr-2 text-pink-500 flex-shrink-0" />
                     Puede acudir a INDECOPI si no obtiene respuesta satisfactoria.
                   </li>
                 </ul>
@@ -389,14 +389,14 @@ Hora: ${new Date().toLocaleTimeString("es-PE")}
           transition={{ duration: 0.6, delay: 0.3 }}
           className="max-w-4xl mx-auto mb-8"
         >
-          <Card className="border-blue-200 bg-blue-50">
+          <Card className="border-pink-200 bg-pink-50">
             <CardHeader>
-              <CardTitle className="flex items-center text-blue-900">
+              <CardTitle className="flex items-center text-pink-500">
                 <Info className="w-5 h-5 mr-2" />
                 Información Legal
               </CardTitle>
             </CardHeader>
-            <CardContent className="text-sm text-blue-800 space-y-2">
+            <CardContent className="text-sm text-pink-500 space-y-2">
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <p className="font-medium mb-2">RECLAMO:</p>
@@ -407,7 +407,7 @@ Hora: ${new Date().toLocaleTimeString("es-PE")}
                   <p>Disconformidad no relacionada a los productos o servicios; o, malestar respecto a la atención.</p>
                 </div>
               </div>
-              <div className="bg-blue-100 rounded-lg p-3 mt-4">
+              <div className="bg-pink-100 rounded-lg p-3 mt-4">
                 <p className="font-medium mb-2">Importante:</p>
                 <ul className="list-disc list-inside space-y-1 text-xs">
                   <li>La formulación del reclamo no impide acudir a otras vías de solución de controversias.</li>

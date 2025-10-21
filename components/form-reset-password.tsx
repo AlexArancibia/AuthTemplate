@@ -128,17 +128,17 @@ const FormResetPassword = ({
                 ? "bg-green-50 border border-green-200" 
                 : messageType === "error"
                 ? "bg-red-50 border border-red-200"
-                : "bg-blue-50 border border-blue-200"
+                : "bg-pink-50 border border-pink-200"
             }`}>
               {messageType === "success" && <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />}
               {messageType === "error" && <XCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />}
-              {messageType === "info" && <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />}
+              {messageType === "info" && <Info className="w-5 h-5 text-pink-600 mt-0.5 flex-shrink-0" />}
               <p className={`text-sm ${
                 messageType === "success" 
                   ? "text-green-800" 
                   : messageType === "error"
                   ? "text-red-800"
-                  : "text-blue-800"
+                  : "text-pink-800"
               }`}>
                 {topMessage}
               </p>

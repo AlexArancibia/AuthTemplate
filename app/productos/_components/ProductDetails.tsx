@@ -504,7 +504,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                 <label className="text-lg font-medium mb-1.5 block">Descripción</label>
                 <ProductSimpleDescription description={product.description ?? ""} />
                 <Link href="#detalles">
-                  <p className="text-xs text-blue-800 font-semibold mt-2">Ver todas las características</p>
+                  <p className="text-xs text-pink-500 font-semibold mt-2">Ver todas las características</p>
                 </Link>
 
                 {optionKeys.map((optionKey, index) => (
@@ -759,7 +759,7 @@ function ProductSimpleDescription({ description }: { description: string }) {
   return (
     <div
       className="text-secondary/90 leading-relaxed overflow-x-auto max-w-full
-        [&_p]:mb-4 [&_a]:text-blue-600 [&_a]:underline 
+        [&_p]:mb-4 [&_a]:text-pink-500 [&_a]:underline 
         [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 
         [&_h1]:text-2xl [&_h1]:font-bold [&_h3]:text-lg [&_h3]:font-medium 
         [&_blockquote]:border-l-4 [&_blockquote]:border-gray-400 [&_blockquote]:pl-4 [&_blockquote]:italic 
@@ -837,7 +837,7 @@ function ProductTabsDescription({ description }: { description: string }) {
         <TabsContent key={section.title} value={section.title}>
           <div
             className="text-secondary/90 leading-relaxed overflow-x-auto max-w-full
-                    [&_p]:mb-4 [&_a]:text-blue-600 [&_a]:underline 
+                    [&_p]:mb-4 [&_a]:text-pink-500 [&_a]:underline 
                     [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 
                     [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:text-xl [&_h2]:font-semibold 
                     [&_h3]:text-lg [&_h3]:font-medium 

@@ -28,7 +28,7 @@ export function BlogCard({ content }: BlogCardProps) {
 
       {/* Content */}
       <div className="p-6 space-y-4 rounded-b-xl border border-border border-t-0" >
-        <Badge variant="secondary" className="bg-primary/10 text-blue-600 hover:bg-primary/20 ">
+        <Badge variant="secondary" className="bg-primary/10 text-pink-600 hover:bg-primary/20 ">
           {content.type}
         </Badge>
 

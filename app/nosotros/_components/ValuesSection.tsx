@@ -12,7 +12,7 @@ interface ValuesSectionProps {
 }
 
 // Colores de gradiente para las cards
-const gradientColors = ["from-sky-950", "from-zinc-900", "from-red-900/50", "from-blue-950"]
+const gradientColors = ["from-sky-950", "from-zinc-900", "from-red-900/50", "from-pink-950"]
 
 // Componente para cada card de valor
 function ValueCard({ card, index }: { card: Card; index: number }) {

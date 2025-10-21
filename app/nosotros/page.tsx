@@ -47,12 +47,12 @@ export default function AboutPage() {
             className="max-w-3xl mx-auto space-y-6"
           >
             <h2 className="text-3xl font-bold">¿Listo para optimizar sus procesos de lavado?</h2>
-            <p className="text-base md:text-xl text-blue-100">
+            <p className="text-base md:text-xl text-pink-100">
               Descubra cómo nuestros productos pueden transformar su negocio y mejorar su eficiencia.
             </p>
             <div className="pt-6">
               <Button
-                className="bg-white text-blue-700 hover:bg-blue-50 text-base px-8 py-6"
+                className="bg-white text-pink-700 hover:bg-pink-50 text-base px-8 py-6"
                 onClick={() =>
                   window.open(
                     "https://wa.me/51960582623?text=Hola,%20me%20gustaría%20conocer%20más%20sobre%20los%20productos%20de%20Clefast",

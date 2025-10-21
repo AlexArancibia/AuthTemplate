@@ -74,10 +74,10 @@ function CardSectionRenderer({ cardSection }: { cardSection: CardSection }) {
               whileInView={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6 }}
               viewport={{ once: true }}
-              className="bg-blue-50 rounded-2xl p-8 flex flex-col items-center text-center"
+              className="bg-pink-50 rounded-2xl p-8 flex flex-col items-center text-center"
             >
-              <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center mb-6">
-                <Goal className="w-10 h-10 text-blue-700" />
+              <div className="w-20 h-20 rounded-full bg-pink-100 flex items-center justify-center mb-6">
+                <Goal className="w-10 h-10 text-pink-700" />
               </div>
               <h3 className="text-xl font-semibold mb-4">{missionCard.title}</h3>
               <p className="text-gray-600 mb-6">{missionCard.description}</p>
@@ -112,7 +112,7 @@ function CardSectionRenderer({ cardSection }: { cardSection: CardSection }) {
             className="max-w-4xl mx-auto space-y-8 text-center"
           >
             <div className="pt-16 border-gray-200">
-              <p className="text-xl font-semibold text-blue-700 italic">{cardSection.description}</p>
+              <p className="text-xl font-semibold text-pink-700 italic">{cardSection.description}</p>
             </div>
           </motion.div>
         )}

@@ -387,14 +387,14 @@ const {
                                 <span className="text-xs">+</span>
                               </Button>
                             </div>
-                            <p className="text-xs">
+                            {/* <p className="text-xs">
                               {item.variant.prices && item.variant.prices.length > 0
                                 ? formatCurrency(
                                     item.variant.prices.find(p => p.currency?.id === activeCurrency?.id)!.price * item.quantity,
                                     activeCurrency,
                                   )
                                 : "N/A"}
-                            </p>
+                            </p> */}
                           </div>
                           <Button
                             variant="ghost"
