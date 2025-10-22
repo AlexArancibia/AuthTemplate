@@ -274,7 +274,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
     
     try {
       const queryParams = buildQueryParams(params)
-      const url = `/products/store/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`
+      const url = `/products/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`
       console.log("🌐 [MainStore fetchProducts] Full URL:", url)
       console.log("🌐 [MainStore fetchProducts] Query params:", queryParams)
       
@@ -326,7 +326,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
     set({ loading: true, error: null })
     try {
       const queryParams = buildQueryParams(params)
-      const response = await apiClient.get<PaginatedResponse<ProductVariant>>(`/product-variants/store/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
+      const response = await apiClient.get<PaginatedResponse<ProductVariant>>(`/product-variants/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
       
       const { data, pagination } = extractPaginatedData<ProductVariant[]>(response)
       set({
@@ -418,7 +418,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<TeamSection[]>(`/team-section/store/${STORE_ID}`)
+      const response = await apiClient.get<TeamSection[]>(`/team-section/${STORE_ID}`)
       const teamSections = extractApiData<TeamSection[]>(response)
       set({
         teamSections,
@@ -537,7 +537,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<PaymentProvider[]>(`/payment-providers/store/${STORE_ID}`)
+      const response = await apiClient.get<PaymentProvider[]>(`/payment-providers/${STORE_ID}`)
       const paymentProviders = extractApiData<PaymentProvider[]>(response)
       set({
         paymentProviders,
@@ -559,7 +559,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
     set({ loading: true, error: null })
     try {
       const queryParams = buildQueryParams(params)
-      const response = await apiClient.get<PaginatedResponse<PaymentTransaction>>(`/payment-transactions/store/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
+      const response = await apiClient.get<PaginatedResponse<PaymentTransaction>>(`/payment-transactions/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
       
       const { data, pagination } = extractPaginatedData<PaymentTransaction[]>(response)
       set({
@@ -627,7 +627,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
         throw new Error("No store ID provided in environment variables")
       }
 
-      const response = await apiClient.get<ShopSettings>(`/shop-settings/store/${STORE_ID}`)
+      const response = await apiClient.get<ShopSettings>(`/shop-settings/${STORE_ID}`)
       const shopSettings = extractApiData<ShopSettings>(response)
       set({
         shopSettings: [shopSettings],
@@ -911,10 +911,10 @@ export const useMainStore = create<MainStore>((set, get) => ({
         shopSettingsResponse,
       ] = await Promise.all([
         apiClient.get(`/card-section/${STORE_ID}`),
-        apiClient.get(`/team-section/store/${STORE_ID}`),
-        apiClient.get(`/payment-providers/store/${STORE_ID}`),
+        apiClient.get(`/team-section/${STORE_ID}`),
+        apiClient.get(`/payment-providers/${STORE_ID}`),
         apiClient.get(`/auth/store/${STORE_ID}`),
-        apiClient.get(`/shop-settings/store/${STORE_ID}`),
+        apiClient.get(`/shop-settings/${STORE_ID}`),
       ])
 
       set({

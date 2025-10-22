@@ -168,7 +168,7 @@ export function Footer() {
           {/* Información de la empresa */}
           <motion.div variants={itemVariants} className="space-y-4">
             <div>
-              <h4 className="text-lg font-semibold mb-4">Mi cuenta</h4>
+              <h3 className="text-lg font-semibold mb-4">Mi cuenta</h3>
               {/* <img src={shopSettings[0]?.logo3} className="h-32 w-32 object-contain" alt="Logo" /> */}
               {/* <p className="text-gray-300 text-sm leading-relaxed">
                 {shopInfo?.description ||
@@ -200,7 +200,7 @@ export function Footer() {
 
           {/* Enlaces de servicio al cliente */}
           <motion.div variants={itemVariants}>
-            <h4 className="text-lg font-semibold mb-4">Servicio al Cliente</h4>
+            <h3 className="text-lg font-semibold mb-4">Servicio al Cliente</h3>
             <ul className="space-y-2">
               {serviceClientLinks.map((link) => {
                 const IconComponent = link.icon
@@ -221,7 +221,7 @@ export function Footer() {
             </ul>
 
             {/* Enlaces legales importantes */}
-            <h4 className="text-lg font-semibold mb-4 mt-8">Legal</h4>
+            <h3 className="text-lg font-semibold mb-4 mt-8">Legal</h3>
             <ul className="space-y-2">
               {legalLinksVisible.map((link) => {
                 const IconComponent = link.icon
@@ -244,7 +244,7 @@ export function Footer() {
 
           {/* Enlaces legales */}
           <motion.div variants={itemVariants}>
-            <h4 className="text-lg font-semibold mb-4">Sobre ANJ</h4>
+            <h3 className="text-lg font-semibold mb-4">Sobre ANJ</h3>
             <ul className="space-y-2">
               {aboutAJN.map((link) => {
                 const IconComponent = link.icon
@@ -267,7 +267,7 @@ export function Footer() {
 
           {/* Información de contacto */}
           <motion.div variants={itemVariants}>
-            <h4 className="text-lg font-semibold mb-4">Contacto</h4>
+            <h3 className="text-lg font-semibold mb-4">Contacto</h3>
             <div className="space-y-3">
               {(shopInfo?.shopOwner || shopInfo?.city) && (
                 <a
