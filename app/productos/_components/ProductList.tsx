@@ -50,7 +50,7 @@ function ProductListContent({
 
   // Optimización: Usar selectores específicos para evitar re-renders innecesarios
   const products = useMainStore(state => state.products)
-  const productsPagination = useMainStore(state => state.productsPagination)
+  const productsPagination = useMainStore(state => state.paginationMeta.products)
   const fetchProducts = useMainStore(state => state.fetchProducts)
   const shopSettings = useMainStore(state => state.shopSettings)
   const categories = useMainStore(state => state.categories)
@@ -99,7 +99,7 @@ function ProductListContent({
         query: filters.searchTerm || undefined,
         sortBy: sortByMapping[sortBy],
         sortOrder: sortOrderMapping[sortBy],
-        categoryIds: filters.categories.length > 0 ? filters.categories : undefined,
+        categorySlugs: filters.categories.length > 0 ? filters.categories : undefined,
         collectionIds: collectionName ? [collectionName] : undefined,
         status: ['ACTIVE', 'ARCHIVED'], // Excluir DRAFT
       })
@@ -164,7 +164,7 @@ function ProductListContent({
             maxPrice={10000}
           />
           <p className="text-sm text-muted-foreground hidden sm:block">
-            Mostrando {displayProducts.length} de {productsPagination.total} productos
+            Mostrando {displayProducts.length} de {productsPagination?.total || 0} productos
           </p>
           <Select value={sortBy} onValueChange={handleSortChange}>
             <SelectTrigger className="w-[180px]">
@@ -203,7 +203,7 @@ function ProductListContent({
         )}
 
         {/* Paginación */}
-        {productsPagination.totalPages > 1 && (
+        {productsPagination && productsPagination.totalPages > 1 && (
           <div className="mt-8">
             <Pagination 
               currentPage={currentPage} 

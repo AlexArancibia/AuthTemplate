@@ -6,7 +6,7 @@ import { signOut } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { LogOut } from "lucide-react"
 import { toast } from "sonner"
-import { useMainStore } from "@/stores/mainStore"
+import { useUserStore } from "@/stores/userStore"
 import { useCartStore } from "@/stores/cartStore"
 
 interface LogoutButtonProps {
@@ -17,7 +17,7 @@ interface LogoutButtonProps {
 
 const LogoutButton = ({ variant = "outline", className = "flex items-center", children }: LogoutButtonProps) => {
   const clearCart = useCartStore(state => state.clearCart)
-  const clearUserData = useMainStore(state => state.clearUserData)
+  const clearUserData = useUserStore(state => state.clearUserData)
   
   const handleClick = async () => {
     try {

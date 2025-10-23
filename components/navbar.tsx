@@ -77,7 +77,6 @@ export default function Navbar({ user }: NavbarProps) {
   const getTotal = useCartStore(state => state.getTotal)
   const getItemsCount = useCartStore(state => state.getItemsCount)
   const clearCart = useCartStore(state => state.clearCart)
-  const clearUserData = useMainStore(state => state.clearUserData)
   const [mounted, setMounted] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [isSearchOpen, setIsSearchOpen] = useState(false)
@@ -155,9 +154,8 @@ export default function Navbar({ user }: NavbarProps) {
     try {
       console.log("[NAVBAR] Signing out user")
       
-      // Limpiar datos del usuario y carrito antes de cerrar sesión
+      // Limpiar datos del carrito antes de cerrar sesión
       clearCart()
-      clearUserData()
       
       toast.success("Sesión cerrada", {
         description: "Has cerrado sesión correctamente",
