@@ -27,7 +27,7 @@ interface ProductDetailsProps {
 }
 
 export default function ProductDetails({ slug }: ProductDetailsProps) {
-  const { products, shopSettings, fetchProducts, fetchProductBySlug } = useMainStore()
+  const { products, shopSettings, fetchProducts, getProductBySlug } = useMainStore()
   const { addItem } = useCartStore()
   const [product, setProduct] = useState<Product | null>(null)
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
@@ -105,7 +105,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
       if (!foundProduct) {
         try {
           // Intentar con endpoint por slug
-          const bySlug = await fetchProductBySlug(slug)
+          const bySlug = await getProductBySlug(slug)
           if (bySlug) {
             foundProduct = bySlug
           } else {
@@ -135,7 +135,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
       setIsLoading(false)
     }
     loadProduct()
-  }, [slug, products, fetchProducts, fetchProductBySlug])
+  }, [slug, products, fetchProducts, getProductBySlug])
 
   const variantOptions = useMemo(() => {
     if (!product || !product.variants) return {}

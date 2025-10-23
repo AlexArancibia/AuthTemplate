@@ -82,7 +82,7 @@ export function ProductCarousel({ collectionName }: ProductCarouselProps) {
           }
         }
 
-        const url = `/products/store/${STORE_ID}?${queryParams.toString()}`
+        const url = `/products/${STORE_ID}?${queryParams.toString()}`
         const response = await apiClient.get(url)
         
         const products = response.data.data || response.data || []

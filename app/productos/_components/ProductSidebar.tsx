@@ -33,7 +33,7 @@ export function ProductSidebar({ product }: ProductSidebarProps) {
         }
 
         // Petición para obtener los últimos 3 productos activos, ordenados por fecha de creación
-        const response = await apiClient.get(`/products/store/${storeId}`, {
+        const response = await apiClient.get(`/products/${storeId}`, {
           params: {
             page: 1,
             limit: 4, // Traer 4 para tener margen por si uno es el producto actual
