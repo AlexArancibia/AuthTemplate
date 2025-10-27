@@ -42,6 +42,7 @@ export interface PaginationMeta {
     inStock?: boolean
     sortBy?: ProductSortBy
     status?: string[]  // Estados de productos: ACTIVE, ARCHIVED, DRAFT
+    attributeFilters?: Record<string, string[]>  // Filtro por atributos de variantes (ej: {"Presentaciones":["1 Lt","500 mLt"]})
   }
   
   // Parámetros específicos para búsqueda de órdenes

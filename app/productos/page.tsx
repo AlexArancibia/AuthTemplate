@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
+import { useState, useEffect, Suspense, useMemo } from "react"
 import { motion } from "framer-motion"
 import { useSearchParams } from "next/navigation"
 import { useMainStore } from "@/stores/mainStore"
@@ -15,9 +15,65 @@ function ProductsContent() {
   const categories = useMainStore(state => state.categories)
   const collections = useMainStore(state => state.collections)
 
+  // Crear mapa de categorías para búsqueda rápida (slug -> id)
+  const categoryMap = useMemo(() => {
+    const map = new Map<string, string>()
+    categories.forEach(cat => map.set(cat.slug, cat.id))
+    return map
+  }, [categories])
+
+  // Crear mapa slug -> category para búsqueda rápida
+  const categorySlugMap = useMemo(() => {
+    const map = new Map<string, typeof categories[0]>()
+    categories.forEach(cat => map.set(cat.slug, cat))
+    return map
+  }, [categories])
+
   useEffect(() => {
     setIsClient(true)
   }, [])
+
+  // Extraer parámetros de filtros desde la URL
+  const searchTerm = searchParams.get("search") || ""
+  const categoriesParamFromURL = searchParams.getAll("category")
+  const page = Number.parseInt(searchParams.get("page") || "1", 10)
+  const sortBy = searchParams.get("sort") || "featured"
+
+  // Extraer rango de precios
+  const minPrice = searchParams.get("minPrice") ? Number.parseFloat(searchParams.get("minPrice")!) : undefined
+  const maxPrice = searchParams.get("maxPrice") ? Number.parseFloat(searchParams.get("maxPrice")!) : undefined
+
+  // ✅ ACTUALIZADO: Extraer filtros de variantes (formato: attributeFilters={"Presentaciones":["1 Lt","500 mLt"]})
+  let variantFilters: Record<string, string[]> = {}
+
+  // Buscar el parámetro attributeFilters en la URL
+  const attributeFiltersParam = searchParams.get("attributeFilters")
+  if (attributeFiltersParam) {
+    try {
+      // Parsear el JSON del parámetro
+      variantFilters = JSON.parse(attributeFiltersParam)
+    } catch (error) {
+      console.error('Error parsing attributeFilters:', error)
+    }
+  }
+
+  // Convertir slugs de categorías a IDs para el filtrado interno usando el mapa
+  const categoriesParam = categoriesParamFromURL
+    .map(slug => categoryMap.get(slug))
+    .filter((id): id is string => id !== undefined)
+
+  // Obtener el nombre de la categoría seleccionada para el título
+  const selectedCategory = categoriesParamFromURL.length > 0 
+    ? categorySlugMap.get(categoriesParamFromURL[0]) || null
+    : null
+
+  const pageTitle = selectedCategory ? selectedCategory.name : "Nuestros Productos"
+
+  // Obtener colección desde query params - SOLO si está en la URL
+  const collectionParam = searchParams.get("collection")
+  const selectedCollection = collectionParam 
+    ? collections.find(col => col.id === collectionParam || col.title === collectionParam)
+    : null  // ✅ No filtrar por colección por defecto
 
   if (!isClient) {
     return (
@@ -36,40 +92,6 @@ function ProductsContent() {
       </main>
     )
   }
-
-  // Extract filter parameters from URL
-  const searchTerm = searchParams.get("search") || ""
-  const categoriesParam = searchParams.getAll("category")
-  const page = Number.parseInt(searchParams.get("page") || "1", 10)
-  const sortBy = searchParams.get("sort") || "featured"
-
-  // Extract price range
-  const minPrice = searchParams.get("minPrice") ? Number.parseFloat(searchParams.get("minPrice")!) : undefined
-  const maxPrice = searchParams.get("maxPrice") ? Number.parseFloat(searchParams.get("maxPrice")!) : undefined
-
-  // Extract variant filters (format: variant_attribute=value1,value2)
-  const variantFilters: Record<string, string[]> = {}
-
-  // Process all search params to find variant filters
-  searchParams.forEach((value, key) => {
-    if (key.startsWith("variant_")) {
-      const attributeName = key.replace("variant_", "")
-      variantFilters[attributeName] = value.split(",")
-    }
-  })
-
-  // Get the selected category name for the title
-  const selectedCategory = categoriesParam.length > 0 
-    ? categories.find(cat => cat.id === categoriesParam[0])
-    : null
-
-  const pageTitle = selectedCategory ? selectedCategory.name : "Nuestros Productos"
-
-  // Obtener colección desde query params o usar "Destacados" por defecto
-  const collectionParam = searchParams.get("collection")
-  const selectedCollection = collectionParam 
-    ? collections.find(col => col.id === collectionParam || col.title === collectionParam)
-    : collections.find(col => col.title === "Destacados")
 
   return (
     <main className="min-h-screen bg-white">

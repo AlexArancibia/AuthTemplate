@@ -1,17 +1,14 @@
 "use client"
 
-import type React from "react"
 import { useState, useMemo, useEffect, useCallback, useRef, Suspense } from "react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Input } from "@/components/ui/input"
-import { Slider } from "@/components/ui/slider"
 import { Separator } from "@/components/ui/separator"
 import type { Category } from "@/types/category"
-import type { Product } from "@/types/product"
 import { useMainStore } from "@/stores/mainStore"
-import { useRouter, usePathname, useSearchParams } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 
 interface ProductFiltersProps {
   onFilterChange: (filters: Filters) => void
@@ -27,16 +24,22 @@ interface Filters {
   priceRange: [number, number]
 }
 
-interface GroupedPresentation {
-  unit: string
-  values: string[]
-}
+// ✅ Atributos hardcodeados (constant fuera del componente para mejor rendimiento)
+const GROUPED_PRESENTATIONS: Array<{ unit: string; values: string[] }> = [
+  {
+    unit: "ML/LT",
+    values: ["100 ml", "250 ml", "500 ml", "1 Lt"]
+  },
+  {
+    unit: "KG",
+    values: ["1 KG", "4 KG", "10 KG", "20 KG", "30 KG", "200 KG"]
+  }
+]
 
 function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPrice }: ProductFiltersProps) {
   const router = useRouter()
   const pathname = usePathname()
-  const searchParams = useSearchParams()
-  const { categories, products, shopSettings } = useMainStore()
+  const { categories } = useMainStore()
 
   // Usar refs para evitar comparaciones innecesarias - con valores iniciales correctos
   const lastFiltersRef = useRef<string>("")
@@ -47,8 +50,6 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string[]>>(initialFilters.variants)
   const [priceRange, setPriceRange] = useState<[number, number]>(initialFilters.priceRange)
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm)
-
-  const defaultCurrency = shopSettings[0]?.defaultCurrency
 
   // Sincronizar categoría seleccionada con los parámetros iniciales de URL
   useEffect(() => {
@@ -66,6 +67,49 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
     return () => clearTimeout(timer)
   }, [searchTerm])
 
+  // Crear lookup map para convertir IDs a slugs (memoizado)
+  const categorySlugMap = useMemo(() => {
+    const map = new Map<string, string>()
+    categories.forEach(cat => map.set(cat.id, cat.slug))
+    return map
+  }, [categories])
+
+  // Función separada para actualizar URL (definir antes de updateFilters)
+  const updateURL = useCallback(
+    (filters: Filters) => {
+      const params = new URLSearchParams()
+
+      // ✅ ACTUALIZADO: Enviar attributeFilters como JSON (formato del backend)
+      if (filters.variants && Object.keys(filters.variants).length > 0) {
+        // Convertir el objeto de filtros a JSON string
+        const jsonString = JSON.stringify(filters.variants)
+        params.set("attributeFilters", jsonString)
+      }
+
+      // Handle other filters
+      if (filters.searchTerm) {
+        params.set("search", filters.searchTerm)
+      }
+
+      // Convertir category ID a slug para la URL usando el mapa
+      if (filters.categories.length > 0) {
+        const slug = categorySlugMap.get(filters.categories[0])
+        if (slug) {
+          params.set("category", slug)
+        }
+      }
+
+      if (filters.priceRange[0] !== minPrice || filters.priceRange[1] !== maxPrice) {
+        params.set("minPrice", filters.priceRange[0].toString())
+        params.set("maxPrice", filters.priceRange[1].toString())
+      }
+
+      const newUrl = `${pathname}?${params.toString()}`
+      router.replace(newUrl, { scroll: false })
+    },
+    [pathname, router, minPrice, maxPrice, categorySlugMap],
+  )
+
   // Función estable para actualizar filtros
   const updateFilters = useCallback(() => {
     const currentFilters = {
@@ -74,11 +118,6 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
       variants: selectedVariants,
       priceRange,
     }
-    
-    console.log('🎯 ProductFilters - Updating filters:', {
-      selectedCategory,
-      categories: currentFilters.categories
-    })
 
     // Crear una clave única para comparar filtros
     const filtersKey = JSON.stringify({
@@ -100,56 +139,26 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
         updateTimeoutRef.current = null
       }
 
-      // Debounce la actualización de filtros
-      updateTimeoutRef.current = setTimeout(() => {
-        onFilterChange(currentFilters)
-
-        // Actualizar URL solo si no estamos en móvil o si el drawer está cerrado
-        const isMobile = window.innerWidth < 1024
-        if (!isMobile) {
-          updateURL(currentFilters)
-        }
-        updateTimeoutRef.current = null
-      }, 100)
+              // Debounce la actualización de filtros
+        updateTimeoutRef.current = setTimeout(() => {
+          onFilterChange(currentFilters)
+          
+          // Actualizar URL solo en desktop
+          const isMobile = window.innerWidth < 1024
+          if (!isMobile) {
+            updateURL(currentFilters)
+          }
+          
+          updateTimeoutRef.current = null
+        }, 100)
     }
-  }, [debouncedSearchTerm, selectedCategory, selectedVariants, priceRange, onFilterChange])
-
-  // Función separada para actualizar URL
-  const updateURL = useCallback(
-    (filters: Filters) => {
-      const params = new URLSearchParams()
-
-      // Handle presentations with special format
-      if (filters.variants.Presentaciones && filters.variants.Presentaciones.length > 0) {
-        const presentationsParam = filters.variants.Presentaciones.map((value) => value.replace(/\s/g, "+")).join(",")
-        params.set("variant_Presentaciones", presentationsParam)
-      }
-
-      // Handle other filters
-      if (filters.searchTerm) {
-        params.set("search", filters.searchTerm)
-      }
-
-      if (filters.categories.length > 0) {
-        params.set("category", filters.categories[0])
-      }
-
-      if (filters.priceRange[0] !== minPrice || filters.priceRange[1] !== maxPrice) {
-        params.set("minPrice", filters.priceRange[0].toString())
-        params.set("maxPrice", filters.priceRange[1].toString())
-      }
-
-      const newUrl = `${pathname}?${params.toString()}`
-      router.replace(newUrl, { scroll: false })
-    },
-    [pathname, router, minPrice, maxPrice],
-  )
+  }, [debouncedSearchTerm, selectedCategory, selectedVariants, priceRange, onFilterChange, updateURL])
 
   // Efecto principal para actualizar filtros
   useEffect(() => {
     updateFilters()
 
-    // Cleanup function
+    // Cleanup function - limpiar timeouts pendientes
     return () => {
       if (updateTimeoutRef.current) {
         clearTimeout(updateTimeoutRef.current)
@@ -157,91 +166,6 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
       }
     }
   }, [updateFilters])
-
-  // Limpiar timeouts al desmontar
-  useEffect(() => {
-    return () => {
-      if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current)
-        updateTimeoutRef.current = null
-      }
-    }
-  }, [])
-
-  const groupedPresentations = useMemo(() => {
-    const presentations = new Set<string>()
-
-    // Recopilar todas las presentaciones
-    products.forEach((product: Product) => {
-      product.variants.forEach((variant) => {
-        Object.entries(variant.attributes!).forEach(([key, value]) => {
-          if (key === "Presentaciones" && typeof value === "string") {
-            // Convertir "Lt" a "L" para normalización
-            const normalizedValue = value.replace(/Lt/i, 'L').replace(/mLt/i, 'ML')
-            presentations.add(normalizedValue)
-          }
-        })
-      })
-    })
-
-    // Filtrar y agrupar por unidad
-    const mlLtPresentations: string[] = []
-    const otherGroups: Record<string, string[]> = {}
-    const validPattern = /^(\d+(?:\.\d+)?)\s+(KG|L|G|ML|LB|OZ)$/i
-
-    Array.from(presentations).forEach((presentation) => {
-      const match = presentation.match(validPattern)
-      if (match) {
-        const [, number, unit] = match
-        let normalizedUnit = unit.toUpperCase()
-        if (normalizedUnit === 'L' || normalizedUnit === 'ML') {
-          mlLtPresentations.push(presentation)
-        } else {
-          if (!otherGroups[normalizedUnit]) {
-            otherGroups[normalizedUnit] = []
-          }
-          otherGroups[normalizedUnit].push(presentation)
-        }
-      }
-    })
-
-    // Ordenar ML/Lt globalmente por mililitros
-    mlLtPresentations.sort((a, b) => {
-      const getMlValue = (str: string) => {
-        const match = str.match(/^(\d+(?:\.\d+)?)\s*(L|LT|ML|MLT)$/i)
-        if (!match) return 0
-        const num = parseFloat(match[1])
-        const u = match[2].toUpperCase()
-        if (u === 'L' || u === 'LT') return num * 1000
-        return num
-      }
-      return getMlValue(a) - getMlValue(b)
-    })
-
-    // Ordenar otros grupos internamente
-    Object.keys(otherGroups).forEach((unit) => {
-      otherGroups[unit].sort((a, b) => {
-        const getValue = (str: string) => {
-          const match = str.match(/^(\d+(?:\.\d+)?)\s+/)
-          return match ? parseFloat(match[1]) : 0
-        }
-        return getValue(a) - getValue(b)
-      })
-    })
-
-    // Construir el array final de grupos
-    const sortedGroups: GroupedPresentation[] = []
-    if (mlLtPresentations.length > 0) {
-      sortedGroups.push({ unit: 'ML/Lt', values: mlLtPresentations.map(v => v.replace(/L$/i, 'Lt')) })
-    }
-    Object.entries(otherGroups)
-      .sort(([unitA], [unitB]) => unitA.localeCompare(unitB))
-      .forEach(([unit, values]) => {
-        sortedGroups.push({ unit, values })
-      })
-
-    return sortedGroups
-  }, [products])
 
   // Sort categories by priority (0 = highest priority)
   const sortedCategories = useMemo(() => {
@@ -266,10 +190,6 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
           : [...currentValues, value],
       }
     })
-  }, [])
-
-  const handlePriceChange = useCallback((value: number[]) => {
-    setPriceRange([value[0], value[1]])
   }, [])
 
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -366,39 +286,37 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
         </div>
       </div> */}
 
-      {/* Grouped Presentations */}
-      {groupedPresentations.length > 0 && (
-        <div>
-          <h3 className="text-lg font-medium mb-4">Presentaciones</h3>
-          <div className="space-y-4 ">
-            {groupedPresentations.map((group, groupIndex) => (
-              <div key={group.unit}>
-                {/* Unit Label */}
-                <div className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">{group.unit}</div>
+      {/* ✅ Presentaciones agrupadas */}
+      <div>
+        <h3 className="text-lg font-medium mb-4">Presentaciones</h3>
+        <div className="space-y-4">
+          {GROUPED_PRESENTATIONS.map((group, groupIndex) => (
+            <div key={group.unit}>
+              {/* Unit Label */}
+              <div className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">{group.unit}</div>
 
-                {/* Values for this unit */}
-                <div className="space-y-2 mb-3">
-                  {group.values.map((value) => (
-                    <div key={`Presentaciones-${value}`} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`Presentaciones-${value}`}
-                        checked={(selectedVariants["Presentaciones"] || []).includes(value)}
-                        onCheckedChange={() => handleVariantChange("Presentaciones", value)}
-                      />
-                      <label htmlFor={`Presentaciones-${value}`} className="text-sm text-gray-700 cursor-pointer">
-                        {value}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Separator between groups (except for the last one) */}
-                {groupIndex < groupedPresentations.length - 1 && <Separator className="my-3 bg-gray-200" />}
+              {/* Values for this unit */}
+              <div className="space-y-2 mb-3">
+                {group.values.map((value) => (
+                  <div key={`Presentaciones-${value}`} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`Presentaciones-${value}`}
+                      checked={(selectedVariants["Presentaciones"] || []).includes(value)}
+                      onCheckedChange={() => handleVariantChange("Presentaciones", value)}
+                    />
+                    <label htmlFor={`Presentaciones-${value}`} className="text-sm text-gray-700 cursor-pointer">
+                      {value}
+                    </label>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+
+              {/* Separator between groups (except for the last one) */}
+              {groupIndex < GROUPED_PRESENTATIONS.length - 1 && <Separator className="my-3 bg-gray-200" />}
+            </div>
+          ))}
         </div>
-      )}
+      </div>
 
       <Button onClick={resetFilters} className="w-full bg-secondary text-white hover:bg-blue-700 transition">
         Resetear Filtros

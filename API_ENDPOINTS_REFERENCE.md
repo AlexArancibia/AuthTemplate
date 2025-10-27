@@ -169,18 +169,21 @@ Body: { apiKey: string }
 
 ### Get Products by Store
 ```
-GET /products/store/:storeId
+GET /products/:storeId
 Auth: PublicKeyGuard
 Query Params:
   - query: string (search term, max 200 chars)
-  - status: ProductStatus[] (DRAFT, ACTIVE, ARCHIVED)
+  - status: ProductStatus[] (ACTIVE, INACTIVE, DRAFT, ARCHIVED)
   - vendor: string (max 100 chars)
-  - categoryIds: string[]
+  - categorySlugs: string[]
   - collectionIds: string[]
   - page: number (default: 1, min: 1)
   - limit: number (default: 20, min: 1, max: 100)
   - sortBy: string (createdAt, updatedAt, title, price, viewCount)
   - sortOrder: 'asc' | 'desc' (default: 'desc')
+  - minPrice: number (≥ 0)
+  - maxPrice: number (≥ 0)
+  - currencyId: string
 Pagination: ✅ Supported
 ```
 
@@ -210,7 +213,7 @@ Auth: PublicKeyGuard
 
 ### Update Product
 ```
-PUT /products/:storeId/:id
+PATCH /products/:storeId/:id
 Auth: AuthGuard
 ```
 
@@ -247,7 +250,7 @@ Auth: PublicKeyGuard
 
 ### Update Variant
 ```
-PUT /products/:storeId/variants/:id
+PATCH /products/:storeId/variants/:id
 Auth: AuthGuard
 ```
 
@@ -277,7 +280,7 @@ Auth: PublicKeyGuard
 
 ### Update Variant Price
 ```
-PUT /products/:storeId/variant-prices/:id
+PATCH /products/:storeId/variant-prices/:id
 Auth: AuthGuard
 ```
 
