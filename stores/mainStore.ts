@@ -405,7 +405,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<TeamSection[]>(`/team-section/${STORE_ID}`)
+      const response = await apiClient.get<TeamSection[]>(`/team-sections/store/${STORE_ID}`)
       const teamSections = extractApiData<TeamSection[]>(response)
       set({
         teamSections,
@@ -898,7 +898,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
         shopSettingsResponse,
       ] = await Promise.all([
         apiClient.get(`/card-section/${STORE_ID}`),
-        apiClient.get(`/team-section/${STORE_ID}`),
+        apiClient.get(`/team-sections/store/${STORE_ID}`),
         apiClient.get(`/payment-providers/${STORE_ID}`),
         apiClient.get(`/auth/store/${STORE_ID}`),
         apiClient.get(`/shop-settings/${STORE_ID}`),

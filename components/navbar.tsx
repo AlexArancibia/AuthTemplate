@@ -52,14 +52,6 @@ export default function Navbar({ user }: NavbarProps) {
   
   // Optimización: Usar selectores específicos para evitar re-renders innecesarios
   const fetchShopSettings = useMainStore(state => state.fetchShopSettings)
-  const fetchProducts = useMainStore(state => state.fetchProducts)
-  const fetchShippingMethods = useMainStore(state => state.fetchShippingMethods)
-  const fetchCategories = useMainStore(state => state.fetchCategories)
-  const fetchContents = useMainStore(state => state.fetchContents)
-  const fetchCollections = useMainStore(state => state.fetchCollections)
-  const fetchPaymentProviders = useMainStore(state => state.fetchPaymentProviders)
-  const fetchCoupons = useMainStore(state => state.fetchCoupons)
-  const fetchCardSections = useMainStore(state => state.fetchCardSections)
   const shopSettings = useMainStore(state => state.shopSettings)
   const loading = useMainStore(state => state.loading)
   const error = useMainStore(state => state.error)
@@ -99,37 +91,26 @@ export default function Navbar({ user }: NavbarProps) {
     return () => clearTimeout(timer)
   }, [])
 
-  // Fetch shop settings on mount
+  // Fetch only shop settings on mount (solo datos esenciales para el navbar)
   useEffect(() => {
-    console.log("[NAVBAR] useEffect for fetching data triggered")
+    console.log("[NAVBAR] useEffect for fetching shop settings triggered")
 
     const loadData = async () => {
       // Skip if already fetched or already loading
       if (hasFetched.current || loading) {
-        console.log("[NAVBAR] Data already fetched or loading, skipping")
+        console.log("[NAVBAR] Shop settings already fetched or loading, skipping")
         return
       }
 
-      console.log("[NAVBAR] Fetching all required data")
+      console.log("[NAVBAR] Fetching shop settings only")
       hasFetched.current = true
 
       try {
-        // Realizar todos los fetch en paralelo (SIN productos)
-        await Promise.all([
-          fetchShopSettings(),
-          // fetchProducts(), // ❌ Removido - Los productos se cargan bajo demanda
-          fetchShippingMethods(),
-          fetchCategories(),
-          fetchContents(),
-          fetchCollections(),
-          fetchCardSections(),
-          fetchCoupons(),
-          fetchPaymentProviders(),
-        ])
-
-        console.log("[NAVBAR] All data loaded successfully")
+        // Solo cargar shop settings que es lo mínimo necesario para el navbar
+        await fetchShopSettings()
+        console.log("[NAVBAR] Shop settings loaded successfully")
       } catch (err) {
-        console.error("[NAVBAR] Error fetching data:", err)
+        console.error("[NAVBAR] Error fetching shop settings:", err)
         toast.error("Error de conexión", {
           description: "No se pudieron cargar los datos de la tienda",
         })
@@ -137,18 +118,7 @@ export default function Navbar({ user }: NavbarProps) {
     }
 
     loadData()
-  }, [
-    fetchShopSettings,
-    // fetchProducts, // ❌ Removida dependencia
-    fetchShippingMethods,
-    fetchCategories,
-    fetchCollections,
-    fetchContents,
-    fetchCardSections,
-    fetchCoupons,
-    fetchPaymentProviders,
-    loading,
-  ])
+  }, [fetchShopSettings, loading])
 
   const handleSignOut = async () => {
     try {
