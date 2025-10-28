@@ -22,7 +22,7 @@ function ProductsContent() {
   const searchTerm = searchParams.get("search") || ""
   const categoriesParamFromURL = searchParams.getAll("category")
   const page = Number(searchParams.get("page") || "1")
-  const sortBy = searchParams.get("sort") || "featured"
+  const sortBy = (searchParams.get("sort") || "featured") as 'featured' | 'newest' | 'name'
   const minPrice = searchParams.get("minPrice") ? Number(searchParams.get("minPrice")) : undefined
   const maxPrice = searchParams.get("maxPrice") ? Number(searchParams.get("maxPrice")) : undefined
 

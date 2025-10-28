@@ -6,9 +6,9 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
+import { Slider } from "@/components/ui/slider"
 import type { Category } from "@/types/category"
 import { useMainStore } from "@/stores/mainStore"
-import { useRouter, usePathname } from "next/navigation"
 
 interface ProductFiltersProps {
   onFilterChange: (filters: Filters) => void
@@ -35,9 +35,11 @@ const GROUPED_PRESENTATIONS: Array<{ unit: string; values: string[] }> = [
   }
 ]
 
+// Helper para formatear precios
+const formatPrice = (price: number): string => 
+  `S/. ${price.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`
+
 function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPrice }: ProductFiltersProps) {
-  const router = useRouter()
-  const pathname = usePathname()
   const { categories } = useMainStore()
 
   const lastFiltersRef = useRef<string>("")
@@ -87,41 +89,12 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
     return () => clearTimeout(timer)
   }, [searchTerm])
 
-  const categorySlugMap = useMemo(() => {
-    const map = new Map<string, string>()
-    categories.forEach(cat => map.set(cat.id, cat.slug))
-    return map
-  }, [categories])
+  // Sincronizar priceRange cuando cambian las props iniciales
+  useEffect(() => {
+    setPriceRange(initialFilters.priceRange)
+  }, [initialFilters.priceRange])
 
-  const updateURL = useCallback(
-    (filters: Filters) => {
-      const params = new URLSearchParams()
 
-      if (filters.variants && Object.keys(filters.variants).length > 0) {
-        params.set("attributeFilters", JSON.stringify(filters.variants))
-      }
-
-      if (filters.searchTerm) {
-        params.set("search", filters.searchTerm)
-      }
-
-      if (filters.categories.length > 0) {
-        const slug = categorySlugMap.get(filters.categories[0])
-        if (slug) {
-          params.set("category", slug)
-        }
-      }
-
-      if (filters.priceRange[0] !== minPrice || filters.priceRange[1] !== maxPrice) {
-        params.set("minPrice", filters.priceRange[0].toString())
-        params.set("maxPrice", filters.priceRange[1].toString())
-      }
-
-      const newUrl = `${pathname}?${params.toString()}`
-      router.replace(newUrl, { scroll: false })
-    },
-    [pathname, router, minPrice, maxPrice, categorySlugMap],
-  )
 
   const updateFilters = useCallback(() => {
     const currentFilters = {
@@ -151,15 +124,12 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
       updateTimeoutRef.current = setTimeout(() => {
         onFilterChange(currentFilters)
         
-        const isMobile = window.innerWidth < 1024
-        if (!isMobile) {
-          updateURL(currentFilters)
-        }
+        // La actualización de URL se maneja en ProductList.tsx
         
         updateTimeoutRef.current = null
       }, 100)
     }
-  }, [debouncedSearchTerm, selectedCategory, selectedVariants, priceRange, onFilterChange, updateURL])
+  }, [debouncedSearchTerm, selectedCategory, selectedVariants, priceRange, onFilterChange])
 
   useEffect(() => {
     updateFilters()
@@ -202,6 +172,20 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
     setSearchTerm(e.target.value)
   }, [])
 
+  const handlePriceRangeChange = useCallback((newRange: number[]) => {
+    setPriceRange([newRange[0], newRange[1]])
+  }, [])
+
+  const handleMinPriceChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Math.max(minPrice, Math.min(maxPrice, Number(e.target.value)))
+    setPriceRange([value, priceRange[1]])
+  }, [minPrice, maxPrice, priceRange[1]])
+
+  const handleMaxPriceChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Math.max(minPrice, Math.min(maxPrice, Number(e.target.value)))
+    setPriceRange([priceRange[0], value])
+  }, [minPrice, maxPrice, priceRange[0]])
+
   const resetFilters = useCallback(() => {
     setSearchTerm("")
     setSelectedCategory("")
@@ -211,9 +195,8 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
     // Limpiar la referencia
     lastFiltersRef.current = ""
 
-    // Actualizar URL
-    router.replace(pathname, { scroll: false })
-  }, [minPrice, maxPrice, pathname, router])
+    // La actualización de URL se maneja en ProductList.tsx
+  }, [minPrice, maxPrice])
 
   return (
     <div className="w-72 bg-white space-y-6">
@@ -248,6 +231,47 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
             ))}
           </div>
         </RadioGroup>
+      </div>
+
+      <div>
+        <h3 className="text-lg font-medium mb-4">Rango de Precios</h3>
+        <div className="space-y-4">
+          <div className="px-2">
+            <Slider
+              value={priceRange}
+              onValueChange={handlePriceRangeChange}
+              min={minPrice}
+              max={maxPrice}
+              step={10}
+              className="w-full"
+            />
+          </div>
+          <div className="flex items-center justify-between text-sm text-gray-600">
+            <span>{formatPrice(priceRange[0])}</span>
+            <span>{formatPrice(priceRange[1])}</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Input
+              type="number"
+              placeholder="Mín"
+              value={priceRange[0]}
+              onChange={handleMinPriceChange}
+              className="w-20 h-8 text-sm"
+              min={minPrice}
+              max={maxPrice}
+            />
+            <span className="text-gray-500">-</span>
+            <Input
+              type="number"
+              placeholder="Máx"
+              value={priceRange[1]}
+              onChange={handleMaxPriceChange}
+              className="w-20 h-8 text-sm"
+              min={minPrice}
+              max={maxPrice}
+            />
+          </div>
+        </div>
       </div>
 
       <div>

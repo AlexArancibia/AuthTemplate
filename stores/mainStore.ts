@@ -39,49 +39,45 @@ import type {
 // Obtener el storeId del entorno
 const STORE_ID = process.env.NEXT_PUBLIC_STORE_ID
 
-// Helper function para construir query params
-const buildQueryParams = (params: any = {}) => {
+// Helper function optimizada para construir query params
+const buildQueryParams = (params: Record<string, any> = {}): string => {
   const queryParams = new URLSearchParams()
   
-  Object.entries(params).forEach(([key, value]) => {
+  for (const [key, value] of Object.entries(params)) {
     // Validar que el valor no sea undefined, null, o string vacío/con solo espacios
-    const isValidValue = value !== undefined && 
-                        value !== null && 
-                        (typeof value !== 'string' || value.trim() !== '')
+    if (value === undefined || value === null) continue
+    if (typeof value === 'string' && value.trim() === '') continue
     
-    if (isValidValue) {
-      // Manejar arrays
-      if (Array.isArray(value)) {
-        if (value.length > 0) {
-          // Para categorySlugs y collectionIds: usar formato de comas
-          if (['categorySlugs', 'collectionIds'].includes(key)) {
-            const joinedValue = value.join(',')
-            queryParams.append(key, joinedValue)
-          } else {
-            // Para status y otros arrays: enviar múltiples valores con el mismo nombre
-            value.forEach((item) => {
-              queryParams.append(key, String(item))
-            })
-          }
-        }
-      } 
-      // Manejar objetos (para attributeFilters)
-      else if (typeof value === 'object' && value !== null && key === 'attributeFilters') {
-        try {
-          // Convertir el objeto a JSON string y agregar al query params
-          const jsonString = JSON.stringify(value)
-          queryParams.append(key, jsonString)
-        } catch (error) {
-          console.error('Error serializing attributeFilters:', error)
+    // Manejar arrays
+    if (Array.isArray(value)) {
+      if (value.length === 0) continue
+      
+      // Para categorySlugs y collectionIds: usar formato de comas
+      if (['categorySlugs', 'collectionIds'].includes(key)) {
+        queryParams.append(key, value.join(','))
+      } else {
+        // Para status y otros arrays: enviar múltiples valores con el mismo nombre
+        for (const item of value) {
+          queryParams.append(key, String(item))
         }
       }
-      else {
-        // Para strings, usar trim() antes de agregar
-        const stringValue = typeof value === 'string' ? value.trim() : String(value)
-        queryParams.append(key, stringValue)
-      }
+      continue
     }
-  })
+    
+    // Manejar objetos (para attributeFilters)
+    if (typeof value === 'object' && value !== null && key === 'attributeFilters') {
+      try {
+        queryParams.append(key, JSON.stringify(value))
+      } catch (error) {
+        console.error('Error serializing attributeFilters:', error)
+      }
+      continue
+    }
+    
+    // Para valores primitivos
+    const stringValue = typeof value === 'string' ? value.trim() : String(value)
+    queryParams.append(key, stringValue)
+  }
   
   return queryParams.toString()
 }

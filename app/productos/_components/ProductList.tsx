@@ -9,14 +9,27 @@ import { ProductFilters } from "./ProductsFilter"
 import { FilterDrawer } from "./FilterDrawer"
 import { ProductCard } from "@/components/ProductCard"
 import ProductsSkeleton from "./ProductsSkeleton"
+import type { ProductSortBy } from "@/types/pagination"
 
 const PRODUCTS_PER_PAGE = 9
+const DEFAULT_MIN_PRICE = 0
+const DEFAULT_MAX_PRICE = 1000
+const DEFAULT_SORT = 'featured' as const
+
+// Configuración simplificada de ordenamiento
+const SORT_OPTIONS = {
+  featured: { sortBy: 'viewCount' as ProductSortBy, sortOrder: 'desc' as const, label: 'Destacados' },
+  newest: { sortBy: 'createdAt' as ProductSortBy, sortOrder: 'desc' as const, label: 'Más recientes' },
+  name: { sortBy: 'title' as ProductSortBy, sortOrder: 'asc' as const, label: 'Nombre A-Z' },
+} as const
+
+type SortOptionKey = keyof typeof SORT_OPTIONS
 
 interface ProductListProps {
   initialSearchTerm?: string
   initialCategories?: string[]
   initialPage?: number
-  initialSortBy?: string
+  initialSortBy?: SortOptionKey
   initialMinPrice?: number
   initialMaxPrice?: number
   initialVariantFilters?: Record<string, string[]>
@@ -29,17 +42,11 @@ interface Filters {
   priceRange: [number, number]
 }
 
-const sortOptions = {
-  featured: { sortBy: 'viewCount', sortOrder: 'desc' },
-  newest: { sortBy: 'createdAt', sortOrder: 'desc' },
-  name: { sortBy: 'title', sortOrder: 'asc' },
-}
-
 export default function ProductList({
   initialSearchTerm = "",
   initialCategories = [],
   initialPage = 1,
-  initialSortBy = "featured",
+  initialSortBy = DEFAULT_SORT,
   initialMinPrice,
   initialMaxPrice,
   initialVariantFilters = {},
@@ -47,122 +54,143 @@ export default function ProductList({
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  
+  // Store selectors
   const products = useMainStore(state => state.products)
   const categories = useMainStore(state => state.categories)
   const productsPagination = useMainStore(state => state.paginationMeta.products)
   const fetchProducts = useMainStore(state => state.fetchProducts)
 
-  const [sortBy, setSortBy] = useState(initialSortBy)
+  // Estado local
+  const [sortBy, setSortBy] = useState<SortOptionKey>(initialSortBy)
   const [currentPage, setCurrentPage] = useState(initialPage)
   const [hasLoaded, setHasLoaded] = useState(false)
   const [filters, setFilters] = useState<Filters>({
     searchTerm: initialSearchTerm,
     categories: initialCategories,
     variants: initialVariantFilters,
-    priceRange: [initialMinPrice || 0, initialMaxPrice || 10000],
+    priceRange: [initialMinPrice || DEFAULT_MIN_PRICE, initialMaxPrice || DEFAULT_MAX_PRICE],
   })
 
-  // Convertir IDs de categorías a slugs (memoized)
-  const categorySlugMap = useMemo(() => {
-    return new Map(categories.map(cat => [cat.id, cat.slug]))
-  }, [categories])
-
-  // Ref para almacenar los valores previos y evitar refetch innecesario
+  // Refs optimizados
   const prevParamsRef = useRef<string>('')
+  const isInitialMount = useRef(true)
 
-  // Sincronizar filtros cuando cambian las props iniciales
-  useEffect(() => {
-    setSortBy(initialSortBy)
-    setCurrentPage(initialPage)
-    setFilters({
-      searchTerm: initialSearchTerm,
-      categories: initialCategories,
-      variants: initialVariantFilters,
-      priceRange: [initialMinPrice || 0, initialMaxPrice || 10000],
-    })
-  }, [initialSortBy, initialPage, initialSearchTerm, initialCategories, initialVariantFilters, initialMinPrice, initialMaxPrice])
+  // Memoizaciones consolidadas
+  const categorySlugMap = useMemo(() => 
+    new Map(categories.map(cat => [cat.id, cat.slug])), 
+    [categories]
+  )
 
-  // Fetch productos
-  useEffect(() => {
-    if (categories.length === 0) return
+  const searchParamsMemo = useMemo(() => {
+    const { sortBy: sortField, sortOrder } = SORT_OPTIONS[sortBy]
+    const categorySlugs = filters.categories
+      .map(catId => categorySlugMap.get(catId))
+      .filter((slug): slug is string => slug !== undefined)
     
-    const sortConfig = sortOptions[sortBy as keyof typeof sortOptions]
-    const attributeFilters = Object.keys(filters.variants).length > 0 ? filters.variants : undefined
-    
-    // Convertir category IDs a slugs
-    const categorySlugs = filters.categories.length > 0
-      ? filters.categories
-          .map(catId => categorySlugMap.get(catId))
-          .filter((slug): slug is string => slug !== undefined)
-      : undefined
-    
-    // Crear una clave única para comparar
-    const paramsKey = JSON.stringify({
-      page: currentPage,
-      sortBy,
-      searchTerm: filters.searchTerm,
-      categoryIds: filters.categories,
-      variants: filters.variants,
-    })
-    
-    // Solo hacer fetch si los parámetros cambiaron
-    if (paramsKey === prevParamsRef.current) return
-    prevParamsRef.current = paramsKey
-    
-    const searchParams = {
+    return {
       page: currentPage,
       limit: PRODUCTS_PER_PAGE,
       query: filters.searchTerm || undefined,
-      sortBy: sortConfig.sortBy as any,
-      sortOrder: sortConfig.sortOrder as any,
-      categorySlugs,
-      status: ['ACTIVE', 'ARCHIVED'] as any,
-      attributeFilters,
+      sortBy: sortField,
+      sortOrder,
+      categorySlugs: categorySlugs.length > 0 ? categorySlugs : undefined,
+      status: ['ACTIVE', 'ARCHIVED'],
+      attributeFilters: Object.keys(filters.variants).length > 0 ? filters.variants : undefined,
+      minPrice: filters.priceRange[0] > DEFAULT_MIN_PRICE ? filters.priceRange[0] : undefined,
+      maxPrice: filters.priceRange[1] < DEFAULT_MAX_PRICE ? filters.priceRange[1] : undefined,
     }
-    
-    setHasLoaded(false)
-    fetchProducts(searchParams).then(() => setHasLoaded(true))
-  }, [currentPage, sortBy, filters.searchTerm, filters.categories, filters.variants, categories.length, categorySlugMap, fetchProducts])
+  }, [currentPage, sortBy, filters, categorySlugMap])
 
-  // Actualizar URL cuando cambian los filtros
+  // Inicialización y fetch de productos
   useEffect(() => {
-    const params = new URLSearchParams()
-    if (filters.searchTerm) params.set("search", filters.searchTerm)
-    if (filters.categories.length > 0) {
-      filters.categories.forEach(catId => {
-        const slug = categorySlugMap.get(catId)
-        if (slug) params.append("category", slug)
+    // Inicializar estado solo en el primer mount
+    if (isInitialMount.current) {
+      setSortBy(initialSortBy)
+      setCurrentPage(initialPage)
+      setFilters({
+        searchTerm: initialSearchTerm,
+        categories: initialCategories,
+        variants: initialVariantFilters,
+        priceRange: [initialMinPrice || DEFAULT_MIN_PRICE, initialMaxPrice || DEFAULT_MAX_PRICE],
       })
+      isInitialMount.current = false
     }
+
+    // Fetch productos si hay categorías disponibles
+    if (categories.length === 0) return
+    
+    const paramsKey = JSON.stringify(searchParamsMemo)
+    if (paramsKey === prevParamsRef.current) return
+    
+    prevParamsRef.current = paramsKey
+    setHasLoaded(false)
+    
+    fetchProducts(searchParamsMemo).finally(() => setHasLoaded(true))
+  }, [searchParamsMemo, categories.length, fetchProducts, initialSortBy, initialPage, initialSearchTerm, initialCategories, initialVariantFilters, initialMinPrice, initialMaxPrice])
+
+  const urlParams = useMemo(() => {
+    const params = new URLSearchParams()
+    
+    // Solo agregar parámetros que no sean valores por defecto
+    if (filters.searchTerm) params.set("search", filters.searchTerm)
+    
+    filters.categories.forEach(catId => {
+      const slug = categorySlugMap.get(catId)
+      if (slug) params.append("category", slug)
+    })
+    
     if (Object.keys(filters.variants).length > 0) {
       params.set("attributeFilters", JSON.stringify(filters.variants))
     }
+    
+    if (filters.priceRange[0] > DEFAULT_MIN_PRICE) params.set("minPrice", filters.priceRange[0].toString())
+    if (filters.priceRange[1] < DEFAULT_MAX_PRICE) params.set("maxPrice", filters.priceRange[1].toString())
     if (currentPage > 1) params.set("page", currentPage.toString())
-    if (sortBy !== "featured") params.set("sort", sortBy)
+    if (sortBy !== DEFAULT_SORT) params.set("sort", sortBy)
 
-    const newUrl = `${pathname}?${params.toString()}`
-    if (newUrl !== `${pathname}?${searchParams.toString()}`) {
-      router.replace(newUrl)
+    return params.toString()
+  }, [filters, currentPage, sortBy, categorySlugMap])
+
+  // Sincronización de URL
+  useEffect(() => {
+    const newUrl = `${pathname}?${urlParams}`
+    const currentUrl = `${pathname}?${searchParams.toString()}`
+    
+    if (newUrl !== currentUrl) {
+      router.replace(newUrl, { scroll: false })
     }
-  }, [filters, currentPage, sortBy, pathname, router, searchParams, categorySlugMap])
+  }, [urlParams, pathname, router, searchParams])
+
+  // Callbacks optimizados
+  const resetToFirstPage = useCallback(() => {
+    if (currentPage !== 1) {
+      setCurrentPage(1)
+      setHasLoaded(false)
+      // Scroll manual cuando cambias de página por filtros
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }, [currentPage])
 
   const handleFilterChange = useCallback((newFilters: Filters) => {
     setFilters(newFilters)
-    setCurrentPage(1)
-    setHasLoaded(false)
-  }, [])
+    resetToFirstPage()
+  }, [resetToFirstPage])
 
-  const handleSortChange = useCallback((value: string) => {
+  const handleSortChange = useCallback((value: SortOptionKey) => {
     setSortBy(value)
-    setCurrentPage(1)
-    setHasLoaded(false)
-  }, [])
+    resetToFirstPage()
+  }, [resetToFirstPage])
 
   const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page)
     setHasLoaded(false)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }, [])
+    
+    // Solo hacer scroll si realmente cambias de página
+    if (page !== currentPage) {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }, [currentPage])
 
   return (
     <div className="grid lg:grid-cols-4 gap-8">
@@ -170,8 +198,8 @@ export default function ProductList({
         <ProductFilters
           initialFilters={filters}
           onFilterChange={handleFilterChange}
-          minPrice={0}
-          maxPrice={10000}
+          minPrice={DEFAULT_MIN_PRICE}
+          maxPrice={DEFAULT_MAX_PRICE}
         />
       </div>
 
@@ -185,7 +213,7 @@ export default function ProductList({
             initialFilters={filters}
             onFilterChange={handleFilterChange}
             minPrice={0}
-            maxPrice={10000}
+            maxPrice={1000}
           />
           <p className="text-sm text-muted-foreground hidden sm:block">
             Mostrando {products.length} de {productsPagination?.total || 0} productos
@@ -195,9 +223,11 @@ export default function ProductList({
               <SelectValue placeholder="Ordenar por" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="featured">Destacados</SelectItem>
-              <SelectItem value="newest">Más recientes</SelectItem>
-              <SelectItem value="name">Nombre</SelectItem>
+              {Object.entries(SORT_OPTIONS).map(([key, config]) => (
+                <SelectItem key={key} value={key}>
+                  {config.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

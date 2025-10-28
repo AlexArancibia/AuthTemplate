@@ -3,7 +3,7 @@
 import type React from "react"
 
 import Link from "next/link"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { usePathname } from "next/navigation"
 import { Menu, ShoppingCart, User, X, Search, Store, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -72,7 +72,7 @@ export default function Navbar({ user }: NavbarProps) {
   const [mounted, setMounted] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const [showInitialLoading, setShowInitialLoading] = useState(true)
+  const [isLoadingShopSettings, setIsLoadingShopSettings] = useState(false)
 
   // Simple fetch control
   const hasFetched = useRef(false)
@@ -82,42 +82,26 @@ export default function Navbar({ user }: NavbarProps) {
     setMounted(true)
   }, [])
 
-  // Show loading screen immediately and hide after 700ms
+  // Fetch shop settings on mount
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowInitialLoading(false)
-    }, 1000)
+    if (hasFetched.current || loading) return
 
-    return () => clearTimeout(timer)
-  }, [])
-
-  // Fetch only shop settings on mount (solo datos esenciales para el navbar)
-  useEffect(() => {
-    console.log("[NAVBAR] useEffect for fetching shop settings triggered")
-
-    const loadData = async () => {
-      // Skip if already fetched or already loading
-      if (hasFetched.current || loading) {
-        console.log("[NAVBAR] Shop settings already fetched or loading, skipping")
-        return
-      }
-
-      console.log("[NAVBAR] Fetching shop settings only")
+    const loadShopSettings = async () => {
       hasFetched.current = true
+      setIsLoadingShopSettings(true)
 
       try {
-        // Solo cargar shop settings que es lo mínimo necesario para el navbar
         await fetchShopSettings()
-        console.log("[NAVBAR] Shop settings loaded successfully")
       } catch (err) {
-        console.error("[NAVBAR] Error fetching shop settings:", err)
         toast.error("Error de conexión", {
           description: "No se pudieron cargar los datos de la tienda",
         })
+      } finally {
+        setIsLoadingShopSettings(false)
       }
     }
 
-    loadData()
+    loadShopSettings()
   }, [fetchShopSettings, loading])
 
   const handleSignOut = async () => {
@@ -154,16 +138,15 @@ export default function Navbar({ user }: NavbarProps) {
       .substring(0, 2)
   }
 
-  // Get shop name from settings
-  const shopName = shopSettings && shopSettings.length > 0 ? shopSettings[0].name : "Mi Tienda"
-  console.log("[NAVBAR] Using shop name:", shopName)
-
-  // Get shop logo from settings
-  const shopLogo = shopSettings && shopSettings.length > 0 && shopSettings[0].logo ? shopSettings[0].logo : null
-  console.log("[NAVBAR] Using shop logo:", shopLogo ? "Yes" : "No")
-
-  // Get default currency
-  const defaultCurrency = shopSettings && shopSettings.length > 0 ? shopSettings[0].defaultCurrency : null
+  // Memoized shop settings data
+  const shopData = useMemo(() => {
+    const settings = shopSettings?.[0]
+    return {
+      name: settings?.name || "Mi Tienda",
+      logo: settings?.logo || null,
+      defaultCurrency: settings?.defaultCurrency || null,
+    }
+  }, [shopSettings])
 
   // Cart calculations
   const totalItems = getItemsCount()
@@ -182,23 +165,8 @@ export default function Navbar({ user }: NavbarProps) {
     }
   }
 
-  // Show loading screen immediately on initial page load - BEFORE any other renders
-  if (showInitialLoading) {
-    return (
-      <div className="fixed inset-0 z-[9999] bg-white flex items-center justify-center" style={{ zIndex: 99999 }}>
-        <div className="flex flex-col items-center">
-          <img
-            src="/fondo1.png"
-            alt="Cargando"
-            className="w-32 h-32 object-contain animate-pulse"
-            style={{ maxWidth: "128px", maxHeight: "128px" }}
-          />
-        </div>
-      </div>
-    )
-  }
 
-  // Si no está montado, no renderizamos nada o un placeholder simple
+  // Si no está montado, mostrar skeleton
   if (!mounted) {
     return (
       <nav className="bg-background/95 backdrop-blur-md border-b sticky top-0 z-[180]">
@@ -233,10 +201,10 @@ export default function Navbar({ user }: NavbarProps) {
           {/* Logo */}
           <div className="w-1/2 lg:w-1/4">
             <Link href="/" aria-label="Ir a la página de inicio" className="flex items-center">
-              {loading ? (
+              {isLoadingShopSettings ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : shopLogo ? (
-                <img src={shopLogo || "/placeholder.svg"} alt={shopName} className="h-10 lg:h-12 w-auto mr-2" />
+              ) : shopData.logo ? (
+                <img src={shopData.logo} alt={shopData.name} className="h-10 lg:h-12 w-auto mr-2" />
               ) : (
                 <Store className="h-5 w-5 mr-2" />
               )}
@@ -398,7 +366,7 @@ export default function Navbar({ user }: NavbarProps) {
                     <div className="mt-auto pt-3 border-t">
                       <p className="font-medium text-base mb-3 flex justify-between">
                         <span>Total:</span>
-                        <span>{formatCurrency(totalPrice, defaultCurrency?.code || "USD")}</span>
+                        <span>{formatCurrency(totalPrice, shopData.defaultCurrency?.code || "USD")}</span>
                       </p>
                       <div className="flex gap-2">
                         <SheetClose asChild>
