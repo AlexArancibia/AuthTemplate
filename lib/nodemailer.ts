@@ -61,7 +61,6 @@ export const sendEmailToClient = async ({
     }
 
     const result = await transporter.sendMail(mailOptions)
-    console.log("Email enviado al cliente:", result.messageId)
     return { success: true, messageId: result.messageId }
   } catch (error) {
     console.error("Error enviando email al cliente:", error)
@@ -92,7 +91,6 @@ export const sendEmailToAdmin = async ({
     }
 
     const result = await transporter.sendMail(mailOptions)
-    console.log("Email enviado al administrador:", result.messageId)
     return { success: true, messageId: result.messageId }
   } catch (error) {
     console.error("Error enviando email al administrador:", error)
@@ -105,7 +103,6 @@ export const verifyEmailConfig = async () => {
   try {
     const transporter = createTransporter()
     await transporter.verify()
-    console.log("Configuración de correo verificada correctamente")
     return true
   } catch (error) {
     console.error("Error en la configuración de correo:", error)

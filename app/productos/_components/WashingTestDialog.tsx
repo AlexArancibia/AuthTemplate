@@ -37,18 +37,6 @@ export function WashingTestDialog({ open, onOpenChange }: WashingTestDialogProps
     washingTestCard?.imageUrl ||
     "https://images.unsplash.com/photo-1517677208171-0bc6725a3e60?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
 
-  // Debug logging
-  useEffect(() => {
-    console.log("[WashingTestDialog] Card section found:", {
-      sectionId: washingTestSection?.id,
-      title: formTitle,
-      subtitle: formSubtitle,
-      cardTitle: imageQuoteTitle,
-      cardDescription: imageQuoteDescription,
-      imageUrl: imageUrl,
-    })
-  }, [washingTestSection, formTitle, formSubtitle, imageQuoteTitle, imageQuoteDescription, imageUrl])
-
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setIsLoading(true)
@@ -65,8 +53,6 @@ export function WashingTestDialog({ open, onOpenChange }: WashingTestDialogProps
         message: formData.get("message") as string,
         subject: formTitle, // Usar el título dinámico como subject
       }
-
-      console.log("[WashingTestDialog] Enviando formulario:", formValues)
 
       await sendContactForm(formValues)
 

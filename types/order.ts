@@ -4,54 +4,51 @@ import { Coupon } from "./coupon";
 import { PaymentProvider, PaymentTransaction } from "./payments";
 import { ShippingMethod } from "./shippingMethod";
 import { ProductVariant } from "./productVariant";
-import { OrderFinancialStatus, OrderFulfillmentStatus, ShippingStatus, PaymentStatus } from "./common";
+import { OrderFinancialStatus, OrderFulfillmentStatus, ShippingStatus, PaymentStatus, InvoiceType } from "./common";
 
 
+// Interfaces simplificadas eliminando campos innecesarios
 export interface CustomerInfo {
-  userId?: string;       // ID opcional para referencia
-  name?: string;         // Nombre completo del cliente
-  email?: string;        // Correo electrónico
-  phone?: string;        // Número de teléfono
-  company?: string;      // Empresa (opcional)
-  taxId?: string;        // NIF/CIF para facturación
-}
-export interface AddressInfo {
-  name?: string;         // Nombre del destinatario
-  address1?: string;     // Dirección principal
-  address2?: string;     // Dirección secundaria (opcional)
-  city?: string;         // Ciudad
-  state?: string;        // Provincia/Estado
-  postalCode?: string;   // Código postal
-  country?: string;      // País
-  phone?: string;        // Teléfono de contacto
+  userId?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
+  company?: string;
+  taxId?: string;
 }
 
-export interface Order {
+export interface AddressInfo {
+  name?: string;
+  address1?: string;
+  address2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+  phone?: string;
+}
+
+// Tipos base simplificados
+export interface BaseOrder {
   id: string;
-  storeId: string;
-  store?: Store;
+  temporalOrderId?: string;
   orderNumber: number;
-  customerInfo: Record<string, any>; // Json en schema
+  customerInfo: Record<string, any>;
   financialStatus?: OrderFinancialStatus | null;
   fulfillmentStatus?: OrderFulfillmentStatus | null;
   currencyId: string;
-  currency: Currency;
   totalPrice: number;
   subtotalPrice: number;
   totalTax: number;
   totalDiscounts: number;
   lineItems: OrderItem[];
-  shippingAddress?: Record<string, any> | null; // Json en schema
-  billingAddress?: Record<string, any> | null; // Json en schema
-  refunds: Refund[];
+  shippingAddress?: Record<string, any> | null;
+  billingAddress?: Record<string, any> | null;
   couponId?: string | null;
-  coupon?: Coupon | null;
   paymentProviderId?: string | null;
-  paymentProvider?: PaymentProvider | null;
   paymentStatus?: PaymentStatus | null;
-  paymentDetails?: Record<string, any> | null; // Json en schema
+  paymentDetails?: Record<string, any> | null;
   shippingMethodId?: string | null;
-  shippingMethod?: ShippingMethod | null;
   shippingStatus: ShippingStatus;
   trackingNumber?: string | null;
   trackingUrl?: string | null;
@@ -62,15 +59,28 @@ export interface Order {
   internalNotes?: string | null;
   source?: string | null;
   preferredDeliveryDate?: Date | null;
-  paymentTransactions?: PaymentTransaction[];
+  businessName?: string | null;
+  invoiceType?: InvoiceType | null;
+  ruc?: string | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// Order completo con relaciones
+export interface Order extends BaseOrder {
+  storeId: string;
+  store?: Store;
+  currency: Currency;
+  coupon?: Coupon | null;
+  paymentProvider?: PaymentProvider | null;
+  shippingMethod?: ShippingMethod | null;
+  refunds: Refund[];
+  paymentTransactions?: PaymentTransaction[];
 }
 
 export interface OrderItem {
   id: string;
   orderId: string;
-  order?: Order;
   variantId?: string | null;
   variant?: ProductVariant | null;
   title: string;
@@ -85,7 +95,6 @@ export interface OrderItem {
 export interface Refund {
   id: string;
   orderId: string;
-  order?: Order;
   amount: number;
   note?: string | null;
   restock: boolean;
@@ -98,9 +107,7 @@ export interface Refund {
 export interface RefundLineItem {
   id: string;
   refundId: string;
-  refund?: Refund;
   orderItemId: string;
-  orderItem?: OrderItem;
   quantity: number;
   amount: number;
   restocked: boolean;
@@ -116,63 +123,15 @@ export interface CreateOrderItemDto {
   totalDiscount?: number;
 }
 
-export interface CreateOrderDto {
-  orderNumber: number
-  storeId: string; // Requerido según schema
-  customerInfo: Record<string, any>;
-  financialStatus?: OrderFinancialStatus;
-  fulfillmentStatus?: OrderFulfillmentStatus;
-  currencyId: string;
-  totalPrice: number;
-  subtotalPrice: number;
-  totalTax: number;
-  totalDiscounts: number;
+// DTOs simplificados usando herencia
+export interface CreateOrderDto extends Omit<BaseOrder, 'id' | 'createdAt' | 'updatedAt' | 'lineItems'> {
   lineItems: CreateOrderItemDto[];
-  shippingAddress?: Record<string, any>;
-  billingAddress?: Record<string, any>;
-  couponId?: string;
-  paymentProviderId?: string;
-  paymentStatus?: PaymentStatus;
-  paymentDetails?: Record<string, any>;
-  shippingMethodId?: string;
-  shippingStatus?: ShippingStatus;
-  trackingNumber?: string;
-  trackingUrl?: string;
-  estimatedDeliveryDate?: Date;
-  customerNotes?: string;
-  internalNotes?: string;
-  source?: string;
-  preferredDeliveryDate?: Date;
 }
 
-export interface UpdateOrderDto {
-  orderNumber: number
-  customerInfo?: Record<string, any>;
-  financialStatus?: OrderFinancialStatus | null;
-  fulfillmentStatus?: OrderFulfillmentStatus | null;
-  totalPrice?: number;
-  subtotalPrice?: number;
-  totalTax?: number;
-  totalDiscounts?: number;
+export interface UpdateOrderDto extends Partial<Omit<BaseOrder, 'id' | 'createdAt' | 'updatedAt' | 'lineItems'>> {
   lineItems?: UpdateOrderItemDto[];
-  currencyId?: string;
-  shippingAddress?: Record<string, any> | null;
-  billingAddress?: Record<string, any> | null;
-  couponId?: string | null;
-  paymentProviderId?: string | null;
-  paymentStatus?: PaymentStatus | null;
-  paymentDetails?: Record<string, any> | null;
-  shippingMethodId?: string | null;
-  shippingStatus?: ShippingStatus;
-  trackingNumber?: string | null;
-  trackingUrl?: string | null;
-  estimatedDeliveryDate?: Date | null;
-  shippedAt?: Date | null;
-  deliveredAt?: Date | null;
-  customerNotes?: string | null;
-  internalNotes?: string | null;
-  source?: string | null;
-  preferredDeliveryDate?: Date | null;
+  addLineItems?: CreateOrderItemDto[];
+  removeLineItemIds?: string[];
 }
 
 export interface UpdateOrderItemDto {
@@ -194,4 +153,24 @@ export interface CreateRefundDto {
     amount: number;
     restocked: boolean;
   }>;
+}
+
+// Tipos simplificados para estadísticas
+export interface OrderStatistics {
+  totalOrders: number;
+  pendingOrders: number;
+  paidOrders: number;
+  fulfilledOrders: number;
+  cancelledOrders: number;
+  refundedOrders: number;
+  totalRevenue: number;
+  averageOrderValue: number;
+  recentOrders: Pick<Order, 'id' | 'orderNumber' | 'totalPrice' | 'financialStatus' | 'fulfillmentStatus' | 'createdAt' | 'currency' | 'lineItems'>[];
+}
+
+export interface OrderStatusUpdate {
+  financialStatus?: OrderFinancialStatus;
+  fulfillmentStatus?: OrderFulfillmentStatus;
+  paymentStatus?: PaymentStatus;
+  shippingStatus?: ShippingStatus;
 }

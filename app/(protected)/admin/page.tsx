@@ -4,9 +4,6 @@ import LogoutButton from "@/components/logout-button";
 const AdminPage = async () => {
   const session = await auth();
 
-  console.log(session);
-  
-
   if (session?.user?.role !== "admin") {
     return <div>You are not admin</div>;
   }

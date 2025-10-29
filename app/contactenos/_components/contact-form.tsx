@@ -89,17 +89,9 @@ export function ContactForm({ id = "cs_eebba224-680f", metadata }: ContactFormPr
   const { shopSettings, cardSections, loading, error } = useMainStore()
   const { sendContactForm } = useEmailStore()
 
-  console.log("[ContactForm] Store state:", {
-    cardSectionsCount: cardSections?.length || 0,
-    loading,
-    error,
-    targetId: id,
-  })
-
   // Filtrar secciones
   const getFilteredSections = (): CardSection[] => {
     if (!id && !metadata) {
-      console.log("[ContactForm] No id or metadata provided")
       return []
     }
 
@@ -107,17 +99,6 @@ export function ContactForm({ id = "cs_eebba224-680f", metadata }: ContactFormPr
 
     if (id) {
       const sectionById = cardSections.find((section) => section.id === id)
-      console.log("[ContactForm] Looking for section with id:", id)
-      console.log(
-        "[ContactForm] Found section:",
-        sectionById
-          ? {
-              id: sectionById.id,
-              title: sectionById.title,
-              isActive: sectionById.isActive,
-            }
-          : "NOT FOUND",
-      )
 
       if (sectionById && sectionById.isActive) {
         filteredSections = [sectionById]
@@ -128,7 +109,6 @@ export function ContactForm({ id = "cs_eebba224-680f", metadata }: ContactFormPr
       )
     }
 
-    console.log("[ContactForm] Filtered sections:", filteredSections.length)
     return filteredSections.sort((a, b) => a.position - b.position)
   }
 
@@ -257,12 +237,6 @@ export function ContactForm({ id = "cs_eebba224-680f", metadata }: ContactFormPr
 
   const contactInfoCard = activeCards.find((card) => card.title === "Información de Contacto")
   const messageCard = activeCards.find((card) => card.title === "Envíanos un mensaje")
-
-  console.log("[ContactForm] Active cards:", {
-    total: activeCards.length,
-    contactInfoCard: contactInfoCard?.id,
-    messageCard: messageCard?.id,
-  })
 
   return (
     <section

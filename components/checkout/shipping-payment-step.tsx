@@ -105,8 +105,6 @@ export function ShippingPaymentStep({
     } else {
       if(!(window as any).MercadoPago){
         initMercadoPago(publicKey, {locale: "es-PE"});
-      } else {
-        console.log("Ya se inicializo")
       }
       (async () => {
         setMpLoading(true);
@@ -141,10 +139,8 @@ export function ShippingPaymentStep({
       }),
     });
     const data = await res.json();
-    console.log("dataendpoint", data);
     
     if (data.success && data.preference_id) {
-      console.log("data: ", data)
       setMpPreferenceId(data.preference_id);
       // OpenMPCheckout()
     } else {
@@ -167,8 +163,6 @@ export function ShippingPaymentStep({
           label: "pagar",
         },
       });
-    } else {
-      console.log("No se ha inicializado")
     }
   }
 
@@ -358,12 +352,6 @@ export function ShippingPaymentStep({
               // TEMPORAL: Usar 100 como threshold por defecto mientras el backend no lo guarda
               // Convertir a número para asegurar que tenga el método .toFixed()
               const freeThreshold = Number(priceData?.freeShippingThreshold || 100)
-              
-              // DEBUG: Ver qué datos llegan
-              console.log('🔍 DEBUG Método:', method.name)
-              console.log('📦 priceData completo:', priceData)
-              console.log('💰 freeThreshold:', freeThreshold)
-              console.log('🛒 subtotal después de descuentos:', total)
               
               // Calcular si califica para envío gratis (usando subtotal después de descuentos)
               const qualifiesForFreeShipping = freeThreshold && total >= freeThreshold

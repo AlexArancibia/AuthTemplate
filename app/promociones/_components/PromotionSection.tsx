@@ -18,10 +18,8 @@ export function PromocionesSection() {
 
     const loadHeroSections = async () => {
       try {
-        console.log("[HeroSection] Cargando hero sections...")
         fetchAttempted.current = true
         await fetchHeroSections()
-        console.log("[HeroSection] Hero sections cargadas correctamente:", heroSections?.length || 0)
         setError(null)
       } catch (err) {
         console.error("[HeroSection] Error al cargar las secciones de héroe:", err)
@@ -44,8 +42,6 @@ export function PromocionesSection() {
         )
       })
     : []
-
-  console.log("[HeroSection] Secciones filtradas:", filteredSections.length)
 
   // Si está cargando, mostrar un skeleton
   if (loading) {
@@ -70,7 +66,6 @@ export function PromocionesSection() {
 
   // Si no hay secciones filtradas, no mostrar nada
   if (filteredSections.length === 0) {
-    console.log("[HeroSection] No hay secciones de héroe para mostrar")
     return null
   }
 

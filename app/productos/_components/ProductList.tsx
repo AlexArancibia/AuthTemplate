@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { useMainStore } from "@/stores/mainStore"
 import { ProductCard } from "@/components/ProductCard"
@@ -14,7 +14,7 @@ interface ProductListProps {
   initialSearchTerm?: string
   initialCategories?: string[]
   initialPage?: number
-  initialSortBy?: ProductSortBy | string // Allow string for backward compatibility
+  initialSortBy?: ProductSortBy | string
   initialMinPrice?: number
   initialMaxPrice?: number
   initialVariantFilters?: Record<string, string[]>
@@ -35,152 +35,105 @@ export default function ProductList({
   selectedCurrencyId,
   acceptedCurrencies,
 }: ProductListProps) {
+  
   const router = useRouter()
   const pathname = usePathname()
-  const { products, paginationMeta, fetchProducts, loading } = useMainStore()
-  const productListRef = useRef<HTMLDivElement>(null)
-  const [currentPage, setCurrentPage] = useState(initialPage)
-  
-  // Track previous filter values to detect actual changes
-  const prevFiltersRef = useRef({
-    searchTerm: initialSearchTerm,
-    categories: initialCategories,
-    sortBy: initialSortBy,
-    minPrice: initialMinPrice,
-    maxPrice: initialMaxPrice
-  })
+  const { products, paginationMeta, fetchProducts } = useMainStore()
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Sync currentPage with initialPage when it changes (e.g., from URL)
-  useEffect(() => {
-    setCurrentPage(initialPage)
-  }, [initialPage])
-
-  // Reset to page 1 ONLY when filters actually change (not just when page changes)
-  useEffect(() => {
-    const filtersChanged = 
-      prevFiltersRef.current.searchTerm !== initialSearchTerm ||
-      JSON.stringify(prevFiltersRef.current.categories) !== JSON.stringify(initialCategories) ||
-      prevFiltersRef.current.sortBy !== initialSortBy ||
-      prevFiltersRef.current.minPrice !== initialMinPrice ||
-      prevFiltersRef.current.maxPrice !== initialMaxPrice
-    
-    if (filtersChanged) {
-      // Update the ref with new values
-      prevFiltersRef.current = {
-        searchTerm: initialSearchTerm,
-        categories: initialCategories,
-        sortBy: initialSortBy,
-        minPrice: initialMinPrice,
-        maxPrice: initialMaxPrice
-      }
-      
-      // Reset to page 1 and scroll to products
-      if (currentPage !== 1) {
-        setCurrentPage(1)
-        // Also update URL to reflect page 1
-        const searchParams = new URLSearchParams(window.location.search)
-        searchParams.set("page", "1")
-        router.push(`${pathname}?${searchParams.toString()}`, { scroll: false })
-      }
-      
-      // Scroll to the top of the product list, accounting for sticky header
-      if (productListRef.current) {
-        const headerHeight = 90 // h-18 from navbar (4.5rem = 72px) + extra spacing
-        const elementPosition = productListRef.current.getBoundingClientRect().top
-        const offsetPosition = elementPosition + window.scrollY - headerHeight
-
-        window.scrollTo({
-          top: offsetPosition,
-          behavior: "smooth"
-        })
-      }
+  // Memoize search parameters
+  const searchParams = useMemo((): SearchProductParams => {
+    const params: SearchProductParams = {
+      page: initialPage,
+      limit: 9,
+      status: ['ACTIVE'],
+      sortBy: (initialSortBy !== 'featured' ? initialSortBy : 'createdAt') as ProductSortBy,
     }
-  }, [initialSearchTerm, initialCategories, initialSortBy, initialMinPrice, initialMaxPrice, currentPage, pathname, router])
+    
+    if (initialSearchTerm) params.query = initialSearchTerm
+    if (initialCategories.length > 0) params.categorySlugs = initialCategories
+    if (initialMinPrice !== undefined && initialMinPrice > 0) params.minPrice = initialMinPrice
+    if (initialMaxPrice !== undefined) params.maxPrice = initialMaxPrice
+    if ((initialMinPrice !== undefined && initialMinPrice > 0) || initialMaxPrice !== undefined) {
+      params.currencyId = selectedCurrencyId
+    }
+    
+    return params
+  }, [initialPage, initialSearchTerm, initialCategories, initialSortBy, initialMinPrice, initialMaxPrice, selectedCurrencyId])
 
-  // Fetch products when parameters change
+  // Page change handler
+  const handlePageChange = (newPage: number) => {
+    const urlParams = new URLSearchParams(window.location.search)
+    urlParams.set("page", newPage.toString())
+    router.push(`${pathname}?${urlParams.toString()}`, { scroll: false })
+  }
+
+  // Reset to page 1 when filters change (excluding page)
+  const prevFiltersRef = useRef<string>("")
+  
+  useEffect(() => {
+    const filtersKey = `${initialSearchTerm}-${initialCategories.join(",")}-${initialSortBy}-${initialMinPrice}-${initialMaxPrice}`
+    
+    if (prevFiltersRef.current && prevFiltersRef.current !== filtersKey && initialPage !== 1) {
+      const urlParams = new URLSearchParams(window.location.search)
+      urlParams.set("page", "1")
+      router.push(`${pathname}?${urlParams.toString()}`, { scroll: false })
+    }
+    
+    prevFiltersRef.current = filtersKey
+  }, [initialSearchTerm, initialCategories, initialSortBy, initialMinPrice, initialMaxPrice, initialPage, pathname, router])
+
+  // Fetch products
   useEffect(() => {
     const fetchData = async () => {
+      setIsLoading(true)
       try {
-        const validSortBy: ProductSortBy = (initialSortBy && initialSortBy !== 'featured' ? initialSortBy : 'createdAt') as ProductSortBy
-        
-        // Determinar el precio mínimo: usar 1 como default solo si no hay filtro de precio del usuario
-        const effectiveMinPrice = initialMinPrice !== undefined ? initialMinPrice : 1
-        
-        const params: SearchProductParams = {
-          page: currentPage,
-          limit: 9,
-          query: initialSearchTerm || undefined,
-          minPrice: effectiveMinPrice,
-          maxPrice: initialMaxPrice,
-          currencyId: selectedCurrencyId,
-          sortBy: validSortBy,
-          status: ['ACTIVE'], // Solo productos activos
-        }
-
-        if (initialCategories && initialCategories.length > 0) {
-          params.categorySlugs = initialCategories
-        }
-
-        await fetchProducts(params)
+        await fetchProducts(searchParams)
       } catch (error) {
         console.error("Error fetching products:", error)
+      } finally {
+        setIsLoading(false)
       }
     }
 
     fetchData()
-  }, [
-    currentPage,
-    initialSearchTerm,
-    initialCategories,
-    initialSortBy,
-    initialMinPrice,
-    initialMaxPrice,
-    selectedCurrencyId,
-    fetchProducts,
-  ])
+  }, [searchParams, fetchProducts])
 
-  // Handle page change
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage)
+  // Memoize pagination metadata
+  const meta = paginationMeta.products
 
-    // Update URL with new page number
-    const searchParams = new URLSearchParams(window.location.search)
-    searchParams.set("page", newPage.toString())
-    router.push(`${pathname}?${searchParams.toString()}`, { scroll: false })
+  // Memoize loading skeleton
+  const loadingSkeleton = useMemo(() => 
+    Array.from({ length: 9 }, (_, i) => (
+      <div key={i} className="space-y-4 animate-pulse">
+        <div className="bg-gray-200 h-[300px] w-full rounded-lg" />
+        <div className="bg-gray-200 h-4 w-2/3 rounded" />
+        <div className="bg-gray-200 h-4 w-1/2 rounded" />
+        <div className="bg-gray-200 h-8 w-full rounded" />
+      </div>
+    ))
+  , [])
 
-    // Scroll to the top of the product list container, accounting for sticky header
-    if (productListRef.current) {
-      const headerHeight = 90 // h-18 from navbar (4.5rem = 72px) + extra spacing
-      const elementPosition = productListRef.current.getBoundingClientRect().top
-      const offsetPosition = elementPosition + window.scrollY - headerHeight
+  // Memoize empty state
+  const emptyState = useMemo(() => (
+    <div className="text-center py-16">
+      <h3 className="text-2xl font-semibold text-gray-700 mb-2">No se encontraron productos</h3>
+      <p className="text-gray-500">Intenta ajustar tus filtros de búsqueda</p>
+    </div>
+  ), [])
 
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: "smooth"
-      })
-    }
-  }
-
-  // Loading state
-  if (loading && products.length === 0) {
+  // Early returns for loading and empty states
+  if (isLoading && products.length === 0) {
     return <ProductListSkeleton />
   }
 
-  // No products found
-  if (!loading && products.length === 0) {
-    return (
-      <div className="text-center py-16">
-        <h3 className="text-2xl font-semibold text-gray-700 mb-2">No se encontraron productos</h3>
-        <p className="text-gray-500">Intenta ajustar tus filtros de búsqueda</p>
-      </div>
-    )
+  if (!isLoading && products.length === 0) {
+    return emptyState
   }
 
-  const meta = paginationMeta.products
-
   return (
-    <div ref={productListRef} data-product-list className="space-y-8">
-      {/* Product Header with count and sort */}
+    <div data-product-list className="space-y-8">
+      {/* Header */}
       {meta && (
         <ProductHeader
           currentItems={products.length}
@@ -190,31 +143,19 @@ export default function ProductList({
         />
       )}
       
-      {/* Products Grid - 3 columns on desktop, 1 column on mobile */}
-      {loading && products.length > 0 ? (
-        // Skeleton loading state for pagination
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[...Array(9)].map((_, index) => (
-            <div key={index} className="space-y-4 animate-pulse">
-              <div className="bg-gray-200 h-[300px] w-full rounded-lg" />
-              <div className="bg-gray-200 h-4 w-2/3 rounded" />
-              <div className="bg-gray-200 h-4 w-1/2 rounded" />
-              <div className="bg-gray-200 h-8 w-full rounded" />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {products.map((product) => (
+      {/* Products Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {isLoading && products.length > 0 ? loadingSkeleton : (
+          products.map((product) => (
             <ProductCard
               key={product.id}
               product={product}
               selectedCurrencyId={selectedCurrencyId}
               acceptedCurrencies={acceptedCurrencies}
             />
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
 
       {/* Pagination */}
       {meta && meta.totalPages > 1 && (

@@ -20,10 +20,8 @@ export function QuienesSomosHero() {
 
     const loadHeroSections = async () => {
       try {
-        console.log("[HeroSection] Cargando hero sections...")
         fetchAttempted.current = true
         await fetchHeroSections()
-        console.log("[HeroSection] Hero sections cargadas correctamente:", heroSections?.length || 0)
         setError(null)
       } catch (err) {
         console.error("[HeroSection] Error al cargar las secciones de héroe:", err)
@@ -36,12 +34,6 @@ export function QuienesSomosHero() {
 
   // Buscar la sección específica
   const heroSection = heroSections?.find((section) => section.isActive && section.metadata?.section === "quienes-somos")
-
-  // Debug: Log para verificar qué está pasando
-  useEffect(() => {
-    console.log("Hero Sections:", heroSections)
-    console.log("Found Hero Section:", heroSection)
-  }, [heroSections, heroSection])
 
   if (loading) {
     return (
@@ -103,10 +95,6 @@ export function QuienesSomosHero() {
   const mobileYoutubeId = mobileBackgroundVideo ? getYouTubeId(mobileBackgroundVideo) : null
   const hasVideo = Boolean(youtubeId)
 
-  console.log("Background Video:", backgroundVideo)
-  console.log("YouTube ID:", youtubeId)
-  console.log("Has Video:", hasVideo)
-
   // Determinar imagen de fondo a usar
   const bgImage = mobileBackgroundImage || backgroundImage
 
@@ -158,11 +146,9 @@ export function QuienesSomosHero() {
                 height: "56.25vw", // 16:9 aspect ratio
               }}
               onLoad={() => {
-                console.log("Video loaded successfully")
                 setIsVideoReady(true)
               }}
               onError={() => {
-                console.log("Video failed to load")
                 setHasVideoError(true)
               }}
               frameBorder="0"

@@ -1,10 +1,9 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
+import { Suspense, useMemo } from "react"
 import { motion } from "framer-motion"
 import { useSearchParams } from "next/navigation"
 import { useCurrencyStore } from "@/stores/currency"
-import ProductListSkeleton from "./_components/ProductListSkeleton"
 import ProductList from "./_components/ProductList"
 import ProductFilterSidebar from "./_components/ProductFilterSidebar"
 import MobileFilterButton from "./_components/MobileFilterButton"
@@ -20,37 +19,18 @@ import {
 
 function ProductsContent() {
   const searchParams = useSearchParams()
-  const [isClient, setIsClient] = useState(false)
   const { selectedCurrencyId, acceptedCurrencies } = useCurrencyStore()
-
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
-
-  if (!isClient) {
-    return (
-      <main className="min-h-screen bg-white">
-        <div className="container-section py-16 md:py-16 bg-[url('/fondoproduct.jpg')] bg-cover">
-          <div className="content-section text-center">
-            <h2 className="text-white mb-2">Nuestros Productos</h2>
-            <p className="text-white/90 text-lg">Descubre nuestra línea completa de productos de limpieza industrial</p>
-          </div>
-        </div>
-        <div className="container-section py-4 md:py-4">
-          <div className="content-section">
-            <ProductListSkeleton />
-          </div>
-        </div>
-      </main>
-    )
-  }
 
   // Extract filter parameters from URL
   const searchTerm = searchParams.get("search") || ""
   const categoryParam = searchParams.get("category")
-  const categories = categoryParam ? categoryParam.split(",") : []
+  
+  // Memoize categories to prevent unnecessary re-renders
+  const categories = useMemo(() => {
+    return categoryParam ? categoryParam.split(",") : []
+  }, [categoryParam])
+  
   const page = Number.parseInt(searchParams.get("page") || "1", 10)
-  // Valid sortBy values: createdAt, updatedAt, title, price, viewCount
   const sortBy = searchParams.get("sort") || "createdAt"
 
   // Extract price range
@@ -59,8 +39,6 @@ function ProductsContent() {
 
   // Extract variant filters (format: variant_attribute=value1,value2)
   const variantFilters: Record<string, string[]> = {}
-
-  // Process all search params to find variant filters
   searchParams.forEach((value, key) => {
     if (key.startsWith("variant_")) {
       const attributeName = key.replace("variant_", "")
@@ -102,7 +80,7 @@ function ProductsContent() {
         <div className="absolute inset-0 z-0 bg-gradient-to-t from-black/100 via-black/40 to-black/30"></div>
 
         <div className="relative z-10 w-full max-w-[1600px] mx-auto flex flex-col items-center gap-6">
-          <h1 className="font-druk text-4xl sm:text-5xl font-bold text-white text-center mb-6">
+          <h1 className="font-druk text-4xl sm:text-5xl font-bold text-gray-800 text-center mb-6">
             Descubre Nuestras
             <br className="hidden sm:inline" />
             Ofertas
@@ -174,21 +152,7 @@ function ProductsContent() {
 
 export default function ProductsPage() {
   return (
-    <Suspense fallback={
-      <main className="min-h-screen bg-white">
-        <div className="container-section py-16 md:py-16 bg-[url('/fondoproduct.jpg')] bg-cover">
-          <div className="content-section text-center">
-            <h2 className="text-white mb-2">Nuestros Productos</h2>
-            <p className="text-white/90 text-lg">Descubre nuestra línea completa de productos de limpieza industrial</p>
-          </div>
-        </div>
-        <div className="container-section py-0 md:py-0">
-          <div className="content-section">
-            <ProductListSkeleton />
-          </div>
-        </div>
-      </main>
-    }>
+    <Suspense fallback={null}>
       <ProductsContent />
     </Suspense>
   )

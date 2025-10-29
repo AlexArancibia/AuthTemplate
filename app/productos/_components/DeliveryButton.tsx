@@ -43,17 +43,9 @@ export function DeliveryButton({ id = "cs_89a37ac3-d83c", metadata }: DeliveryBu
   const { cardSections, loading, error } = useMainStore()
   const [open, setOpen] = useState(false)
 
-  console.log("[DeliveryButton] Store state:", {
-    cardSectionsCount: cardSections?.length || 0,
-    loading,
-    error,
-    targetId: id,
-  })
-
   // Filtrar secciones
   const getFilteredSections = (): CardSection[] => {
     if (!id && !metadata) {
-      console.log("[DeliveryButton] No id or metadata provided")
       return []
     }
 
@@ -61,17 +53,6 @@ export function DeliveryButton({ id = "cs_89a37ac3-d83c", metadata }: DeliveryBu
 
     if (id) {
       const sectionById = cardSections.find((section) => section.id === id)
-      console.log("[DeliveryButton] Looking for section with id:", id)
-      console.log(
-        "[DeliveryButton] Found section:",
-        sectionById
-          ? {
-              id: sectionById.id,
-              title: sectionById.title,
-              isActive: sectionById.isActive,
-            }
-          : "NOT FOUND",
-      )
 
       if (sectionById && sectionById.isActive) {
         filteredSections = [sectionById]
@@ -82,7 +63,6 @@ export function DeliveryButton({ id = "cs_89a37ac3-d83c", metadata }: DeliveryBu
       )
     }
 
-    console.log("[DeliveryButton] Filtered sections:", filteredSections.length)
     return filteredSections.sort((a, b) => a.position - b.position)
   }
 
@@ -91,12 +71,10 @@ export function DeliveryButton({ id = "cs_89a37ac3-d83c", metadata }: DeliveryBu
 
   // Retornar null si no hay datos
   if (!id && !metadata) {
-    console.log("[DeliveryButton] Returning null - no id or metadata")
     return null
   }
 
   if (loading) {
-    console.log("[DeliveryButton] Returning loading state")
     return (
       <motion.div
         className="relative w-full rounded-2xl p-[2px] overflow-hidden"
@@ -123,7 +101,6 @@ export function DeliveryButton({ id = "cs_89a37ac3-d83c", metadata }: DeliveryBu
   }
 
   if (error) {
-    console.log("[DeliveryButton] Returning error state")
     return (
       <motion.div
         className="relative w-full rounded-2xl p-[2px] overflow-hidden"
@@ -150,7 +127,6 @@ export function DeliveryButton({ id = "cs_89a37ac3-d83c", metadata }: DeliveryBu
   }
 
   if (!deliverySection) {
-    console.log("[DeliveryButton] Returning null - no delivery section found")
     return null
   }
 
@@ -161,15 +137,8 @@ export function DeliveryButton({ id = "cs_89a37ac3-d83c", metadata }: DeliveryBu
   const firstCard = activeCards[0]
 
   if (!firstCard) {
-    console.log("[DeliveryButton] No active cards found")
     return null
   }
-
-  console.log("[DeliveryButton] Active card:", {
-    id: firstCard.id,
-    title: firstCard.title,
-    imageUrl: firstCard.imageUrl,
-  })
 
   return (
     <>

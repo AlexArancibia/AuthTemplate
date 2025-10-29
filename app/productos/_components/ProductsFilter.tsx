@@ -41,6 +41,19 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
   const searchParams = useSearchParams()
   const { categories, products, shopSettings } = useMainStore()
 
+  // Función optimizada para obtener valores por defecto según la moneda
+  const getDefaultPriceRange = useCallback((currencyId: string) => {
+    const currency = acceptedCurrencies.find(c => c.id === currencyId) || 
+                   shopSettings?.[0]?.defaultCurrency
+    
+    // Valores por defecto según código de moneda
+    switch (currency?.code) {
+      case 'USD': return { min: 0, max: 500 }
+      case 'PEN': return { min: 0, max: 2000 }
+      default: return { min: 0, max: 1000 }
+    }
+  }, [shopSettings, acceptedCurrencies])
+
   // Usar refs para evitar comparaciones innecesarias - con valores iniciales correctos
   const lastFiltersRef = useRef<string>("")
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -68,24 +81,8 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
     setSelectedBrand((prev) => (prev === brand ? null : brand))
   }, [])
 
-const filteredProducts = products
-  .filter((product) => product.status !== "DRAFT")
-  .filter((product) => {
-    const matchesSearch =
-      !searchTerm ||
-      product.title.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesBrand =
-      !selectedBrand ||
-      product.vendor?.toLowerCase() === selectedBrand.toLowerCase();
-
-    const price = Number(product.variants?.[0]?.prices?.[0]?.price) || 0;
-
-    const inPriceRange =
-      price >= priceRange[0] && price <= priceRange[1];
-
-    return matchesSearch && matchesBrand && inPriceRange;
-  });
+// El filtrado de productos ahora se maneja completamente en el backend
+// Los productos ya vienen filtrados desde la API según los parámetros enviados
 
 
   const defaultCurrency = useMemo(() => {
@@ -97,8 +94,6 @@ const filteredProducts = products
 
   // Debounce search term
   useEffect(() => {
-    console.log("currencies aceptados: ", defaultCurrency)
-    console.log("Productos cargados:", products)
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm)
     }, 300)
@@ -318,7 +313,8 @@ const filteredProducts = products
     setSearchTerm("")
     setSelectedCategories([])
     setSelectedVariants({})
-    setPriceRange([minPrice, maxPrice])
+    const defaultRange = getDefaultPriceRange(selectedCurrencyId)
+    setPriceRange([defaultRange.min, defaultRange.max])
     setSelectedBrand(null)
 
     // Limpiar la referencia
@@ -329,14 +325,14 @@ const filteredProducts = products
       searchTerm: "",
       categories: [],
       variants: {},
-      priceRange: [minPrice, maxPrice] as [number, number],
+      priceRange: [defaultRange.min, defaultRange.max] as [number, number],
       brand: null,
     }
     onFilterChange(resetFiltersData)
 
     // Actualizar URL
     router.replace(pathname, { scroll: false })
-  }, [minPrice, maxPrice, pathname, router, onFilterChange])
+  }, [selectedCurrencyId, getDefaultPriceRange, pathname, router, onFilterChange])
 
   return (
     <div className="w-72 bg-white space-y-6">

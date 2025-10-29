@@ -12,11 +12,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ use
     }
 
     const { userId } = await params
-    console.log(`Creating address for user ID: ${userId}`)
 
     // Obtener los datos para crear la dirección
     const data = await request.json()
-    console.log("Address data:", data)
 
     // Verificar que el usuario existe
     const user = await db.user.findUnique({
@@ -25,7 +23,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ use
     })
 
     if (!user) {
-      console.log(`User with ID ${userId} not found`)
       return NextResponse.json({ message: "Usuario no encontrado" }, { status: 404 })
     }
 
@@ -37,11 +34,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ use
       )
     }
 
-    console.log(`User found: ${user.email}`)
-
     // Si la dirección es predeterminada, actualizar otras direcciones del mismo tipo
     if (data.isDefault) {
-      console.log(`Setting other addresses of type ${data.addressType} to non-default`)
       await db.address.updateMany({
         where: {
           userId,
@@ -55,7 +49,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ use
     }
 
     // Crear la nueva dirección
-    console.log("Creating new address in database")
     const newAddress = await db.address.create({
       data: {
         ...data,
@@ -63,7 +56,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ use
       },
     })
 
-    console.log(`Address created successfully with ID: ${newAddress.id}`)
     return NextResponse.json(newAddress)
   } catch (error: any) {
     console.error("Error creating address:", error)

@@ -49,8 +49,6 @@ export default function Navbar() {
     fetchCoupons,
     fetchCardSections,
     shopSettings,
-    loading,
-    error,
     categories,
   } = useMainStore()
 const { 
@@ -68,6 +66,7 @@ const {
   const [showInitialLoading, setShowInitialLoading] = useState(true)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [mobileTiendaOpen, setMobileTiendaOpen] = useState(false)
+  const [isNavbarLoading, setIsNavbarLoading] = useState(true)
 
   const sortedCategories = useMemo(() => {
     if (!categories) return []
@@ -112,8 +111,6 @@ const {
 
   const activeCurrency = acceptedCurrencies.find(c => c.id === selectedCurrencyId)
 
-  const hasFetched = useRef(false)
-
   useEffect(() => {
     setMounted(true)
   }, [])
@@ -122,22 +119,19 @@ const {
     const timer = setTimeout(() => {
       setShowInitialLoading(false)
     }, 1000)
-
     return () => clearTimeout(timer)
   }, [])
 
+  // Cargar datos iniciales del navbar una sola vez
   useEffect(() => {
-    console.log("[NAVBAR] useEffect for fetching data triggered")
+    // Si ya hay datos cargados, no hacer fetch
+    if (shopSettings.length > 0 && categories.length > 0) {
+      setIsNavbarLoading(false)
+      return
+    }
 
     const loadData = async () => {
-      if (hasFetched.current || loading) {
-        console.log("[NAVBAR] Data already fetched or loading, skipping")
-        return
-      }
-
-      console.log("[NAVBAR] Fetching all required data")
-      hasFetched.current = true
-
+      setIsNavbarLoading(true)
       try {
         await Promise.all([
           fetchShopSettings(),
@@ -149,32 +143,21 @@ const {
           fetchCoupons({ limit: 100 }),
           fetchPaymentProviders(),
         ])
-
-        console.log("[NAVBAR] All data loaded successfully")
       } catch (err) {
         console.error("[NAVBAR] Error fetching data:", err)
         toast.error("Error de conexión", {
           description: "No se pudieron cargar los datos de la tienda",
         })
+      } finally {
+        setIsNavbarLoading(false)
       }
     }
 
     loadData()
-  }, [
-    fetchShopSettings,
-    fetchShippingMethods,
-    fetchCategories,
-    fetchCollections,
-    fetchContents,
-    fetchCardSections,
-    fetchCoupons,
-    fetchPaymentProviders,
-    loading,
-  ])
+  }, [shopSettings.length, categories.length, fetchShopSettings, fetchShippingMethods, fetchCategories, fetchCollections, fetchContents, fetchCardSections, fetchCoupons, fetchPaymentProviders])
 
   const handleSignOut = async () => {
     try {
-      console.log("[NAVBAR] Signing out user")
       toast.success("Sesión cerrada", {
         description: "Has cerrado sesión correctamente",
       })
@@ -209,12 +192,9 @@ const {
     const trimmedSearch = searchTerm.trim()
     
     if (trimmedSearch && trimmedSearch.length >= 2) {
-      console.log("Buscando:", trimmedSearch)
       setSearchTerm("")
       setMobileMenuOpen(false)
       window.location.href = `/productos?search=${encodeURIComponent(trimmedSearch)}`
-    } else if (trimmedSearch.length > 0 && trimmedSearch.length < 2) {
-      console.log("Búsqueda muy corta - mínimo 2 caracteres")
     }
   }
 
@@ -258,7 +238,7 @@ const {
           {/* Header superior: Logo, buscador (desktop) e íconos */}
           <div className="content-section flex h-16 items-center justify-between">
              <Link href="/" className="logo-container">
-              {loading ? (
+              {isNavbarLoading ? (
                  <Loader2 className="h-8 w-8 animate-spin" />
                ) : (
                  <img 

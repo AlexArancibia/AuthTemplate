@@ -115,15 +115,12 @@ export const useUserStore = create<UserStore>((set, get) => ({
     // Verificar si ya tenemos el usuario en caché y es el mismo email
     const { currentUser } = get()
     if (currentUser && currentUser.email === email) {
-      console.log(`[USER_STORE] Using cached user data for email: ${email}`)
       return currentUser
     }
 
     set({ loading: true, error: null })
 
     try {
-      console.log(`[USER_STORE] Fetching user data for email: ${email}`)
-
       // Llamada a la API en lugar de consulta directa a Prisma
       const response = await fetch(`/api/users/by-email/${encodeURIComponent(email)}`)
 
@@ -135,12 +132,9 @@ export const useUserStore = create<UserStore>((set, get) => ({
       const user = await response.json()
 
       if (!user) {
-        console.log(`[USER_STORE] User not found with email: ${email}`)
         set({ loading: false, error: "Usuario no encontrado" })
         return null
       }
-
-      console.log(`[USER_STORE] User data fetched successfully for: ${user.name || user.email}`)
 
       // Actualizar el estado con el usuario obtenido
       set({
@@ -165,8 +159,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
     set({ loading: true, error: null })
 
     try {
-      console.log(`[USER_STORE] Updating user data for email: ${email}`, data)
-
       // Llamada a la API en lugar de actualización directa en Prisma
       const response = await fetch(`/api/users/by-email/${encodeURIComponent(email)}`, {
         method: "PATCH",
@@ -182,8 +174,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
       }
 
       const updatedUser = await response.json()
-
-      console.log(`[USER_STORE] User updated successfully: ${updatedUser.name || updatedUser.email}`)
 
       // Actualizar el estado con el usuario actualizado
       set({
@@ -214,7 +204,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
       error: null,
       addressError: null,
     })
-    console.log("[USER_STORE] User data cleared")
   },
 
   // MÉTODOS PARA GESTIÓN DE DIRECCIONES mediante API
@@ -224,8 +213,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
     set({ addressLoading: true, addressError: null })
 
     try {
-      console.log(`[USER_STORE] Creating new address for user ID: ${userId}`, data)
-
       // Llamada a la API en lugar de creación directa en Prisma
       const response = await fetch(`/api/users/${userId}/addresses`, {
         method: "POST",
@@ -241,8 +228,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
       }
 
       const newAddress = await response.json()
-
-      console.log(`[USER_STORE] Address created successfully with ID: ${newAddress.id}`)
 
       // Actualizar el estado del usuario con la nueva dirección
       const { currentUser } = get()
@@ -278,8 +263,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
     set({ addressLoading: true, addressError: null })
 
     try {
-      console.log(`[USER_STORE] Updating address with ID: ${addressId}`, data)
-
       // Llamada a la API en lugar de actualización directa en Prisma
       const response = await fetch(`/api/addresses/${addressId}`, {
         method: "PATCH",
@@ -295,8 +278,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
       }
 
       const updatedAddress = await response.json()
-
-      console.log(`[USER_STORE] Address updated successfully: ${updatedAddress.id}`)
 
       // Actualizar el estado del usuario con la dirección actualizada
       const { currentUser } = get()
@@ -334,8 +315,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
     set({ addressLoading: true, addressError: null })
 
     try {
-      console.log(`[USER_STORE] Deleting address with ID: ${addressId}`)
-
       // Llamada a la API en lugar de eliminación directa en Prisma
       const response = await fetch(`/api/addresses/${addressId}`, {
         method: "DELETE",
@@ -345,8 +324,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
         const errorData = await response.json()
         throw new Error(errorData.message || `Error al eliminar dirección: ${response.status}`)
       }
-
-      console.log(`[USER_STORE] Address deleted successfully: ${addressId}`)
 
       // Actualizar el estado del usuario eliminando la dirección
       const { currentUser } = get()
@@ -377,8 +354,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
     set({ addressLoading: true, addressError: null })
 
     try {
-      console.log(`[USER_STORE] Setting address ${addressId} as default`)
-
       // Llamada a la API en lugar de actualización directa en Prisma
       const response = await fetch(`/api/addresses/${addressId}/set-default`, {
         method: "POST",
@@ -390,8 +365,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
       }
 
       const updatedAddress = await response.json()
-
-      console.log(`[USER_STORE] Address set as default successfully: ${addressId}`)
 
       // Actualizar el estado del usuario con las direcciones actualizadas
       const { currentUser } = get()

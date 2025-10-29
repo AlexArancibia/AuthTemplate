@@ -31,11 +31,9 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
     const loadOrders = async () => {
       // Skip if already fetched or already loading
       if (hasFetched.current || ordersLoading) {
-        console.log("[USER_ORDERS] Orders already fetched or loading, skipping")
         return
       }
 
-      console.log("[USER_ORDERS] Fetching orders with pagination")
       hasFetched.current = true
 
       try {
@@ -47,7 +45,6 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
           sortBy: 'createdAt',
           sortOrder: 'desc'
         })
-        console.log("[USER_ORDERS] Orders loaded successfully")
       } catch (error) {
         console.error("[USER_ORDERS] Error fetching orders:", error)
         toast.error("Error al cargar los pedidos")
@@ -57,17 +54,8 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
     loadOrders()
   }, [fetchOrders, ordersLoading, userEmail, currentPage])
 
-  // Debug logs
-  console.log("[USER_ORDERS] orders type:", typeof orders)
-  console.log("[USER_ORDERS] orders value:", orders)
-  console.log("[USER_ORDERS] orders.data exists:", orders && "data" in orders)
-  console.log("[USER_ORDERS] userId:", userId)
-
   // Los orders ya vienen filtrados por el backend usando customerEmail
   const userOrders = Array.isArray(orders) ? orders : []
-  
-  console.log("[USER_ORDERS] User orders length:", userOrders.length)
-  console.log("[USER_ORDERS] Pagination meta:", paginationMeta.orders)
 
   const getStatusBadge = (order: any) => {
     // Financial status

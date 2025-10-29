@@ -73,7 +73,6 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
   // Precargar todas las imágenes de variantes cuando se carga el producto
   useEffect(() => {
     if (!product) return
-    console.log("estructura del product: ", product)
 
     const imagesToPreload: string[] = []
 
@@ -96,9 +95,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
       preloadImage(url).catch((err) => console.warn(`Failed to preload image: ${url}`, err)),
     )
 
-    Promise.allSettled(preloadPromises).then(() => {
-      console.log("All images preloaded")
-    })
+    Promise.allSettled(preloadPromises)
   }, [product])
 
   // Fetch del producto individual por slug
@@ -108,14 +105,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
       setError(null)
       
       try {
-        console.log(`[ProductDetails] Fetching product by slug: ${slug}`)
         const fetchedProduct = await getProductBySlug(slug)
-        
-        console.log("[ProductDetails] Product fetched successfully:", {
-          id: fetchedProduct.id,
-          title: fetchedProduct.title,
-          variantsCount: fetchedProduct.variants?.length || 0,
-        })
         
         setProduct(fetchedProduct)
         

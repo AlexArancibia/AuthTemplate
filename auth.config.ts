@@ -93,7 +93,6 @@ export default {
               throw new Error(result.error || "Error enviando email de verificación")
             }
 
-            console.log("Email de verificación enviado:", result.messageId)
           } catch (error) {
             // Log del error pero no fallar el proceso
             console.error("Error enviando email de verificación:", error)

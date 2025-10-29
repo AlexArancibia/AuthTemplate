@@ -88,14 +88,6 @@ export function FeaturedProductsSection({
     setLoadingProducts(prev => ({ ...prev, [categoryId]: true }))
 
     try {
-      console.log(`🔍 [FeaturedProductsSection] Fetching products for category: ${category.name} (${category.slug})`)
-      console.log(`🔍 [FeaturedProductsSection] Params:`, {
-        categorySlugs: [category.slug],
-        status: ['ACTIVE'],
-        limit: productsPerCategory,
-        sortBy: 'createdAt',
-        sortOrder: 'desc'
-      })
       const response = await fetchProducts({
         categorySlugs: [category.slug],
         status: ['ACTIVE'],
@@ -103,8 +95,6 @@ export function FeaturedProductsSection({
         sortBy: 'createdAt',
         sortOrder: 'desc'
       })
-      console.log(`✅ [FeaturedProductsSection] Successfully fetched ${response.data.length} products for category ${category.name}`)
-      console.log(`✅ [FeaturedProductsSection] Response:`, response)
 
       // Guardar en estado local (el mainStore ya maneja su propio cache)
       setProductsByCategory(prev => ({
@@ -154,10 +144,7 @@ export function FeaturedProductsSection({
     if (category) {
       // Verificar si ya tenemos los productos cargados para esta categoría
       if (!productsByCategory[category.id] || productsByCategory[category.id].length === 0) {
-        console.log(`🔄 [FeaturedProductsSection] Loading products for category: ${category.name} (not cached)`)
         loadProductsForCategory(category.id)
-      } else {
-        console.log(`✅ [FeaturedProductsSection] Using cached products for category: ${category.name}`)
       }
     }
     

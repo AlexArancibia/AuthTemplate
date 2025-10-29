@@ -99,6 +99,11 @@ export enum ContentType {
 }
 
 
+export enum InvoiceType {
+  FACTURA = 'FACTURA',
+  BOLETA = 'BOLETA'
+}
+
 export enum UserRole {
   ADMIN = 'ADMIN',
   MANAGER = 'MANAGER',

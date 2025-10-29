@@ -134,7 +134,6 @@ export const useCookieConsent = (): CookieConsentState => {
     }
     
     // También puedes inicializar otros servicios de analytics aquí
-    console.log('Google Analytics initialized');
   };
 
   const initializeMarketingServices = (): void => {
@@ -151,13 +150,10 @@ export const useCookieConsent = (): CookieConsentState => {
     if (typeof window !== 'undefined' && window.fbq) {
       window.fbq('consent', 'grant');
     }
-    
-    console.log('Marketing services initialized');
   };
 
   const initializePersonalizationServices = (): void => {
     // Inicializar servicios de personalización
-    console.log('Personalization services initialized');
   };
 
   const cleanupCookies = (): void => {

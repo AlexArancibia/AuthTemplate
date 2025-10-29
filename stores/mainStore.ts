@@ -5,7 +5,7 @@ import { extractApiData, extractPaginatedData } from "@/lib/apiHelpers"
 import type { Product } from "@/types/product"
 import type { Category } from "@/types/category"
 import type { Collection } from "@/types/collection"
-import type { Order } from "@/types/order"
+import type { Order, OrderStatistics, OrderStatusUpdate } from "@/types/order"
 import type { Coupon } from "@/types/coupon"
 import type { ShippingMethod } from "@/types/shippingMethod"
 import type { ShopSettings } from "@/types/store"
@@ -40,48 +40,37 @@ import type {
 // Obtener el storeId del entorno
 const STORE_ID = process.env.NEXT_PUBLIC_STORE_ID
 
-// Helper function para construir query params
+// Helpers optimizados
 const buildQueryParams = (params: any = {}) => {
-  console.log("🔧 [buildQueryParams] Input params:", params)
   const queryParams = new URLSearchParams()
   
   Object.entries(params).forEach(([key, value]) => {
-    // Validar que el valor no sea undefined, null, o string vacío/con solo espacios
-    const isValidValue = value !== undefined && 
-                        value !== null && 
-                        (typeof value !== 'string' || value.trim() !== '')
-    
-    if (isValidValue) {
-      // Manejar arrays
-      if (Array.isArray(value)) {
-        if (value.length > 0) {
-          // Para categorySlugs y collectionIds: usar formato de comas
-          if (['categorySlugs', 'collectionIds'].includes(key)) {
-            const joinedValue = value.join(',')
-            console.log(`🔧 [buildQueryParams] Adding array param (comma format): ${key} = ${joinedValue}`)
-            queryParams.append(key, joinedValue)
-          } else {
-            // Para status y otros arrays: enviar múltiples valores con el mismo nombre
-            value.forEach((item) => {
-              console.log(`🔧 [buildQueryParams] Adding array param (multiple values): ${key} = ${item}`)
-              queryParams.append(key, String(item))
-            })
-          }
+    if (value !== undefined && value !== null && (typeof value !== 'string' || value.trim() !== '')) {
+      if (Array.isArray(value) && value.length > 0) {
+        if (['categorySlugs', 'collectionIds'].includes(key)) {
+          queryParams.append(key, value.join(','))
+        } else {
+          value.forEach((item) => queryParams.append(key, String(item)))
         }
       } else {
-        // Para strings, usar trim() antes de agregar
-        const stringValue = typeof value === 'string' ? value.trim() : String(value)
-        console.log(`🔧 [buildQueryParams] Adding param: ${key} = ${stringValue}`)
-        queryParams.append(key, stringValue)
+        queryParams.append(key, typeof value === 'string' ? value.trim() : String(value))
       }
-    } else {
-      console.log(`🔧 [buildQueryParams] Skipping param: ${key} (value is undefined/null/empty)`)
     }
   })
   
-  const result = queryParams.toString()
-  console.log("🔧 [buildQueryParams] Final query string:", result)
-  return result
+  return queryParams.toString()
+}
+
+// Helper para endpoints de órdenes
+const createOrderEndpoint = (path: string, params?: Record<string, any>) => {
+  const queryString = params ? `?${buildQueryParams(params)}` : ''
+  return `/orders/${STORE_ID}${path}${queryString}`
+}
+
+// Helper para manejo de errores común
+const handleApiError = (error: any, operation: string) => {
+  console.error(`Failed to ${operation}:`, error)
+  throw error
 }
 
 // Definir la interfaz MainStore
@@ -173,7 +162,12 @@ interface MainStore {
   getProductById: (id: string) => Promise<Product>
   getProductBySlug: (slug: string) => Promise<Product>
   getCollectionById: (id: string) => Promise<Collection>
-  getOrderById: (id: string) => Promise<Order>
+  // Métodos adicionales para órdenes
+  getOrderByNumber: (orderNumber: number) => Promise<Order>
+  getOrderByTemporalId: (temporalOrderId: string) => Promise<Order>
+  getOrderStatistics: (startDate?: string, endDate?: string) => Promise<OrderStatistics>
+  updateOrderStatus: (id: string, statusData: OrderStatusUpdate) => Promise<Order>
+  deleteOrder: (id: string) => Promise<void>
   getCouponById: (id: string) => Promise<Coupon>
   getCurrencyById: (id: string) => Promise<Currency>
   getExchangeRateById: (id: string) => Promise<ExchangeRate>
@@ -258,61 +252,36 @@ export const useMainStore = create<MainStore>((set, get) => ({
   },
 
   // Método fetchProducts con paginación
-  // Endpoint: GET /products/store/:storeId
+  // Endpoint: GET /products/:storeId
   // Soporta filtros: query, categorySlugs, collectionIds, status, vendor, minPrice, maxPrice, currencyId
   // Paginación: page, limit, sortBy, sortOrder
   fetchProducts: async (params: SearchProductParams = {}, forceRefresh = false) => {
-    console.log("🚀 [MainStore fetchProducts] START - Params received:", params)
-    console.log("🔑 [MainStore fetchProducts] STORE_ID:", STORE_ID)
-    
     if (!STORE_ID) {
-      console.error("❌ [MainStore fetchProducts] No store ID provided in environment variables")
       throw new Error("No store ID provided in environment variables")
     }
 
-    console.log("⏳ [MainStore fetchProducts] Setting loading to true")
     set({ loading: true, error: null })
     
     try {
       const queryParams = buildQueryParams(params)
-      const url = `/products/store/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`
-      console.log("🌐 [MainStore fetchProducts] Full URL:", url)
-      console.log("🌐 [MainStore fetchProducts] Query params:", queryParams)
+      const url = `/products/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`
       
-      console.log("📡 [MainStore fetchProducts] Making API call...")
       const response = await apiClient.get<PaginatedResponse<Product>>(url)
       
-      console.log("✅ [MainStore fetchProducts] Response received!")
-      console.log("📦 [MainStore fetchProducts] Products count:", response.data?.data?.length || 0)
-      console.log("📦 [MainStore fetchProducts] Pagination:", response.data?.pagination)
-      
-      // Validar estructura de respuesta
+      // Validate response structure
       if (!response.data || !response.data.data) {
-        console.error("❌ [MainStore fetchProducts] Invalid response structure:", response.data)
         throw new Error("Invalid response structure from API")
       }
       
-      console.log("💾 [MainStore fetchProducts] Updating store state...")
       const { data, pagination } = extractPaginatedData<Product[]>(response)
-      const newState = {
+      set({
         products: data,
         paginationMeta: { ...get().paginationMeta, products: pagination || null },
         loading: false,
-      }
-      
-      set(newState)
-      
-      console.log("✅ [MainStore fetchProducts] Store updated successfully")
-      console.log("🔍 [MainStore fetchProducts] Products in store:", get().products.length)
+      })
       
       return { data, pagination }
     } catch (error: any) {
-      console.error("❌ [MainStore fetchProducts] Error caught!")
-      console.error("❌ [MainStore fetchProducts] Error details:", {
-        message: error.message,
-        status: error.response?.status,
-        data: error.response?.data,
-      })
       set({ error: "Failed to fetch products", loading: false })
       throw error
     }
@@ -327,7 +296,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
     set({ loading: true, error: null })
     try {
       const queryParams = buildQueryParams(params)
-      const response = await apiClient.get<PaginatedResponse<ProductVariant>>(`/product-variants/store/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
+      const response = await apiClient.get<PaginatedResponse<ProductVariant>>(`/products/${STORE_ID}/variants${queryParams ? `?${queryParams}` : ''}`)
       
       const { data, pagination } = extractPaginatedData<ProductVariant[]>(response)
       set({
@@ -419,7 +388,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<TeamSection[]>(`/team-section/store/${STORE_ID}`)
+      const response = await apiClient.get<TeamSection[]>(`/team-sections/${STORE_ID}`)
       const teamSections = extractApiData<TeamSection[]>(response)
       set({
         teamSections,
@@ -432,7 +401,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchTeamMembers
+  // Método fetchTeamMembers - Obtiene una sección específica con sus miembros
   fetchTeamMembers: async (teamSectionId: string) => {
     if (!STORE_ID) {
       throw new Error("No store ID provided in environment variables")
@@ -440,10 +409,10 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<TeamMember[]>(
-        `/team-members?teamSectionId=${teamSectionId}&storeId=${STORE_ID}`,
-      )
-      const teamMembers = extractApiData<TeamMember[]>(response)
+      const response = await apiClient.get<TeamSection>(`/team-sections/${STORE_ID}/${teamSectionId}`)
+      const teamSection = extractApiData<TeamSection>(response)
+      // Extraer los miembros de la sección
+      const teamMembers = teamSection.members || []
       set({
         teamMembers,
         loading: false,
@@ -455,29 +424,6 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchOrders con paginación
-  fetchOrders: async (params: SearchOrderParams = {}, forceRefresh = false) => {
-    if (!STORE_ID) {
-      throw new Error("No store ID provided in environment variables")
-    }
-
-    set({ loading: true, error: null })
-    try {
-      const queryParams = buildQueryParams(params)
-      const response = await apiClient.get<PaginatedResponse<Order>>(`/orders/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
-      
-      const { data, pagination } = extractPaginatedData<Order[]>(response)
-      set({
-        orders: data,
-        paginationMeta: { ...get().paginationMeta, orders: pagination },
-        loading: false,
-      })
-      return { data, pagination }
-    } catch (error) {
-      set({ error: "Failed to fetch orders", loading: false })
-      throw error
-    }
-  },
 
   // Método fetchCoupons con paginación
   fetchCoupons: async (params: SearchCouponParams = {}, forceRefresh = false) => {
@@ -538,7 +484,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.get<PaymentProvider[]>(`/payment-providers/store/${STORE_ID}`)
+      const response = await apiClient.get<PaymentProvider[]>(`/payment-providers/${STORE_ID}`)
       const paymentProviders = extractApiData<PaymentProvider[]>(response)
       set({
         paymentProviders,
@@ -560,7 +506,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
     set({ loading: true, error: null })
     try {
       const queryParams = buildQueryParams(params)
-      const response = await apiClient.get<PaginatedResponse<PaymentTransaction>>(`/payment-transactions/store/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
+      const response = await apiClient.get<PaginatedResponse<PaymentTransaction>>(`/payment-transactions/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
       
       const { data, pagination } = extractPaginatedData<PaymentTransaction[]>(response)
       set({
@@ -628,7 +574,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
         throw new Error("No store ID provided in environment variables")
       }
 
-      const response = await apiClient.get<ShopSettings>(`/shop-settings/store/${STORE_ID}`)
+      const response = await apiClient.get<ShopSettings>(`/shop-settings/${STORE_ID}`)
       const shopSettings = extractApiData<ShopSettings>(response)
       set({
         shopSettings: [shopSettings],
@@ -788,21 +734,32 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Mantener solo los métodos de creación y actualización para orders y refunds
-  createOrder: async (data: any) => {
+  // Métodos de órdenes optimizados
+  fetchOrders: async (params: SearchOrderParams = {}, forceRefresh = false) => {
+    if (!STORE_ID) throw new Error("No store ID provided in environment variables")
+    
     set({ loading: true, error: null })
     try {
-      if (!STORE_ID) {
-        throw new Error("No store ID provided in environment variables")
-      }
+      const response = await apiClient.get<PaginatedResponse<Order>>(createOrderEndpoint('', params))
+      const { data, pagination } = extractPaginatedData<Order[]>(response)
+      set({
+        orders: data,
+        paginationMeta: { ...get().paginationMeta, orders: pagination },
+        loading: false,
+      })
+      return { data, pagination }
+    } catch (error) {
+      set({ error: "Failed to fetch orders", loading: false })
+      return handleApiError(error, "fetch orders")
+    }
+  },
 
-      // Asegurarse de que el storeId esté incluido en los datos
-      const orderData = {
-        ...data,
-        storeId: STORE_ID,
-      }
-
-      const response = await apiClient.post<Order>(`/orders/${STORE_ID}` , orderData)
+  createOrder: async (data: any) => {
+    if (!STORE_ID) throw new Error("No store ID provided in environment variables")
+    
+    set({ loading: true, error: null })
+    try {
+      const response = await apiClient.post<Order>(createOrderEndpoint(''), data)
       const newOrder = extractApiData<Order>(response)
       set((state) => ({
         orders: [...state.orders, newOrder],
@@ -811,33 +768,25 @@ export const useMainStore = create<MainStore>((set, get) => ({
       return newOrder
     } catch (error) {
       set({ error: "Failed to create order", loading: false })
-      throw error
+      return handleApiError(error, "create order")
     }
   },
 
   updateOrder: async (id: string, data: any) => {
-    if (!STORE_ID) {
-      throw new Error("No store ID provided in environment variables")
-    }
+    if (!STORE_ID) throw new Error("No store ID provided in environment variables")
+    
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.put<Order>(`/orders/${STORE_ID}/${id}`, data)
+      const response = await apiClient.put<Order>(createOrderEndpoint(`/${id}`), data)
       const updatedOrder = extractApiData<Order>(response)
       set((state) => ({
         orders: state.orders.map((order) => (order.id === id ? { ...order, ...updatedOrder } : order)),
         loading: false,
       }))
       return updatedOrder
-    } catch (error: any) {
-      let errorMsg = "Failed to update order"
-      if (error.response) {
-        errorMsg += `: ${error.response.status} - ${JSON.stringify(error.response.data)}`
-      } else if (error.message) {
-        errorMsg += `: ${error.message}`
-      }
-      set({ error: errorMsg, loading: false })
-      console.error("[updateOrder] Error details:", error)
-      throw error
+    } catch (error) {
+      set({ error: "Failed to update order", loading: false })
+      return handleApiError(error, "update order")
     }
   },
 
@@ -922,10 +871,10 @@ export const useMainStore = create<MainStore>((set, get) => ({
         shopSettingsResponse,
       ] = await Promise.all([
         apiClient.get(`/card-section/${STORE_ID}`),
-        apiClient.get(`/team-section/store/${STORE_ID}`),
-        apiClient.get(`/payment-providers/store/${STORE_ID}`),
+        apiClient.get(`/team-sections/${STORE_ID}`),
+        apiClient.get(`/payment-providers/${STORE_ID}`),
         apiClient.get(`/auth/store/${STORE_ID}`),
-        apiClient.get(`/shop-settings/store/${STORE_ID}`),
+        apiClient.get(`/shop-settings/${STORE_ID}`),
       ])
 
       set({
@@ -1016,17 +965,73 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  getOrderById: async (id) => {
-    if (!STORE_ID) {
-      throw new Error("No store ID provided in environment variables")
-    }
-    
+  // Métodos adicionales optimizados
+  getOrderById: async (id: string) => {
+    if (!STORE_ID) throw new Error("No store ID provided in environment variables")
     try {
-      const response = await apiClient.get<Order>(`/orders/${STORE_ID}/${id}`)
+      const response = await apiClient.get<Order>(createOrderEndpoint(`/${id}`))
       return extractApiData<Order>(response)
     } catch (error) {
-      console.error("Failed to fetch order by id:", error)
-      throw error
+      return handleApiError(error, "fetch order by id")
+    }
+  },
+
+  getOrderByNumber: async (orderNumber: number) => {
+    if (!STORE_ID) throw new Error("No store ID provided in environment variables")
+    try {
+      const response = await apiClient.get<Order>(createOrderEndpoint(`/number/${orderNumber}`))
+      return extractApiData<Order>(response)
+    } catch (error) {
+      return handleApiError(error, "fetch order by number")
+    }
+  },
+
+  getOrderByTemporalId: async (temporalOrderId: string) => {
+    if (!STORE_ID) throw new Error("No store ID provided in environment variables")
+    try {
+      const response = await apiClient.get<Order>(createOrderEndpoint(`/temporal/${temporalOrderId}`))
+      return extractApiData<Order>(response)
+    } catch (error) {
+      return handleApiError(error, "fetch order by temporal ID")
+    }
+  },
+
+  getOrderStatistics: async (startDate?: string, endDate?: string) => {
+    if (!STORE_ID) throw new Error("No store ID provided in environment variables")
+    try {
+      const params = { ...(startDate && { startDate }), ...(endDate && { endDate }) }
+      const response = await apiClient.get<OrderStatistics>(createOrderEndpoint('/statistics', params))
+      return extractApiData<OrderStatistics>(response)
+    } catch (error) {
+      return handleApiError(error, "fetch order statistics")
+    }
+  },
+
+  updateOrderStatus: async (id: string, statusData: OrderStatusUpdate) => {
+    if (!STORE_ID) throw new Error("No store ID provided in environment variables")
+    try {
+      const response = await apiClient.patch<Order>(createOrderEndpoint(`/${id}/status`), statusData)
+      const updatedOrder = extractApiData<Order>(response)
+      
+      set((state) => ({
+        orders: state.orders.map((order) => (order.id === id ? { ...order, ...updatedOrder } : order)),
+      }))
+      
+      return updatedOrder
+    } catch (error) {
+      return handleApiError(error, "update order status")
+    }
+  },
+
+  deleteOrder: async (id: string) => {
+    if (!STORE_ID) throw new Error("No store ID provided in environment variables")
+    try {
+      await apiClient.delete(createOrderEndpoint(`/${id}`))
+      set((state) => ({
+        orders: state.orders.filter((order) => order.id !== id),
+      }))
+    } catch (error) {
+      return handleApiError(error, "delete order")
     }
   },
 

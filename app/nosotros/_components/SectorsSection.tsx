@@ -14,14 +14,6 @@ interface SectorsSectionProps {
 function SectorCard({ card, index }: { card: Card; index: number }) {
   if (!card.isActive) return null
 
-  console.log(`[SectorCard ${index}] Card data:`, {
-    id: card.id,
-    title: card.title,
-    description: card.description?.substring(0, 100) + "...",
-    imageUrl: card.imageUrl,
-    isActive: card.isActive,
-  })
-
   return (
     <div className="relative flex-1 transition-all duration-500 ease-in-out hover:flex-[3] group overflow-hidden rounded-xl">
       <div className="absolute inset-0 w-full h-full">
@@ -51,21 +43,9 @@ function SectorCard({ card, index }: { card: Card; index: number }) {
 function CardSectionRenderer({ cardSection }: { cardSection: CardSection }) {
   if (!cardSection.isActive) return null
 
-  console.log("[SectorsSection] CardSection data:", {
-    id: cardSection.id,
-    title: cardSection.title,
-    subtitle: cardSection.subtitle,
-    description: cardSection.description,
-    isActive: cardSection.isActive,
-    cardsCount: cardSection.cards?.length || 0,
-  })
-
   const activeCards = (cardSection.cards || []).filter((card) => card.isActive).sort((a, b) => a.position - b.position)
 
-  console.log("[SectorsSection] Active cards:", activeCards.length)
-
   if (activeCards.length === 0) {
-    console.log("[SectorsSection] No active cards found")
     return null
   }
 
@@ -123,26 +103,9 @@ function matchesMetadata(
 export default function SectorsSection({ id = "cs_b6e904f5-519f", metadata }: SectorsSectionProps = {}) {
   const { cardSections, loading, error } = useMainStore()
 
-  console.log("[SectorsSection] Store state:", {
-    cardSectionsCount: cardSections?.length || 0,
-    loading,
-    error,
-    targetId: id,
-  })
-
-  console.log(
-    "[SectorsSection] All cardSections:",
-    cardSections?.map((section) => ({
-      id: section.id,
-      title: section.title,
-      isActive: section.isActive,
-    })),
-  )
-
   // Filtrar secciones
   const getFilteredSections = (): CardSection[] => {
     if (!id && !metadata) {
-      console.log("[SectorsSection] No id or metadata provided")
       return []
     }
 
@@ -150,17 +113,6 @@ export default function SectorsSection({ id = "cs_b6e904f5-519f", metadata }: Se
 
     if (id) {
       const sectionById = cardSections.find((section) => section.id === id)
-      console.log("[SectorsSection] Looking for section with id:", id)
-      console.log(
-        "[SectorsSection] Found section:",
-        sectionById
-          ? {
-              id: sectionById.id,
-              title: sectionById.title,
-              isActive: sectionById.isActive,
-            }
-          : "NOT FOUND",
-      )
 
       if (sectionById && sectionById.isActive) {
         filteredSections = [sectionById]
@@ -171,7 +123,6 @@ export default function SectorsSection({ id = "cs_b6e904f5-519f", metadata }: Se
       )
     }
 
-    console.log("[SectorsSection] Filtered sections:", filteredSections.length)
     return filteredSections.sort((a, b) => a.position - b.position)
   }
 
@@ -179,26 +130,20 @@ export default function SectorsSection({ id = "cs_b6e904f5-519f", metadata }: Se
 
   // Retornar null si no hay datos
   if (!id && !metadata) {
-    console.log("[SectorsSection] Returning null - no id or metadata")
     return null
   }
 
   if (loading) {
-    console.log("[SectorsSection] Returning null - loading")
     return null
   }
 
   if (error) {
-    console.log("[SectorsSection] Returning null - error:", error)
     return null
   }
 
   if (activeSections.length === 0) {
-    console.log("[SectorsSection] Returning null - no active sections")
     return null
   }
-
-  console.log("[SectorsSection] Rendering sections:", activeSections.length)
 
   return (
     <>
