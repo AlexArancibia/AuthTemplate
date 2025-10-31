@@ -6,7 +6,7 @@ import Link from "next/link"
 import { motion } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Clock, Eye, ShoppingCart } from "lucide-react"
+import { Clock, Eye, ShoppingCart, ChevronRight } from "lucide-react"
 import type { Product } from "@/types/product"
 import type { CurrencyOption } from "@/stores/currency";
 import { useMainStore } from "@/stores/mainStore"
@@ -101,32 +101,69 @@ export function ProductCard({
     return shopSettings && shopSettings.length > 0 ? shopSettings[0]?.defaultCurrency : null
   }, [selectedCurrencyId, acceptedCurrencies, shopSettings])
 
-  // Obtener todos los precios de las variantes que coinciden con la moneda predeterminada
-  const prices = (product.variants || [])
-    .flatMap((variant) => {
-      // Validar que variant tenga prices y sea un array
-      if (!variant.prices || !Array.isArray(variant.prices)) {
-        return null
-      }
-      // Buscar el precio que coincide con la moneda activa
-      const matchingPrice = variant.prices.find((p) => p.currencyId === activeCurrency?.id)
-      return matchingPrice ? matchingPrice.price : null
-    })
-    .filter((price): price is number => price !== null && price > 0) // Filtrar valores nulos y cero
-
-  // Si no hay precios válidos, usar un array con 0 para evitar errores
-  const validPrices = prices.length > 0 ? prices : [0]
-
-  const lowestPrice = Math.min(...validPrices)
-  const highestPrice = Math.max(...validPrices)
-
+  // Función helper para formatear precio
   const formatPrice = (price: number) => `${activeCurrency?.symbol || "$"} ${Number(price).toFixed(2)}`
+
+  // Función helper para calcular porcentaje de descuento
+  const calculateDiscountPercentage = (original: number, price: number): number => {
+    return Math.round(((original - price) / original) * 100)
+  }
+
+  // Obtener todas las variantes con sus datos de precio
+  const allVariants = (product.variants || [])
+    .map((variant) => {
+      if (!variant.prices || !Array.isArray(variant.prices)) return null
+      
+      const matchingPrice = variant.prices.find((p) => p.currencyId === activeCurrency?.id)
+      if (!matchingPrice || !matchingPrice.price) return null
+
+      const price = Number(matchingPrice.price)
+      const originalPrice =
+        matchingPrice.originalPrice != null
+          ? typeof matchingPrice.originalPrice === "number"
+            ? matchingPrice.originalPrice
+            : Number(matchingPrice.originalPrice)
+          : null
+
+      // Determinar si tiene descuento (original > price y ambos válidos)
+      const hasDiscount = originalPrice !== null && originalPrice > price && price > 0
+
+      return {
+        title: variant.title,
+        price,
+        originalPrice,
+        hasDiscount,
+        discountPercent: hasDiscount ? calculateDiscountPercentage(originalPrice, price) : null,
+      }
+    })
+    .filter((v): v is NonNullable<typeof v> => v !== null)
+
+  // Detectar si al menos una variante tiene descuento
+  const hasAnyDiscount = allVariants.some((v) => v.hasDiscount)
+
+  // Detectar si todas las variantes tienen el mismo precio y mismo originalPrice
+  const allVariantsSamePrice = allVariants.length > 0 && 
+    allVariants.every((v) => v.price === allVariants[0].price && 
+                             v.originalPrice === allVariants[0].originalPrice)
+
+  // Calcular precio mínimo para display
+  const prices = allVariants.map((v) => v.price)
+  const lowestPrice = prices.length > 0 ? Math.min(...prices) : 0
+  const highestPrice = prices.length > 0 ? Math.max(...prices) : 0
+
+  // Encontrar la variante con el precio mínimo
+  const lowestPriceVariant = allVariants.find((v) => v.price === lowestPrice)
+  
+  // Calcular el porcentaje de descuento más alto de todas las variantes
+  const maxDiscountPercent = allVariants
+    .filter((v) => v.discountPercent !== null)
+    .reduce((max, v) => Math.max(max, v.discountPercent!), 0)
 
   const priceDisplay =
     prices.length > 0
       ? prices.length === 1 || Math.min(...prices) === Math.max(...prices)
         ? formatPrice(prices[0])
-        : `${formatPrice(Math.min(...prices))} - ${formatPrice(Math.max(...prices))}`
+        : `Desde ${formatPrice(Math.min(...prices))}`
       : null
 
   // Verificar si el producto es nuevo (menos de 7 días)
@@ -270,19 +307,69 @@ export function ProductCard({
 
           {/* Precio pegado al título */}
           {priceDisplay && (
-            <div className="mt-1">
-              <div className="font-adi-regular flex items-center gap-2">
-                {showSaleBadge ? (
-                  <>
-                    <span className="text-base font-bold text-black">{priceDisplay}</span>
-                    <span className="text-sm text-gray-400 line-through">
-                      {formatPrice(lowestPrice * (1 + salePercentage / 100))}
-                    </span>
-                  </>
+            <div className="mt-1 space-y-1">
+              {/* Lógica principal: Si al menos una variante tiene descuento */}
+              {hasAnyDiscount ? (
+                // EXCEPCIÓN: Si todas las variantes tienen el mismo precio con descuento O solo hay una variante con descuento
+                (allVariantsSamePrice && allVariants[0].hasDiscount) || 
+                (allVariants.length === 1 && allVariants[0].hasDiscount) ? (
+                  <div className="inline-flex items-baseline">
+                    <span className="text-sm font-bold text-red-600">{formatPrice(allVariants[0].price)}</span>
+                    <sup className="text-xs text-gray-900 line-through whitespace-nowrap ml-1">
+                      {formatPrice(allVariants[0].originalPrice!)}
+                    </sup>
+                  </div>
                 ) : (
-                  <span className="text-sm font-bold text-black">{priceDisplay}</span>
-                )}
-              </div>
+                  // Mostrar solo el precio mínimo con su descuento si lo tiene
+                  <div className="space-y-0.5">
+                    <div className="inline-flex items-baseline flex-wrap gap-1">
+                      {priceDisplay?.startsWith("Desde") ? (
+                        <>
+                          <span className="text-sm font-bold text-gray-900">Desde</span>
+                          {lowestPriceVariant?.hasDiscount && lowestPriceVariant.originalPrice ? (
+                            <>
+                              <span className="text-sm font-bold text-red-600">{formatPrice(lowestPrice)}</span>
+                              <sup className="text-xs text-gray-900 line-through whitespace-nowrap ml-1">
+                                {formatPrice(lowestPriceVariant.originalPrice)}
+                              </sup>
+                            </>
+                          ) : (
+                            <span className="text-sm font-bold text-gray-900">{formatPrice(lowestPrice)}</span>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-sm font-bold text-red-600">{priceDisplay}</span>
+                          {lowestPriceVariant?.hasDiscount && lowestPriceVariant.originalPrice && (
+                            <sup className="text-xs text-gray-900 line-through whitespace-nowrap ml-1">
+                              {formatPrice(lowestPriceVariant.originalPrice)}
+                            </sup>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    {maxDiscountPercent > 0 && (
+                      <div className="text-xs text-green-600 font-medium">
+                        Descuentos hasta -{maxDiscountPercent}%
+                      </div>
+                    )}
+                  </div>
+                )
+              ) : (
+                // No hay descuentos: display simple con fallback a showSaleBadge si aplica
+                <div className="font-adi-regular flex items-center gap-2 flex-wrap">
+                  {showSaleBadge ? (
+                    <>
+                      <span className="text-base font-bold text-black">{priceDisplay}</span>
+                      <span className="text-sm text-gray-400 line-through">
+                        {formatPrice(lowestPrice * (1 + salePercentage / 100))}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-sm font-bold text-black">{priceDisplay}</span>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

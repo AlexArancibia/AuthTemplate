@@ -7,7 +7,7 @@ export const getPriceAndSymbol = (
   selectedCurrencyId: string,
   acceptedCurrencies: CurrencyOption[],
   defaultCurrency?: CurrencyOption
-): { price: number; symbol: string } => {
+): { price: number; originalPrice: number | null; symbol: string } => {
   // Buscar por moneda seleccionada
   let priceObj = prices?.find((p) => p.currencyId === selectedCurrencyId)
 
@@ -17,11 +17,17 @@ export const getPriceAndSymbol = (
   }
 
   const price = priceObj?.price ? Number(priceObj.price) : 0
+  const originalPrice = priceObj?.originalPrice
+    ? typeof priceObj.originalPrice === "number"
+      ? priceObj.originalPrice
+      : Number(priceObj.originalPrice)
+    : null
+
   const symbol =
     priceObj?.currency?.symbol ||
     acceptedCurrencies.find((c) => c.id === selectedCurrencyId)?.symbol ||
     defaultCurrency?.symbol ||
     ""
 
-  return { price, symbol }
+  return { price, originalPrice, symbol }
 }

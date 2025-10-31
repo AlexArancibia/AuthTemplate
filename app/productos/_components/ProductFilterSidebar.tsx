@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { useMainStore } from "@/stores/mainStore"
 import type { Collection } from "@/types/collection"
@@ -22,6 +22,17 @@ interface ProductFilterSidebarProps {
   isMobile?: boolean
 }
 
+// Helper: Máximo por defecto según código de moneda
+const getDefaultMaxPrice = (code: string): number => {
+  const maxByCurrency: Record<string, number> = { USD: 500, PEN: 2000 }
+  return maxByCurrency[code] ?? 1000
+}
+
+// Helper: Parsear número de URL con valor por defecto
+const parsePriceFromUrl = (urlValue: string | null, defaultValue: number): number => {
+  return urlValue && !isNaN(Number(urlValue)) ? Number(urlValue) : defaultValue
+}
+
 export default function ProductFilterSidebar({ isMobile = false }: ProductFilterSidebarProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -31,13 +42,20 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
   const isInitialMount = useRef(true)
   const previousCurrencyId = useRef(selectedCurrencyId)
   
-  // Get currency symbol
-  const defaultCurrency = shopSettings?.[0]?.defaultCurrency
-  const currencyOption = acceptedCurrencies.find((c) => c.id === selectedCurrencyId) || defaultCurrency
-  const currencySymbol = currencyOption?.symbol || "$"
+  // Obtener información de moneda (memoizado)
+  const currencyOption = useMemo(() => {
+    const defaultCurrency = shopSettings?.[0]?.defaultCurrency
+    return acceptedCurrencies.find((c) => c.id === selectedCurrencyId) || defaultCurrency
+  }, [selectedCurrencyId, acceptedCurrencies, shopSettings])
 
-  // Fixed price range (simple solution until backend provides min/max endpoint)
-  const productPriceRange = { min: 0, max: 1000 }
+  const currencySymbol = currencyOption?.symbol || "$"
+  const currencyCode = currencyOption?.code || "USD"
+
+  // Rango de precios dinámico según moneda (memoizado)
+  const productPriceRange = useMemo(() => ({
+    min: 0,
+    max: getDefaultMaxPrice(currencyCode)
+  }), [currencyCode])
 
   // Load categories and collections on mount
   useEffect(() => {
@@ -102,13 +120,15 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     
     return categoryValues
   })
-  const [priceRange, setPriceRange] = useState<[number, number]>(() => {
-    const minFromUrl = searchParams.get("minPrice")
-    const maxFromUrl = searchParams.get("maxPrice")
-    const min = minFromUrl && !isNaN(Number(minFromUrl)) ? Number(minFromUrl) : 0
-    const max = maxFromUrl && !isNaN(Number(maxFromUrl)) ? Number(maxFromUrl) : 1000
-    return [min, max]
-  })
+  // Inicializar rango de precios desde URL
+  const initialPriceRange = useMemo(() => {
+    const defaultMax = getDefaultMaxPrice(currencyCode)
+    const min = parsePriceFromUrl(searchParams.get("minPrice"), 0)
+    const max = parsePriceFromUrl(searchParams.get("maxPrice"), defaultMax)
+    return [min, max] as [number, number]
+  }, [searchParams, currencyCode])
+
+  const [priceRange, setPriceRange] = useState<[number, number]>(initialPriceRange)
   const [searchTerm, setSearchTerm] = useState<string>(() => searchParams.get("search") || "")
   const [selectedCollections, setSelectedCollections] = useState<string[]>(() => {
     const collectionParam = searchParams.get("collections")
@@ -117,6 +137,16 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
   const [showCategories, setShowCategories] = useState(true)
   const [showCollections, setShowCollections] = useState(true)
   const [showPriceFilter, setShowPriceFilter] = useState(true)
+
+  // Estados locales para los inputs (para permitir escritura libre sin actualizar URL)
+  const [minPriceInput, setMinPriceInput] = useState<string>(initialPriceRange[0].toString())
+  const [maxPriceInput, setMaxPriceInput] = useState<string>(initialPriceRange[1].toString())
+
+  // Sincronizar los inputs cuando cambia priceRange (desde slider o URL)
+  useEffect(() => {
+    setMinPriceInput(priceRange[0].toString())
+    setMaxPriceInput(priceRange[1].toString())
+  }, [priceRange])
 
   // Update URL whenever filters change
   const updateURL = useCallback((
@@ -156,14 +186,17 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
   const urlMaxPrice = searchParams.get("maxPrice")
   
   useEffect(() => {
-    const newMin = urlMinPrice ? Number(urlMinPrice) : 0
-    const newMax = urlMaxPrice ? Number(urlMaxPrice) : 1000
+    const newMin = parsePriceFromUrl(urlMinPrice, 0)
+    const newMax = parsePriceFromUrl(urlMaxPrice, productPriceRange.max)
     
-    // Only update if the URL values are different from current state
-    if (priceRange[0] !== newMin || priceRange[1] !== newMax) {
-      setPriceRange([newMin, newMax])
-    }
-  }, [urlMinPrice, urlMaxPrice])
+    setPriceRange(prev => {
+      // Only update if the URL values are different from current state
+      if (prev[0] !== newMin || prev[1] !== newMax) {
+        return [newMin, newMax]
+      }
+      return prev
+    })
+  }, [urlMinPrice, urlMaxPrice, productPriceRange.max])
 
   // Reset price filter when currency changes
   useEffect(() => {
@@ -246,12 +279,53 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     )
   }
 
-  // Handle price change on slider release
-  const handlePriceChange = (value: number[]) => {
-    const newPriceRange = value as [number, number]
-    // Note: setPriceRange is already called by onValueChange, no need to call it again
-    updateURL(selectedCategories, selectedCollections, newPriceRange, searchTerm)
+  // Helper: Validar y ajustar valor de precio
+  const validateAndClampPrice = (value: number, min: number, max: number, compareValue?: number): number => {
+    if (isNaN(value) || value < min) return min
+    if (value > max) return max
+    if (compareValue !== undefined) {
+      return compareValue < value ? compareValue : value
+    }
+    return value
   }
+
+  // Handle price change on slider release
+  const handlePriceChange = useCallback((value: number[]) => {
+    const newPriceRange = value as [number, number]
+    updateURL(selectedCategories, selectedCollections, newPriceRange, searchTerm)
+  }, [selectedCategories, selectedCollections, searchTerm, updateURL])
+
+  // Handle manual input change (solo números)
+  const sanitizeNumericInput = (value: string) => value.replace(/[^0-9]/g, "")
+  
+  const handleMinPriceInputChange = useCallback((value: string) => {
+    setMinPriceInput(sanitizeNumericInput(value))
+  }, [])
+  
+  const handleMaxPriceInputChange = useCallback((value: string) => {
+    setMaxPriceInput(sanitizeNumericInput(value))
+  }, [])
+
+  // Handle manual input blur (min price)
+  const handleMinPriceBlur = useCallback(() => {
+    const numValue = Number.parseInt(minPriceInput, 10)
+    const validatedValue = validateAndClampPrice(numValue, productPriceRange.min, productPriceRange.max, priceRange[1])
+    const newPriceRange: [number, number] = [validatedValue, priceRange[1]]
+    setPriceRange(newPriceRange)
+    setMinPriceInput(validatedValue.toString())
+    updateURL(selectedCategories, selectedCollections, newPriceRange, searchTerm)
+  }, [minPriceInput, productPriceRange, priceRange, selectedCategories, selectedCollections, searchTerm, updateURL])
+
+  // Handle manual input blur (max price)
+  const handleMaxPriceBlur = useCallback(() => {
+    const numValue = Number.parseInt(maxPriceInput, 10)
+    const validatedValue = validateAndClampPrice(numValue, productPriceRange.min, productPriceRange.max)
+    const finalValue = Math.max(validatedValue, priceRange[0]) // No menor que el mínimo
+    const newPriceRange: [number, number] = [priceRange[0], finalValue]
+    setPriceRange(newPriceRange)
+    setMaxPriceInput(finalValue.toString())
+    updateURL(selectedCategories, selectedCollections, newPriceRange, searchTerm)
+  }, [maxPriceInput, productPriceRange, priceRange, selectedCategories, selectedCollections, searchTerm, updateURL])
 
   // Check if any filter is active
   const hasActiveFilters =
@@ -418,7 +492,7 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
             <div className="relative py-2">
               <Slider
                 min={0}
-                max={1000}
+                max={productPriceRange.max}
                 step={1}
                 value={priceRange}
                 onValueChange={(value) => setPriceRange(value as [number, number])}
@@ -426,14 +500,32 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
                 className="w-full"
               />
             </div>
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-600">
-                {currencySymbol}{priceRange[0]}
-              </span>
-              <span className="text-xs text-gray-500">-</span>
-              <span className="text-gray-600">
-                {currencySymbol}{priceRange[1]}
-              </span>
+            <div className="flex justify-between items-center gap-2">
+              {/* Input para precio mínimo */}
+              <div className="flex items-center gap-1 flex-1">
+                <span className="text-xs text-gray-500">{currencySymbol}</span>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  value={minPriceInput}
+                  onChange={(e) => handleMinPriceInputChange(e.target.value)}
+                  onBlur={handleMinPriceBlur}
+                  className="w-full h-8 text-sm text-center px-2"
+                />
+              </div>
+              <span className="text-xs text-gray-500 px-1">-</span>
+              {/* Input para precio máximo */}
+              <div className="flex items-center gap-1 flex-1">
+                <span className="text-xs text-gray-500">{currencySymbol}</span>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  value={maxPriceInput}
+                  onChange={(e) => handleMaxPriceInputChange(e.target.value)}
+                  onBlur={handleMaxPriceBlur}
+                  className="w-full h-8 text-sm text-center px-2"
+                />
+              </div>
             </div>
           </div>
         )}
