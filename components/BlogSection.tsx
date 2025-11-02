@@ -1,12 +1,38 @@
 "use client"
 import { motion } from "framer-motion"
 import { ChevronRight } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
 import { BlogCard } from "./BlogCard"
 import { useMainStore } from "@/stores/mainStore"
-import { useEffect } from "react"
 
 export function BlogSection() {
-  const { contents } = useMainStore()
+  const { contents, fetchContents, loading } = useMainStore()
+  const [error, setError] = useState<string | null>(null)
+  const fetchAttempted = useRef(false)
+
+  // Fetch de los contenidos del blog
+  useEffect(() => {
+    // Si ya hay contenidos cargados, no hacer fetch
+    if (Array.isArray(contents) && contents.length > 0) {
+      return
+    }
+
+    // Evitar múltiples intentos de fetch
+    if (fetchAttempted.current) return
+
+    const loadContents = async () => {
+      try {
+        fetchAttempted.current = true
+        await fetchContents()
+        setError(null)
+      } catch (err) {
+        setError("No se pudieron cargar los contenidos. Por favor, intenta de nuevo más tarde.")
+      }
+    }
+
+    loadContents()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contents])
 
   // Ensure contents is an array before filtering
   const contentsArray = Array.isArray(contents) ? contents : []

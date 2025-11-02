@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { useMainStore } from "@/stores/mainStore"
 import { Skeleton } from "@/components/ui/skeleton"
 import { PostCard } from "./_components/PostCard"
@@ -11,8 +11,30 @@ export default function BlogPage() {
   const contents = useMainStore(state => state.contents)
   const fetchContents = useMainStore(state => state.fetchContents)
   const loading = useMainStore(state => state.loading)
+  const fetchAttempted = useRef(false)
 
- 
+  // Fetch de los contenidos del blog
+  useEffect(() => {
+    // Si ya hay contenidos cargados, no hacer fetch
+    if (Array.isArray(contents) && contents.length > 0) {
+      return
+    }
+
+    // Evitar múltiples intentos de fetch
+    if (fetchAttempted.current) return
+
+    const loadContents = async () => {
+      try {
+        fetchAttempted.current = true
+        await fetchContents()
+      } catch (err) {
+        // Error silencioso, ya que el estado de loading del store manejará el error
+      }
+    }
+
+    loadContents()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contents])
 
   // Ensure contents is an array before filtering
   const contentsArray = Array.isArray(contents) ? contents : []

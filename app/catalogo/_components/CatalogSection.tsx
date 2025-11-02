@@ -5,7 +5,7 @@ import { motion } from "framer-motion"
 import { ExternalLink } from "lucide-react"
 import { useMainStore } from "@/stores/mainStore"
 import type { CardSection, CardSectionMetadata } from "@/types/card"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 
 interface CatalogSectionProps {
   id?: string
@@ -46,10 +46,35 @@ function matchesMetadata(
 export default function CatalogSection({ id = "cs_9235fb0d-a4d0", metadata }: CatalogSectionProps = {}) {
   // Optimización: Usar selectores específicos para evitar re-renders innecesarios
   const cardSections = useMainStore(state => state.cardSections)
+  const fetchCardSections = useMainStore(state => state.fetchCardSections)
   const loading = useMainStore(state => state.loading)
   const error = useMainStore(state => state.error)
   const [activeCards, setActiveCards] = useState<Record<string, boolean>>({})
   const [isMobile, setIsMobile] = useState(false)
+  const fetchAttempted = useRef(false)
+
+  // Fetch de las secciones de tarjetas
+  useEffect(() => {
+    // Si ya hay cardSections cargados, no hacer fetch
+    if (Array.isArray(cardSections) && cardSections.length > 0) {
+      return
+    }
+
+    // Evitar múltiples intentos de fetch
+    if (fetchAttempted.current) return
+
+    const loadCardSections = async () => {
+      try {
+        fetchAttempted.current = true
+        await fetchCardSections()
+      } catch (err) {
+        // Error silencioso, ya que el estado de loading del store manejará el error
+      }
+    }
+
+    loadCardSections()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cardSections])
 
   useEffect(() => {
     const checkIfMobile = () => {

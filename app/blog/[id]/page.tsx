@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useEffect, useState } from "react"
+import { use, useEffect, useState, useRef } from "react"
 import Image from "next/image"
 import { useMainStore } from "@/stores/mainStore"
 import type { Content } from "@/types/content"
@@ -11,22 +11,38 @@ import { motion } from "framer-motion"
 
 export default function BlogPost({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
-  const { contents, loading } = useMainStore()
+  const { getContentBySlug, loading } = useMainStore()
   const [currentContent, setCurrentContent] = useState<Content | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const fetchAttempted = useRef(false)
 
   useEffect(() => {
     const loadContent = async () => {
-      if (contents) {
-        // Ensure contents is an array before using find
-        const contentsArray = Array.isArray(contents) ? contents : []
-        const content = contentsArray.find((c) => c.slug === resolvedParams.id)
+      // Evitar múltiples intentos de fetch
+      if (fetchAttempted.current) return
+
+      if (!getContentBySlug) {
+        setIsLoading(false)
+        return
+      }
+
+      try {
+        fetchAttempted.current = true
+        setIsLoading(true)
+        const content = await getContentBySlug(resolvedParams.id)
         setCurrentContent(content || null)
+      } catch (err) {
+        setCurrentContent(null)
+      } finally {
+        setIsLoading(false)
       }
     }
-    loadContent()
-  }, [contents, resolvedParams.id])
 
-  if (loading || !currentContent) {
+    loadContent()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolvedParams.id])
+
+  if (loading || isLoading || !currentContent) {
     return <BlogPostSkeleton />
   }
 

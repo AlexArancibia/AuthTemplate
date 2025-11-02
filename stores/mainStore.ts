@@ -1083,7 +1083,6 @@ export const useMainStore = create<MainStore>((set, get) => ({
       const response = await apiClient.get<Content>(`/contents/by-slug/${STORE_ID}/${slug}`)
       return extractApiData<Content>(response)
     } catch (error) {
-      console.error("Failed to fetch content by slug:", error)
       throw error
     }
   },

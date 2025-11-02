@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useMainStore } from "@/stores/mainStore"
@@ -9,11 +9,38 @@ import { cn } from "@/lib/utils"
 
 export function Sidebar() {
   const { fetchContents, fetchCategories, contents, categories, loading } = useMainStore()
+  const fetchAttempted = useRef(false)
 
   useEffect(() => {
-    fetchContents()
-    fetchCategories()
-  }, [fetchContents, fetchCategories])
+    // Si ya hay contenidos y categorías cargados, no hacer fetch
+    const hasContents = Array.isArray(contents) && contents.length > 0
+    const hasCategories = Array.isArray(categories) && categories.length > 0
+    
+    if (hasContents && hasCategories) {
+      return
+    }
+
+    // Evitar múltiples intentos de fetch
+    if (fetchAttempted.current) return
+
+    const loadData = async () => {
+      fetchAttempted.current = true
+      
+      try {
+        if (!hasContents) {
+          await fetchContents()
+        }
+        if (!hasCategories) {
+          await fetchCategories()
+        }
+      } catch (err) {
+        // Error silencioso
+      }
+    }
+
+    loadData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contents, categories])
 
   if (loading) {
     return <SidebarSkeleton />
