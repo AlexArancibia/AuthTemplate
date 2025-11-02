@@ -1,7 +1,7 @@
 "use client"
 
 import { motion, useInView } from "framer-motion"
-import { useRef } from "react"
+import { useRef, useState, useEffect } from "react"
 import { Loader2, Users2, ShoppingBag, Shield, Truck } from "lucide-react"
 import type { CardSection, Card, CardSectionMetadata } from "@/types/card"
 import { useMainStore } from "@/stores/mainStore"
@@ -138,7 +138,44 @@ function matchesMetadata(
 }
 
 export default function FeaturesSection({ id, metadata }: FeaturesSectionProps = {}) {
-  const { cardSections, loading, error } = useMainStore()
+  const { cardSections, loading, error, getCardSectionById } = useMainStore()
+  const [fetchedSection, setFetchedSection] = useState<CardSection | null>(null)
+  const [isFetching, setIsFetching] = useState(false)
+  const [fetchError, setFetchError] = useState<string | null>(null)
+
+  // Fetch section by ID if not in store array
+  useEffect(() => {
+    const fetchSection = async () => {
+      if (!id || !getCardSectionById) return
+      
+      // Check if section is already in store
+      const sectionInStore = cardSections.find((section) => section.id === id)
+      if (sectionInStore) {
+        setFetchedSection(null)
+        return
+      }
+
+      // Try to fetch from API
+      setIsFetching(true)
+      setFetchError(null)
+      try {
+        const section = await getCardSectionById(id)
+        if (section && section.isActive) {
+          setFetchedSection(section)
+        } else {
+          setFetchedSection(null)
+        }
+      } catch (err) {
+        console.error("Error fetching card section by id:", err)
+        setFetchError("No se pudo cargar la sección")
+        setFetchedSection(null)
+      } finally {
+        setIsFetching(false)
+      }
+    }
+
+    fetchSection()
+  }, [id, cardSections, getCardSectionById])
 
   // Filter sections
   const getFilteredSections = (): CardSection[] => {
@@ -149,9 +186,13 @@ export default function FeaturesSection({ id, metadata }: FeaturesSectionProps =
     let filteredSections: CardSection[] = []
 
     if (id) {
+      // First check store array
       const sectionById = cardSections.find((section) => section.id === id)
       if (sectionById && sectionById.isActive) {
         filteredSections = [sectionById]
+      } else if (fetchedSection && fetchedSection.isActive) {
+        // Use fetched section if not in store
+        filteredSections = [fetchedSection]
       }
     } else if (metadata) {
       filteredSections = cardSections.filter(
@@ -168,7 +209,7 @@ export default function FeaturesSection({ id, metadata }: FeaturesSectionProps =
     return null
   }
 
-  if (loading) {
+  if (loading || isFetching) {
     return (
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 " />
@@ -179,12 +220,12 @@ export default function FeaturesSection({ id, metadata }: FeaturesSectionProps =
     )
   }
 
-  if (error) {
+  if (error || fetchError) {
     return (
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 " />
         <div className="container-section relative py-16 lg:py-24 flex justify-center items-center min-h-[400px]">
-          <div className="text-red-500">{error}</div>
+          <div className="text-red-500">{error || fetchError}</div>
         </div>
       </div>
     )

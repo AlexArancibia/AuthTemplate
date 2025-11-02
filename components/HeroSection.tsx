@@ -14,6 +14,11 @@ export function HeroSection() {
   useEffect(() => {
     // Evitar múltiples intentos de fetch
     if (fetchAttempted.current) return
+    
+    // Si ya hay hero sections cargadas, no hacer fetch
+    if (Array.isArray(heroSections) && heroSections.length > 0) {
+      return
+    }
 
     const loadHeroSections = async () => {
       try {

@@ -11,7 +11,7 @@ interface AboutSectionProps {
 }
 
 export function AboutSection({ contentId = "cnt_363018db-f61b" }: AboutSectionProps) {
-  const { contents } = useMainStore()
+  const { contents, getContentById } = useMainStore()
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [content, setContent] = useState<{
@@ -34,9 +34,18 @@ export function AboutSection({ contentId = "cnt_363018db-f61b" }: AboutSectionPr
     const loadContent = async () => {
       try {
         setIsLoading(true)
-        // Ensure contents is an array before using find
+        // First try to find content in the store array
         const contentsArray = Array.isArray(contents) ? contents : []
-        const contentData = contentsArray.find((c) => c.id === contentId)
+        let contentData = contentsArray.find((c) => c.id === contentId)
+
+        // If not found in store, fetch it directly from API
+        if (!contentData && getContentById) {
+          try {
+            contentData = await getContentById(contentId)
+          } catch (fetchError) {
+            console.error("Error fetching content by id:", fetchError)
+          }
+        }
 
         if (!contentData) {
           setError("Contenido no encontrado")
@@ -86,7 +95,7 @@ export function AboutSection({ contentId = "cnt_363018db-f61b" }: AboutSectionPr
     }
 
     loadContent()
-  }, [contents, contentId])
+  }, [contents, contentId, getContentById])
 
   if (isLoading) {
     return (

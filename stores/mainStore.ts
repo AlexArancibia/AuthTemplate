@@ -176,6 +176,9 @@ interface MainStore {
   getCurrencyById: (id: string) => Promise<Currency>
   getExchangeRateById: (id: string) => Promise<ExchangeRate>
   getFrequentlyBoughtTogetherById: (id: string) => Promise<FrequentlyBoughtTogether>
+  getContentById: (id: string) => Promise<Content>
+  getContentBySlug: (slug: string) => Promise<Content>
+  getCardSectionById: (id: string) => Promise<CardSection>
 }
 
 export const useMainStore = create<MainStore>((set, get) => ({
@@ -273,13 +276,20 @@ export const useMainStore = create<MainStore>((set, get) => ({
       
       const response = await apiClient.get<PaginatedResponse<Product>>(url)
       
-      // Validar estructura de respuesta
-      if (!response.data || !response.data.data) {
+      // Validar que tenemos al menos una respuesta
+      if (!response.data) {
         console.error("Invalid response structure from API:", response.data)
         throw new Error("Invalid response structure from API")
       }
       
+      // Dejar que extractPaginatedData maneje la estructura (puede venir envuelta o no)
       const { data, pagination } = extractPaginatedData<Product[]>(response)
+      
+      // Validar que extrajimos datos válidos
+      if (!Array.isArray(data)) {
+        console.error("Invalid data extracted from API response:", data)
+        throw new Error("Invalid data structure: expected array")
+      }
       const newState = {
         products: data,
         paginationMeta: { ...get().paginationMeta, products: pagination || null },
@@ -1046,6 +1056,48 @@ export const useMainStore = create<MainStore>((set, get) => ({
       return extractApiData<FrequentlyBoughtTogether>(response)
     } catch (error) {
       console.error("Failed to fetch frequently bought together by id:", error)
+      throw error
+    }
+  },
+
+  getContentById: async (id) => {
+    if (!STORE_ID) {
+      throw new Error("No store ID provided in environment variables")
+    }
+    
+    try {
+      const response = await apiClient.get<Content>(`/contents/${STORE_ID}/${id}`)
+      return extractApiData<Content>(response)
+    } catch (error) {
+      console.error("Failed to fetch content by id:", error)
+      throw error
+    }
+  },
+
+  getContentBySlug: async (slug) => {
+    if (!STORE_ID) {
+      throw new Error("No store ID provided in environment variables")
+    }
+    
+    try {
+      const response = await apiClient.get<Content>(`/contents/by-slug/${STORE_ID}/${slug}`)
+      return extractApiData<Content>(response)
+    } catch (error) {
+      console.error("Failed to fetch content by slug:", error)
+      throw error
+    }
+  },
+
+  getCardSectionById: async (id) => {
+    if (!STORE_ID) {
+      throw new Error("No store ID provided in environment variables")
+    }
+    
+    try {
+      const response = await apiClient.get<CardSection>(`/card-section/${STORE_ID}/${id}`)
+      return extractApiData<CardSection>(response)
+    } catch (error) {
+      console.error("Failed to fetch card section by id:", error)
       throw error
     }
   },

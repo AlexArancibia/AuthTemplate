@@ -16,9 +16,30 @@ interface ProductSidebarProps {
 }
 
 export function ProductSidebar({ product }: ProductSidebarProps) {
-  const { shippingMethods, paymentProviders, shopSettings } = useMainStore()
+  const { shippingMethods, paymentProviders, shopSettings, fetchPaymentProviders } = useMainStore()
   const [latestProducts, setLatestProducts] = useState<Product[]>([])
   const [loadingLatest, setLoadingLatest] = useState(true)
+
+  // Cargar payment providers si no están cargados
+  useEffect(() => {
+    const loadPaymentProviders = async () => {
+      // Si ya hay payment providers cargados, no hacer fetch
+      if (Array.isArray(paymentProviders) && paymentProviders.length > 0) {
+        return
+      }
+
+      try {
+        if (fetchPaymentProviders) {
+          await fetchPaymentProviders()
+        }
+      } catch (error) {
+        console.error("Error fetching payment providers:", error)
+      }
+    }
+
+    loadPaymentProviders()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Cargar últimos productos directamente desde la API
   useEffect(() => {
@@ -105,28 +126,32 @@ export function ProductSidebar({ product }: ProductSidebarProps) {
             Métodos de pago
           </h3>
           <div className="flex flex-wrap gap-3">
-            {paymentProviders.map((provider) => (
-              <div 
-                key={provider.id} 
-                className="  rounded-lg text-sm flex items-center gap-2  "
-              >
-                {provider.imgUrl ? (
-                  <div className="w-6 h-6 flex-shrink-0 overflow-hidden rounded">
-                    <img
-                      src={provider.imgUrl || "/placeholder.svg"}
-                      alt={provider.name}
-                      className="w-full h-full object-contain"
-              
-                    />
-                  </div>
-                ) : (
-                  <div className="w-6 h-6 flex-shrink-0 bg-gradient-to-br from-blue-100 to-blue-200 rounded flex items-center justify-center">
-                    <CreditCard className="w-3 h-3 text-blue-600" />
-                  </div>
-                )}
-                <span className="text-gray-700 font-normal">{provider.name}</span>
-              </div>
-            ))}
+            {Array.isArray(paymentProviders) && paymentProviders.length > 0
+              ? paymentProviders
+                  .filter((provider) => provider.isActive)
+                  .map((provider) => (
+                    <div 
+                      key={provider.id} 
+                      className="rounded-lg text-sm flex items-center gap-2"
+                    >
+                      {provider.imgUrl ? (
+                        <div className="w-6 h-6 flex-shrink-0 overflow-hidden rounded">
+                          <img
+                            src={provider.imgUrl || "/placeholder.svg"}
+                            alt={provider.name}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-6 h-6 flex-shrink-0 bg-gradient-to-br from-blue-100 to-blue-200 rounded flex items-center justify-center">
+                          <CreditCard className="w-3 h-3 text-blue-600" />
+                        </div>
+                      )}
+                      <span className="text-gray-700 font-normal">{provider.name}</span>
+                    </div>
+                  ))
+              : <p className="text-sm text-gray-500">No hay métodos de pago disponibles</p>
+            }
           </div>
         </div>
 

@@ -33,7 +33,7 @@ export default function FrequentlyBoughtTogetherComponent({ product }: Frequentl
   const [selectedProducts, setSelectedProducts] = useState<Record<string, boolean>>({})
   const [selectedVariantIds, setSelectedVariantIds] = useState<Record<string, string>>({})
 
-  const { fetchFrequentlyBoughtTogether, frequentlyBoughtTogether, products } = useMainStore()
+  const { fetchFrequentlyBoughtTogether, frequentlyBoughtTogether, getProductById } = useMainStore()
   const { addItem } = useCartStore()
 
   // Estado para almacenar los productos completos obtenidos
@@ -42,93 +42,109 @@ export default function FrequentlyBoughtTogetherComponent({ product }: Frequentl
   // Buscar grupos FBT relevantes y obtener productos completos
   useEffect(() => {
     const loadFBTData = async () => {
+      // Validaciones iniciales
+      if (!product?.variants || product.variants.length === 0) {
+        setLoading(false)
+        return
+      }
+
+      if (!getProductById) {
+        console.error("getProductById not available")
+        setLoading(false)
+        return
+      }
+
       setLoading(true)
 
       try {
-        // Solo cargar FBT si hay variantes en el producto
-        if (product.variants && product.variants.length > 0) {
-          // Asegurarse de que tenemos los datos de FBT
-          if (frequentlyBoughtTogether.length === 0) {
-            await fetchFrequentlyBoughtTogether()
-          }
+        // Cargar FBT si no está disponible
+        let fbtArray: FrequentlyBoughtTogether[] = []
+        if (!Array.isArray(frequentlyBoughtTogether) || frequentlyBoughtTogether.length === 0) {
+          const response = await fetchFrequentlyBoughtTogether()
+          fbtArray = response.data || []
         } else {
-          // Si no hay variantes, no hay nada que hacer
+          fbtArray = frequentlyBoughtTogether
+        }
+
+        // Obtener IDs de variantes del producto actual
+        const productVariantIds = product.variants.map((v) => v.id)
+
+        // Buscar grupo FBT que contenga alguna variante del producto actual
+        const relevantGroup = fbtArray.find((group) => {
+          if (!group.variants || group.variants.length === 0) return false
+          return group.variants.some((variant) => 
+            variant?.id && productVariantIds.includes(variant.id)
+          )
+        })
+
+        if (!relevantGroup) {
           setLoading(false)
           return
         }
 
-        // Obtener IDs de variantes del producto actual
-        const productVariantIds = product.variants?.map((v) => v.id) || []
+        setSelectedGroup(relevantGroup)
 
-        // Buscar grupos FBT que contengan alguna variante del producto actual
-        // Verificación defensiva para asegurar que frequentlyBoughtTogether sea un array
-        const relevantGroups = Array.isArray(frequentlyBoughtTogether) 
-          ? frequentlyBoughtTogether.filter((group) => {
-              // Optimización: verificar primero si el grupo tiene variantes
-              if (!group.variants || group.variants.length === 0) return false
-              
-              // Buscar coincidencias de variantes
-              return group.variants.some((variant) => 
-                variant && variant.id && productVariantIds.includes(variant.id)
-              )
-            })
-          : []
+        // Obtener IDs únicos de productos del FBT
+        const productIds = Array.from(
+          new Set(
+            relevantGroup.variants
+              ?.map((v) => v.productId)
+              .filter((id): id is string => Boolean(id)) || []
+          )
+        )
 
-        if (relevantGroups.length > 0) {
-          const selectedFBTGroup = relevantGroups[0]
-          setSelectedGroup(selectedFBTGroup)
+        if (productIds.length === 0) {
+          setLoading(false)
+          return
+        }
 
-          // Obtener IDs únicos de variantes del grupo FBT
-          const variantIds = selectedFBTGroup.variants?.map((v) => v.id) || []
+        // Obtener productos
+        const fetchedProducts = await Promise.all(
+          productIds.map((id) => getProductById(id))
+        )
 
-          // Encontrar productos que contienen estas variantes usando la variable products del store
-          const relatedProducts = products.filter((prod) =>
-            prod.variants?.some((variant) => variantIds.includes(variant.id)),
+        const validProducts = fetchedProducts.filter((p): p is Product => p !== null)
+        setFbtProducts(validProducts)
+
+        // Inicializar selecciones
+        const initialSelected: Record<string, boolean> = {}
+        const initialVariantIds: Record<string, string> = {}
+
+        validProducts.forEach((prod) => {
+          initialSelected[prod.id] = true
+
+          // Buscar variante del FBT para este producto
+          const fbtVariant = relevantGroup.variants?.find((v) => 
+            v.productId === prod.id && prod.variants?.some((pv) => pv.id === v.id)
           )
 
-          setFbtProducts(relatedProducts)
+          if (fbtVariant) {
+            initialVariantIds[prod.id] = fbtVariant.id
+          } else if (prod.variants && prod.variants.length > 0) {
+            // Fallback: primera variante con precio > 0, o primera variante
+            const variantWithPrice = prod.variants.find(v => 
+              v.prices?.[0]?.price && Number(v.prices[0].price) > 0
+            )
+            initialVariantIds[prod.id] = variantWithPrice?.id || prod.variants[0].id
+          }
+        })
 
-          // Inicializar selecciones basadas en los productos obtenidos
-          const initialSelected: Record<string, boolean> = {}
-          const initialVariantIds: Record<string, string> = {}
+        setSelectedProducts(initialSelected)
+        setSelectedVariantIds(initialVariantIds)
 
-          // Para cada producto, encontrar la variante correspondiente del grupo FBT
-          relatedProducts.forEach((prod) => {
-            initialSelected[prod.id] = true
-
-            // Encontrar la variante de este producto que está en el grupo FBT
-            const fbtVariant = selectedFBTGroup.variants?.find((v) => prod.variants?.some((pv) => pv.id === v.id))
-
-            if (fbtVariant) {
-              initialVariantIds[prod.id] = fbtVariant.id
-            } else if (prod.variants && prod.variants.length > 0) {
-              // Fallback a la primera variante con precio diferente de 0
-              const firstVariantWithPrice = prod.variants.find(v => 
-                v.prices && v.prices.length > 0 && Number(v.prices[0]?.price || 0) !== 0
-              );
-              if (firstVariantWithPrice) {
-                initialVariantIds[prod.id] = firstVariantWithPrice.id
-              } else {
-                // Si todas las variantes tienen precio 0, usar la primera
-                initialVariantIds[prod.id] = prod.variants[0].id
-              }
-            }
-          })
-
-          setSelectedProducts(initialSelected)
-          setSelectedVariantIds(initialVariantIds)
-        }
       } catch (error) {
         console.error("Error loading FBT data:", error)
+        setFbtProducts([])
+      } finally {
+        setLoading(false)
       }
-
-      setLoading(false)
     }
 
-    if (product && products.length > 0) {
+    if (product) {
       loadFBTData()
     }
-  }, [product, fetchFrequentlyBoughtTogether, frequentlyBoughtTogether, products])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.id])
 
   // Actualizar la función calculateTotalPrice para usar fbtProducts
   const calculateTotalPrice = () => {

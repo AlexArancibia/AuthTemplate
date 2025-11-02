@@ -15,6 +15,11 @@ export function PromocionesSection() {
   useEffect(() => {
     // Evitar múltiples intentos de fetch
     if (fetchAttempted.current) return
+    
+    // Si ya hay hero sections cargadas, no hacer fetch
+    if (Array.isArray(heroSections) && heroSections.length > 0) {
+      return
+    }
 
     const loadHeroSections = async () => {
       try {
@@ -30,7 +35,8 @@ export function PromocionesSection() {
     }
 
     loadHeroSections()
-  }, [fetchHeroSections])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Filtrar solo las secciones con metadata.section igual a "inicio"
   const filteredSections = Array.isArray(heroSections)

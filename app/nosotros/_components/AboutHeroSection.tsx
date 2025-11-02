@@ -17,6 +17,11 @@ export function QuienesSomosHero() {
   useEffect(() => {
     // Evitar múltiples intentos de fetch
     if (fetchAttempted.current) return
+    
+    // Si ya hay hero sections cargadas, no hacer fetch
+    if (Array.isArray(heroSections) && heroSections.length > 0) {
+      return
+    }
 
     const loadHeroSections = async () => {
       try {
@@ -32,7 +37,8 @@ export function QuienesSomosHero() {
     }
 
     loadHeroSections()
-  }, [fetchHeroSections])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Buscar la sección específica
   const heroSection = heroSections?.find((section) => section.isActive && section.metadata?.section?.toLowerCase() === "quienes-somos")
