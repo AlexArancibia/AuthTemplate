@@ -1,12 +1,11 @@
 "use client"
 
-// ...existing code...
 import type React from "react"
 
 import Link from "next/link"
 import { useState, useEffect, useRef, useMemo } from "react"
-import { useRouter, usePathname } from "next/navigation"
-import { Menu, ShoppingCart, User, X, Search, Store, Loader2, ChevronDown } from "lucide-react"
+import { usePathname } from "next/navigation"
+import { Menu, ShoppingCart, User, X, Search, Store, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
@@ -33,20 +32,12 @@ import { useUserStore } from "@/stores/userStore"
 import ShopMenu from "./ShopMenu"
 import MobileMenu from "./MobileMenu"
 
-interface NavbarProps {
-  // user?: {
-  //   name?: string | null
-  //   email?: string | null
-  //   image?: string | null
-  //   role?: string | null
-  // } | null
-}
-
 const navItems = [
   { name: "Inicio", href: "/" },
   { name: "Tienda", href: "/productos" },
   { name: "Contacto", href: "/contactenos" },
   { name: "Ofertas", href: "/ofertas" },
+  { name: "DEPORTISTAS", href: "/nuestros-deportistas" },
 ]
 
 export default function Navbar() {
@@ -63,19 +54,16 @@ export default function Navbar() {
     fetchCardSections,
     shopSettings,
     loading,
-    error,
     categories,
     collections,
   } = useMainStore()
-const { 
+  const { 
     showDialog, 
     acceptAllCookies, 
     declineAllCookies, 
     acceptSelectedCookies, 
-    openCookieSettings 
-  } = useCookieConsent();
-  const router = useRouter()
-    const isCookieConsentEnabled: boolean = shopSettings?.[0]?.cookieConsentEnabled ?? false;
+  } = useCookieConsent()
+  const isCookieConsentEnabled = shopSettings?.[0]?.cookieConsentEnabled ?? false
   const { items, removeItem, updateQuantity, getTotal, getItemsCount } = useCartStore()
   const [mounted, setMounted] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
@@ -161,20 +149,12 @@ const {
 
   // Fetch shop settings on mount
   useEffect(() => {
-    console.log("[NAVBAR] useEffect for fetching data triggered")
-
     const loadData = async () => {
-      // Skip if already fetched or already loading
-      if (hasFetched.current || loading) {
-        console.log("[NAVBAR] Data already fetched or loading, skipping")
-        return
-      }
+      if (hasFetched.current || loading) return
 
-      console.log("[NAVBAR] Fetching all required data")
       hasFetched.current = true
 
       try {
-        // Realizar todos los fetch en paralelo con límites altos para carga inicial
         await Promise.all([
           fetchShopSettings(),
           fetchShippingMethods({ limit: 100 }),
@@ -185,8 +165,6 @@ const {
           fetchCoupons({ limit: 100 }),
           fetchPaymentProviders(),
         ])
-
-        console.log("[NAVBAR] All data loaded successfully")
       } catch (err) {
         console.error("[NAVBAR] Error fetching data:", err)
         toast.error("Error de conexión", {
@@ -210,13 +188,10 @@ const {
 
   const handleSignOut = async () => {
     try {
-      console.log("[NAVBAR] Signing out user")
       toast.success("Sesión cerrada", {
         description: "Has cerrado sesión correctamente",
       })
-      await signOut({
-        callbackUrl: "/login",
-      })
+      await signOut({ callbackUrl: "/login" })
     } catch (error) {
       console.error("[NAVBAR] Error signing out:", error)
       toast.error("Error al cerrar sesión", {
@@ -235,18 +210,8 @@ const {
       .substring(0, 2)
   }
 
-  // Get shop name from settings
-  const shopName = shopSettings && shopSettings.length > 0 ? shopSettings[0].name : "Mi Tienda"
-  console.log("[NAVBAR] Using shop name:", shopName)
-
-  // Get shop logo from settings
-  const shopLogo = shopSettings && shopSettings.length > 0 && shopSettings[0].logo ? shopSettings[0].logo : null
-  console.log("[NAVBAR] Using shop logo:", shopLogo ? "Yes" : "No")
-
-  // Get default currency
-  const defaultCurrency = shopSettings && shopSettings.length > 0 ? shopSettings[0].defaultCurrency : null
-
-  // Cart calculations
+  const shopName = shopSettings?.[0]?.name ?? "Mi Tienda"
+  const shopLogo = shopSettings?.[0]?.logo ?? null
   const totalItems = getItemsCount()
   const totalPrice = getTotal(selectedCurrencyId)
 
@@ -254,17 +219,10 @@ const {
     e.preventDefault()
     const trimmedSearch = searchTerm.trim()
     
-    if (trimmedSearch && trimmedSearch.length >= 2) {
-      // Implementar la búsqueda aquí
-      console.log("Buscando:", trimmedSearch)
+    if (trimmedSearch.length >= 2) {
       setIsSearchOpen(false)
       setSearchTerm("")
-
-      // Redirigir a la página de resultados de búsqueda
       window.location.href = `/productos?search=${encodeURIComponent(trimmedSearch)}`
-    } else if (trimmedSearch.length > 0 && trimmedSearch.length < 2) {
-      // Mostrar feedback al usuario (opcional - puede implementarse con toast)
-      console.log("Búsqueda muy corta - mínimo 2 caracteres")
     }
   }
 
@@ -335,33 +293,33 @@ const {
           </div>
 
           {/* Navigation Links - Desktop */}
-          <div className="hidden lg:flex lg:w-1/2 xl:w-1/2 justify-center relative">
+          <div className="hidden lg:flex lg:w-1/2 xl:w-1/2 justify-evenly items-center relative gap-2 xl:gap-4">
             {navItems.map((item) => {
               const isShop = item.name.toLowerCase() === "tienda"
-              if (!isShop) {
+              
+              if (isShop) {
                 return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={cn(
-                      "px-6 xl:px-12 py-1 text-sm transition-colors hover:text-primary",
-                      pathname === item.href ? "text-primary" : "text-secondary",
-                    )}
-                  >
-                    {item.name}
-                  </Link>
+                  <div key="tienda" className="px-2 xl:px-3 py-1 text-sm">
+                    <ShopMenu
+                      categories={sortedCategories}
+                      collections={collections || []}
+                      isActive={pathname.startsWith("/productos")}
+                    />
+                  </div>
                 )
               }
 
-              // --- Tienda con HoverCard ---
               return (
-                <div key="tienda" className="px-6 xl:px-12 py-1 text-sm">
-                  <ShopMenu
-                    categories={sortedCategories}
-                    collections={collections || []}
-                    isActive={pathname.startsWith("/productos")}
-                  />
-                </div>
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={cn(
+                    "px-2 xl:px-3 py-1 text-sm transition-colors hover:text-primary whitespace-nowrap",
+                    pathname === item.href ? "text-primary" : "text-secondary",
+                  )}
+                >
+                  {item.name}
+                </Link>
               )
             })}
           </div>
@@ -481,20 +439,15 @@ const {
 
                             <p className="text-xs">
                               {(() => {
-                                if (!item.variant.prices || item.variant.prices.length === 0) {
-                                  return "N/A"
-                                }
+                                const prices = item.variant.prices
+                                if (!prices?.length) return "N/A"
                                 
-                                const priceForCurrency = item.variant.prices.find(p => p.currency?.id === activeCurrency?.id)
-                                if (!priceForCurrency) {
-                                  // Fallback: usar el primer precio disponible si no hay precio para la moneda activa
-                                  const fallbackPrice = item.variant.prices[0]
-                                  return fallbackPrice 
-                                    ? formatCurrency(fallbackPrice.price * item.quantity, activeCurrency)
-                                    : "N/A"
-                                }
+                                const priceForCurrency = prices.find(p => p.currency?.id === activeCurrency?.id)
+                                const price = priceForCurrency || prices[0]
                                 
-                                return formatCurrency(priceForCurrency.price * item.quantity, activeCurrency)
+                                return price 
+                                  ? formatCurrency(price.price * item.quantity, activeCurrency)
+                                  : "N/A"
                               })()}
                             </p>
                           </div>

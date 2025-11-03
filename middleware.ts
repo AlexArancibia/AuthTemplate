@@ -28,6 +28,7 @@ const publicRoutes = [
   "/cambios-devoluciones",
   "/forgot-password", // Nueva ruta pública
   "/reset-password", // Nueva ruta pública
+  "/nuestros-deportistas", // Nueva ruta pública
 ];
 const publicPrefixes = ["/productos/", "/blog/"];
 const authRoutes = ["/login", "/register"]; // Estas son las páginas a las que se redirige si ya está logueado

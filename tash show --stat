@@ -1,0 +1,176 @@
+[1mdiff --git a/app/page.tsx b/app/page.tsx[m
+[1mindex 5809d0f..a877237 100644[m
+[1m--- a/app/page.tsx[m
+[1m+++ b/app/page.tsx[m
+[36m@@ -7,7 +7,7 @@[m [mimport Link from "next/link"[m
+ import { useMainStore } from "@/stores/mainStore"[m
+ import { HeroSection } from "@/components/HeroSection"[m
+ import { ProductCarousel } from "@/components/ProductCarousel"[m
+[31m-import { Suspense } from "react"[m
+[32m+[m[32mimport { Suspense, useEffect, useRef } from "react"[m
+ import CardSectionsContainer from "@/components/card-sections-container"[m
+ import { BlogSection } from "@/components/BlogSection"[m
+ import FeaturesSection from "@/components/FeaturesSection"[m
+[36m@@ -15,7 +15,50 @@[m [mimport { AboutSection } from "@/components/AboutSection"[m
+ import { DeliveryHeroSection } from "@/components/DeliverySection"[m
+ [m
+ export default function HomePage() {[m
+[31m- [m
+[32m+[m[32m  console.log("[HomePage] ⚛️ Renderizando HomePage component")[m
+[32m+[m[32m  const { cardSections, initializeStore } = useMainStore()[m
+[32m+[m[32m  const initializedRef = useRef(false)[m
+[32m+[m[41m  [m
+[32m+[m[32m  console.log("[HomePage] Hook useMainStore ejecutado:", {[m
+[32m+[m[32m    cardSectionsCount: cardSections.length,[m
+[32m+[m[32m    hasInitializeStore: typeof initializeStore === 'function',[m
+[32m+[m[32m    initializeStoreName: initializeStore?.name || 'undefined',[m
+[32m+[m[32m    alreadyInitialized: initializedRef.current[m
+[32m+[m[32m  })[m
+[32m+[m
+[32m+[m[32m  // SOLUCIÓN: Llamar a initializeStore al montar el componente[m
+[32m+[m[32m  useEffect(() => {[m
+[32m+[m[32m    if (initializedRef.current) {[m
+[32m+[m[32m      console.log("[HomePage] ⏭️ initializeStore ya fue llamado, saltando...")[m
+[32m+[m[32m      return[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    if (typeof initializeStore !== 'function') {[m
+[32m+[m[32m      console.error("[HomePage] ❌ initializeStore NO es una función!")[m
+[32m+[m[32m      return[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    console.log("[HomePage] 🚀 LLAMANDO a initializeStore() al montar el componente...")[m
+[32m+[m[32m    initializedRef.current = true[m
+[32m+[m[41m    [m
+[32m+[m[32m    initializeStore()[m
+[32m+[m[32m      .then(() => {[m
+[32m+[m[32m        console.log("[HomePage] ✅ initializeStore completado exitosamente")[m
+[32m+[m[32m      })[m
+[32m+[m[32m      .catch((error) => {[m
+[32m+[m[32m        console.error("[HomePage] ❌ Error al llamar initializeStore:", error)[m
+[32m+[m[32m        initializedRef.current = false // Permitir reintento en caso de error[m
+[32m+[m[32m      })[m
+[32m+[m[32m  }, [initializeStore])[m
+[32m+[m
+[32m+[m[32m  // Efecto para monitorear cambios en cardSections[m
+[32m+[m[32m  useEffect(() => {[m
+[32m+[m[32m    console.log("[HomePage] 📊 CardSections actualizadas:", {[m
+[32m+[m[32m      cardSectionsCount: cardSections.length,[m
+[32m+[m[32m      cardSectionsIds: cardSections.map(cs => cs?.id || 'sin id'),[m
+[32m+[m[32m      timestamp: new Date().toISOString()[m
+[32m+[m[32m    })[m
+[32m+[m[32m  }, [cardSections])[m
+ [m
+   return ([m
+     <>[m
+[1mdiff --git a/components/FeaturesSection.tsx b/components/FeaturesSection.tsx[m
+[1mindex 48d433b..907710c 100644[m
+[1m--- a/components/FeaturesSection.tsx[m
+[1m+++ b/components/FeaturesSection.tsx[m
+[36m@@ -1,7 +1,7 @@[m
+ "use client"[m
+ [m
+ import { motion, useInView } from "framer-motion"[m
+[31m-import { useRef } from "react"[m
+[32m+[m[32mimport { useRef, useEffect } from "react"[m
+ import { Loader2, Users2, ShoppingBag, Shield, Truck } from "lucide-react"[m
+ import type { CardSection, Card, CardSectionMetadata } from "@/types/card"[m
+ import { useMainStore } from "@/stores/mainStore"[m
+[36m@@ -65,14 +65,33 @@[m [mfunction FeatureCard({ card, index, isInView }: { card: Card; index: number; isI[m
+ [m
+ // Section renderer with features styling[m
+ function CardSectionRenderer({ cardSection }: { cardSection: CardSection }) {[m
+[32m+[m[32m  console.log("[FeaturesSection/CardSectionRenderer] Renderizando sección:", {[m
+[32m+[m[32m    id: cardSection.id,[m
+[32m+[m[32m    title: cardSection.title,[m
+[32m+[m[32m    isActive: cardSection.isActive,[m
+[32m+[m[32m    cardsCount: cardSection.cards?.length || 0[m
+[32m+[m[32m  })[m
+[32m+[m
+   const ref = useRef(null)[m
+   const isInView = useInView(ref, { once: true, amount: 0.3 })[m
+ [m
+[31m-  if (!cardSection.isActive) return null[m
+[32m+[m[32m  if (!cardSection.isActive) {[m
+[32m+[m[32m    console.log("[FeaturesSection/CardSectionRenderer] Sección inactiva:", cardSection.id)[m
+[32m+[m[32m    return null[m
+[32m+[m[32m  }[m
+ [m
+   const activeCards = (cardSection.cards || []).filter((card) => card.isActive).sort((a, b) => a.position - b.position)[m
+ [m
+[31m-  if (activeCards.length === 0) return null[m
+[32m+[m[32m  console.log("[FeaturesSection/CardSectionRenderer] Cards activas:", {[m
+[32m+[m[32m    sectionId: cardSection.id,[m
+[32m+[m[32m    activeCardsCount: activeCards.length,[m
+[32m+[m[32m    activeCards: activeCards.map(c => ({ id: c.id, title: c.title }))[m
+[32m+[m[32m  })[m
+[32m+[m
+[32m+[m[32m  if (activeCards.length === 0) {[m
+[32m+[m[32m    console.log("[FeaturesSection/CardSectionRenderer] No hay cards activas:", cardSection.id)[m
+[32m+[m[32m    return null[m
+[32m+[m[32m  }[m
+ [m
+   return ([m
+     <section ref={ref} className="relative overflow-hidden">[m
+[36m@@ -138,8 +157,33 @@[m [mfunction matchesMetadata([m
+ }[m
+ [m
+ export default function FeaturesSection({ id, metadata }: FeaturesSectionProps = {}) {[m
+[32m+[m[32m  console.log("[FeaturesSection] ⚛️ Renderizando FeaturesSection con:", {[m
+[32m+[m[32m    id,[m
+[32m+[m[32m    metadata,[m
+[32m+[m[32m    timestamp: new Date().toISOString()[m
+[32m+[m[32m  })[m
+[32m+[m[41m  [m
+   const { cardSections, loading, error } = useMainStore()[m
+ [m
+[32m+[m[32m  console.log("[FeaturesSection] Estado inicial del hook:", {[m
+[32m+[m[32m    cardSectionsCount: cardSections.length,[m
+[32m+[m[32m    loading,[m
+[32m+[m[32m    error[m
+[32m+[m[32m  })[m
+[32m+[m
+[32m+[m[32m  // NOTA: FeaturesSection NO intenta cargar cards - initializeStore se encarga de eso[m
+[32m+[m[32m  // Solo mostramos loading si no hay cards todavía[m
+[32m+[m
+[32m+[m[32m  console.log("[FeaturesSection] Renderizado con:", {[m
+[32m+[m[32m    id,[m
+[32m+[m[32m    metadata,[m
+[32m+[m[32m    cardSectionsCount: cardSections?.length || 0,[m
+[32m+[m[32m    cardSections: cardSections,[m
+[32m+[m[32m    cardSectionsIsArray: Array.isArray(cardSections),[m
+[32m+[m[32m    loading,[m
+[32m+[m[32m    error[m
+[32m+[m[32m  })[m
+[32m+[m
+   // Filter sections[m
+   const getFilteredSections = (): CardSection[] => {[m
+     if (!id && !metadata) {[m
+[36m@@ -164,33 +208,60 @@[m [mexport default function FeaturesSection({ id, metadata }: FeaturesSectionProps =[m
+ [m
+   const activeSections = getFilteredSections()[m
+ [m
+[32m+[m[32m  console.log("[FeaturesSection] Secciones filtradas:", {[m
+[32m+[m[32m    activeSectionsCount: activeSections.length,[m
+[32m+[m[32m    activeSections: activeSections.map(s => ({ id: s.id, title: s.title, isActive: s.isActive }))[m
+[32m+[m[32m  })[m
+[32m+[m
+   if (!id && !metadata) {[m
+     return null[m
+   }[m
+ [m
+[31m-  if (loading) {[m
+[32m+[m[32m  if (error) {[m
+     return ([m
+       <div className="relative overflow-hidden">[m
+         <div className="absolute inset-0 " />[m
+         <div className="container-section relative py-16 lg:py-24 flex justify-center items-center min-h-[400px]">[m
+[31m-          <Loader2 className="h-10 w-10 animate-spin text-primary" />[m
+[32m+[m[32m          <div className="text-red-500">{error}</div>[m
+         </div>[m
+       </div>[m
+     )[m
+   }[m
+ [m
+[31m-  if (error) {[m
+[32m+[m[32m  // SOLUCIÓN PRINCIPAL: Si NO hay cards todavía, mostrar loading (puede que

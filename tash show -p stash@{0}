@@ -1,0 +1,15 @@
+[33medb0d82[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32manjsports[m[33m, [m[1;31morigin/anjsports[m[33m)[m HEAD@{0}: checkout: moving from anjsports to anjsports
+[33medb0d82[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32manjsports[m[33m, [m[1;31morigin/anjsports[m[33m)[m HEAD@{1}: checkout: moving from clefast to anjsports
+[33mb1adc53[m[33m ([m[1;32mclefast[m[33m)[m HEAD@{2}: reset: moving to HEAD
+[33mb1adc53[m[33m ([m[1;32mclefast[m[33m)[m HEAD@{3}: checkout: moving from anjsports to clefast
+[33medb0d82[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32manjsports[m[33m, [m[1;31morigin/anjsports[m[33m)[m HEAD@{4}: commit: Update product filter sidebar, product card and price utils
+[33m6da7825[m HEAD@{5}: checkout: moving from sportt-Peru to anjsports
+[33m3a5e6d3[m[33m ([m[1;31morigin/sportt-Peru[m[33m, [m[1;32msportt-Peru[m[33m)[m HEAD@{6}: commit: ActualizaciÃ³n completa: mejoras en productos, autenticaciÃ³n, stores y documentaciÃ³n API
+[33mad11ce1[m HEAD@{7}: checkout: moving from clefast to sportt-Peru
+[33mb1adc53[m[33m ([m[1;32mclefast[m[33m)[m HEAD@{8}: commit: feat: improve products page functionality and UI components
+[33mcd1937a[m HEAD@{9}: commit: Mejoras en UX: Añadir estados de carga, optimización de navbar y mejor gestión de estado
+[33m45dac54[m HEAD@{10}: commit: Mejora sistema de filtros de productos y documentación de API - Refactorización de componentes ProductList y ProductsFilter para mejor rendimiento - Actualización de tipos de paginación y store principal - Documentación completa de API de productos y endpoints
+[33m1b56ee0[m HEAD@{11}: checkout: moving from main to clefast
+[33md22b2d0[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m HEAD@{12}: reset: moving to origin/main
+[33md55b130[m HEAD@{13}: pull origin clefast: Merge made by the 'ort' strategy.
+[33md22b2d0[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m HEAD@{14}: clone: from https://github.com/AlexArancibia/AuthTemplate.git

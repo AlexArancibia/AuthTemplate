@@ -1,0 +1,71 @@
+59cbbbb - AlexArancibia, 2025-11-02 Sunday : WIP on clefast: b1adc53 feat: improve products page functionality and UI components
+cf6ea12 - AlexArancibia, 2025-11-02 Sunday : index on clefast: b1adc53 feat: improve products page functionality and UI components
+2d352ec - AlexArancibia, 2025-11-02 Sunday : untracked files on clefast: b1adc53 feat: improve products page functionality and UI components
+df845c7 - Alexander Arancibia, 2025-11-02 Sunday : fix fetching
+4ff21bc - Alexander Arancibia, 2025-11-01 Saturday : fix clefast
+edb0d82 - AlexArancibia, 2025-10-31 Friday : Update product filter sidebar, product card and price utils
+3a5e6d3 - AlexArancibia, 2025-10-29 Wednesday : ActualizaciÃ³n completa: mejoras en productos, autenticaciÃ³n, stores y documentaciÃ³n API
+b1adc53 - AlexArancibia, 2025-10-28 Tuesday : feat: improve products page functionality and UI components
+cd1937a - AlexArancibia, 2025-10-27 Monday : Mejoras en UX: Añadir estados de carga, optimización de navbar y mejor gestión de estado
+45dac54 - AlexArancibia, 2025-10-27 Monday : Mejora sistema de filtros de productos y documentación de API - Refactorización de componentes ProductList y ProductsFilter para mejor rendimiento - Actualización de tipos de paginación y store principal - Documentación completa de API de productos y endpoints
+1b56ee0 - Alexander Arancibia, 2025-10-23 Thursday : endpoints fixed
+e844bbf - Alexander Arancibia, 2025-10-23 Thursday : endpoints fixed
+6da7825 - Alexander Arancibia, 2025-10-22 Wednesday : fix: endpoints updated
+ad11ce1 - riuzerjc, 2025-10-20 Monday : fix(ui): feat(checkout): add /failure page and center confirmation content
+dc37166 - riuzerjc, 2025-10-20 Monday : feat: global pink theme + new font; revamped product cards; new checkout style and subcomponents
+611757e - Alexander Arancibia, 2025-10-20 Monday : update
+3af0cf9 - Alexander Arancibia, 2025-10-19 Sunday : feat:new design
+b052f66 - Alexander Arancibia, 2025-10-19 Sunday : feat:new design
+8e9168a - riuzerjc, 2025-10-18 Saturday : style: update ProductCard styles refactor: remove all traces of 'anj' and replace with 'sporttperu' feat: add new assets to public/ chore: update contact form to match official website version
+2274707 - riuzerjc, 2025-10-18 Saturday : Add new payment, webhook, success pages, store initializers, and persisted store modules.
+ec73e36 - riuzerjc, 2025-10-18 Saturday : Update checkout, layout, shipping-payment-step, middleware, and main store. Update package files.
+ede7b7f - GonzaloNavach, 2025-10-14 Tuesday : Merge pull request #26 from AlexArancibia/sportt-migracion-componente5
+46fbf95 - GonzaloNavach, 2025-10-14 Tuesday : feat: agregar FeaturedProductsSection y actualizar layout, página principal y footer
+b9267b6 - GonzaloNavach, 2025-10-14 Tuesday : Merge pull request #25 from AlexArancibia/sportt-migracion-componente4
+67b9132 - GonzaloNavach, 2025-10-14 Tuesday : feat: migración de componentes - añadir PromotionalGrid y actualizar carruseles de productos
+6159342 - GonzaloNavach, 2025-10-14 Tuesday : Merge pull request #24 from AlexArancibia/sportt-migracion-componente3
+6de3730 - GonzaloNavach, 2025-10-14 Tuesday : feat: Migración de CollectionCarousel a conexión con backend - Implementación de llamadas API para obtener colecciones dinámicamente - Integración con tipos TypeScript actualizados (Collection, Media, Currency) - Manejo de estados de carga y errores - Soporte para múltiples divisas y precios de variantes - Mejoras en la visualización de productos en el carrusel
+8fc4f1d - GonzaloNavach, 2025-10-14 Tuesday : Merge pull request #23 from AlexArancibia/sportt-migracion-componente2
+3e0198a - GonzaloNavach, 2025-10-14 Tuesday : feat: Agregar componente FeaturedProductsWithSidebar con filtros y actualizar home
+0c8310b - Alexander Arancibia, 2025-10-13 Monday : fixedf
+1adc0f1 - GonzaloNavach, 2025-10-13 Monday : feat: Actualización de diseño y branding para Sportt Peru - Actualización de componentes Hero (HeroSection, HeroCaruselBase, HeroSlide) - Mejoras en la navegación y navbar - Actualización de estilos globales y layout principal - Agregados nuevos assets e imágenes - Incorporación del logo de Sportt - Actualización del schema de Prisma y página de checkout
+82b880b - Alexander Arancibia, 2025-10-13 Monday : new models
+82014d1 - GonzaloNavach, 2025-10-12 Sunday : Update checkout, email config and address components
+27e6606 - GonzaloNavach, 2025-10-12 Sunday : Actualizaciones en autenticación y configuración de email
+78c3bfc - GonzaloNavach, 2025-10-12 Sunday : Mejoras en sistema de autenticación: verificación de email, configuración de nodemailer y correcciones en componentes
+e2283e3 - Alexander Arancibia, 2025-10-12 Sunday : products workspace fixed
+761a915 - Alexander Arancibia, 2025-10-10 Friday : collection fixed
+53be89d - AlexArancibia, 2025-10-10 Friday : Merge pull request #22 from AlexArancibia/feature-actualizacion-productos-filter
+d18fad2 - GonzaloNavach, 2025-10-10 Friday : feat: actualización de filtros y componentes de productos
+b20b799 - Alexander Arancibia, 2025-10-10 Friday : feat: product list fixed
+925b29f - GonzaloNavach, 2025-10-08 Wednesday : Merge pull request #21 from AlexArancibia/clefastfeature/fechasEnviosPedidos
+efe9117 - GonzaloNavach, 2025-10-08 Wednesday : fix: corregir referencia de colecciones y mejorar ButtonSocial con className personalizable
+03e0dab - GonzaloNavach, 2025-10-08 Wednesday : Merge pull request #20 from AlexArancibia/clefastfeature/fechasEnviosPedidos
+fb1014e - GonzaloNavach, 2025-10-08 Wednesday : fix: agregar campos faltantes de ubicación en formulario de checkout (country, state, city IDs)
+938b253 - GonzaloNavach, 2025-10-08 Wednesday : Merge pull request #19 from AlexArancibia/clefastfeature/fechasEnviosPedidos
+f463007 - GonzaloNavach, 2025-10-08 Wednesday : feat: Implementar fechas de envío en pedidos y checkout
+3f31f12 - AlexArancibia, 2025-10-07 Tuesday : Merge pull request #18 from AlexArancibia/fix/blog-images
+4c4ab5d - GonzaloNavach, 2025-10-06 Monday : feat: Fix blog images and add quick login panel functionality, and update endpoints bakend
+b59d0cb - Alexander Arancibia, 2025-10-05 Sunday : fix reset
+b7f4b4c - Alexander Arancibia, 2025-10-05 Sunday : products responsive design
+97a0f10 - Alexander Arancibia, 2025-10-05 Sunday : fix: responsive design
+57067a4 - riuzerjc, 2025-10-03 Friday : fixing api use orders
+8c01622 - riuzerjc, 2025-10-03 Friday : changing placehodler img
+e00e2de - riuzerjc, 2025-10-03 Friday : adding image store to use un culqui module
+c0287ab - Alexander Arancibia, 2025-10-03 Friday : new endpoints
+6865266 - Alexander Arancibia, 2025-10-03 Friday : new endpoints
+26c00fe - AlexArancibia, 2025-09-23 Tuesday : Merge pull request #17 from AlexArancibia/clefast-fix/Logo
+a537759 - GonzaloNavach, 2025-09-23 Tuesday : feat: agregar iconos y favicon para la aplicación
+d7fb302 - AlexArancibia, 2025-09-23 Tuesday : Merge pull request #16 from AlexArancibia/clefast-Feature/FiltroProductos
+2f0d4b3 - GonzaloNavach, 2025-09-22 Monday : Feature filtrado por categoria unica mas titulo
+b2c1226 - AlexArancibia, 2025-09-22 Monday : Merge pull request #15 from AlexArancibia/clefast-change-cookieBarra
+9a92423 - GonzaloNavach, 2025-09-22 Monday : feat: implementacion cookie consent functionality con CookieBar component
+7c5448e - Alexander Arancibia, 2025-09-20 Saturday : any removed
+25dbee5 - GonzaloNavach, 2025-09-20 Saturday : Merge pull request #14 from AlexArancibia/feature/direcciones-formulario
+3575642 - unknown, 2025-09-20 Saturday : edicion/creacion/obtencion/eliminacion de direcciones y mejoras en el checkout direcciones
+1bc4d33 - GonzaloNavach, 2025-09-18 Thursday : Merge pull request #13 from AlexArancibia/fix/forgotPass-emailColors
+3aefafa - unknown, 2025-09-18 Thursday : cambio de colores de texto y fondo
+5abff9e - GonzaloNavach, 2025-09-18 Thursday : Merge pull request #12 from AlexArancibia/clefast-fix-login
+39fb48e - unknown, 2025-09-18 Thursday : fix de actualizacion del boton de inicio de secion
+788044a - GonzaloNavach, 2025-09-17 Wednesday : Merge pull request #11 from AlexArancibia/clefast-login-store
+77e0848 - unknown, 2025-09-17 W

@@ -20,7 +20,6 @@ import { BrandsCarousel } from "@/components/BrandsCarousel"
 import { CollectionCarousel } from "@/components/CollectionCarousel"
 import { FeatureCollection } from "@/components/FeatureCollection"
 import { Testimonials } from "@/components/Testimonials"
-import { Sponsors } from "@/components/Sponsors"
 
 export default function HomePage() {
   const pathname = usePathname()
@@ -100,7 +99,6 @@ export default function HomePage() {
 
       {/* <BlogSection /> */}
       <Testimonials />
-      <Sponsors />
       
     </>
   )

@@ -24,7 +24,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { SearchProductParams } from "@/types/pagination"
 
 interface ProductDetailsProps {
-  slug: string
+  slug?: string
+  id?: string
 }
 
 // Componente SVG de WhatsApp
@@ -87,8 +88,8 @@ function useReleaseCountdownWithSeconds(releaseDate: Date | string | null | unde
   return { timeLeft, isReleased }
 }
 
-export default function ProductDetails({ slug }: ProductDetailsProps) {
-  const { products, shopSettings, getProductBySlug, fetchProducts } = useMainStore()
+export default function ProductDetails({ slug, id }: ProductDetailsProps) {
+  const { products, shopSettings, getProductBySlug, getProductById, fetchProducts } = useMainStore()
   const { selectedCurrencyId, acceptedCurrencies } = useCurrencyStore() // Obtener valores del store
   const { addItem } = useCartStore()
   const [product, setProduct] = useState<Product | null>(null)
@@ -172,15 +173,23 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
     })
   }, [product])
 
-  // Fetch del producto individual por slug
+  // Fetch del producto individual por slug o id
   useEffect(() => {
     const loadProduct = async () => {
       setIsLoading(true)
       setError(null)
       
       try {
-        console.log(`[ProductDetails] Fetching product by slug: ${slug}`)
-        const fetchedProduct = await getProductBySlug(slug)
+        let fetchedProduct: Product
+        if (id) {
+          console.log(`[ProductDetails] Fetching product by id: ${id}`)
+          fetchedProduct = await getProductById(id)
+        } else if (slug) {
+          console.log(`[ProductDetails] Fetching product by slug: ${slug}`)
+          fetchedProduct = await getProductBySlug(slug)
+        } else {
+          throw new Error("Either slug or id must be provided")
+        }
         
         console.log("[ProductDetails] Product fetched successfully:", {
           id: fetchedProduct.id,
@@ -204,7 +213,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
     }
     
     loadProduct()
-  }, [slug, getProductBySlug])
+  }, [slug, id, getProductBySlug, getProductById])
 
   const variantOptions = useMemo(() => {
     if (!product || !product.variants) return {}
