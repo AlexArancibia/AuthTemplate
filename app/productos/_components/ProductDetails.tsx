@@ -26,6 +26,59 @@ interface ProductDetailsProps {
   slug: string
 }
 
+// Hook personalizado para el contador de disponibilidad con segundos
+function useReleaseCountdownWithSeconds(releaseDate: Date | string | null | undefined) {
+  const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null)
+  const [isReleased, setIsReleased] = useState(false)
+
+  useEffect(() => {
+    if (!releaseDate) {
+      setTimeLeft(null)
+      setIsReleased(true)
+      return
+    }
+
+    const targetDate = releaseDate instanceof Date ? releaseDate : new Date(releaseDate)
+    const now = new Date()
+
+    // Si la fecha de lanzamiento ya pasó
+    if (targetDate <= now) {
+      setTimeLeft(null)
+      setIsReleased(true)
+      return
+    }
+
+    // Calcular tiempo restante inicialmente
+    const calculateTimeLeft = () => {
+      const now = new Date()
+      const difference = targetDate.getTime() - now.getTime()
+
+      if (difference <= 0) {
+        setTimeLeft(null)
+        setIsReleased(true)
+        return
+      }
+
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24))
+      const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60))
+      const seconds = Math.floor((difference % (1000 * 60)) / 1000)
+
+      setTimeLeft({ days, hours, minutes, seconds })
+      setIsReleased(false)
+    }
+
+    calculateTimeLeft()
+
+    // Actualizar cada segundo
+    const timer = setInterval(calculateTimeLeft, 1000)
+
+    return () => clearInterval(timer)
+  }, [releaseDate])
+
+  return { timeLeft, isReleased }
+}
+
 export default function ProductDetails({ slug }: ProductDetailsProps) {
   const { products, shopSettings, getProductBySlug } = useMainStore()
   const { selectedCurrencyId, acceptedCurrencies } = useCurrencyStore() // Obtener valores del store
@@ -41,6 +94,9 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
   const [preloadedImages, setPreloadedImages] = useState<Set<string>>(new Set())
   const [showContinueShopping, setShowContinueShopping] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Hook para el cronómetro de disponibilidad
+  const { timeLeft: releaseTimeLeft, isReleased: isProductReleased } = useReleaseCountdownWithSeconds(product?.releaseDate)
 
   // Carrusel para productos relacionados
   const [emblaRef, emblaApi] = useEmblaCarousel({
@@ -548,6 +604,50 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                     </Button>
                   </div>
                 </div>
+
+                {/* Cronómetro de disponibilidad */}
+                {product?.releaseDate && !isProductReleased && releaseTimeLeft !== null && (
+                  <div 
+                    className="relative text-white p-5 rounded-lg overflow-hidden"
+                    style={{
+                      backgroundImage: "url('/FONDO-TEXTURA.jpg')",
+                      backgroundSize: "cover",
+                      backgroundPosition: "center"
+                    }}
+                  >
+                     <h3 className="text-base font-bold mb-4 text-white font-druk">
+                       Producto disponible el {(() => {
+                         const releaseDate = product.releaseDate instanceof Date 
+                           ? product.releaseDate 
+                           : new Date(product.releaseDate)
+                         return releaseDate.toLocaleDateString('es-ES', { 
+                           day: 'numeric', 
+                           month: 'long', 
+                           year: 'numeric' 
+                         })
+                       })()}
+                     </h3>
+                     <div className="flex items-center gap-4 flex-wrap">
+                       <span className="text-sm font-normal text-white whitespace-nowrap font-adi-regular">Disponible en:</span>
+                       <div className="bg-white/20 rounded-md px-4 py-3 flex flex-col items-center justify-center min-w-[70px]">
+                         <span className="text-4xl font-bold text-white leading-none font-mono tracking-tight">{releaseTimeLeft.days}</span>
+                         <span className="text-xs uppercase font-normal text-white mt-1 font-adi-regular">DÍAS</span>
+                       </div>
+                       <div className="bg-white/20 rounded-md px-4 py-3 flex flex-col items-center justify-center min-w-[70px]">
+                         <span className="text-4xl font-bold text-white leading-none font-mono tracking-tight">{releaseTimeLeft.hours}</span>
+                         <span className="text-xs uppercase font-normal text-white mt-1 font-adi-regular">HORAS</span>
+                       </div>
+                       <div className="bg-white/20 rounded-md px-4 py-3 flex flex-col items-center justify-center min-w-[70px]">
+                         <span className="text-4xl font-bold text-white leading-none font-mono tracking-tight">{releaseTimeLeft.minutes}</span>
+                         <span className="text-xs uppercase font-normal text-white mt-1 font-adi-regular">MIN</span>
+                       </div>
+                       <div className="bg-white/20 rounded-md px-4 py-3 flex flex-col items-center justify-center min-w-[70px]">
+                         <span className="text-4xl font-bold text-white leading-none font-mono tracking-tight">{releaseTimeLeft.seconds}</span>
+                         <span className="text-xs uppercase font-normal text-white mt-1 font-adi-regular">SEG</span>
+                       </div>
+                     </div>
+                  </div>
+                )}
 
                 <div className="space-y-4">
                   {hasValidPrice(selectedVariant) && (

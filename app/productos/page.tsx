@@ -25,7 +25,7 @@ function ProductsContent() {
         <div className="container-section py-16 md:py-16 bg-[url('/fondoproduct.jpg')] bg-cover">
           <div className="content-section text-center">
             <h2 className="text-white mb-2">Nuestros Productos</h2>
-            <p className="text-white/90 text-lg">Descubre nuestra línea completa de productos de limpieza industrial</p>
+            <p className="text-white/90 text-lg">Descubre nuestra línea completa de productos de tenis de mesa: raquetas, gomas, mesas, robots, accesorios y más</p>
           </div>
         </div>
         <div className="container-section py-8 md:py-16">
@@ -150,7 +150,7 @@ export default function ProductsPage() {
         <div className="container-section py-16 md:py-16 bg-[url('/fondoproduct.jpg')] bg-cover">
           <div className="content-section text-center">
             <h2 className="text-white mb-2">Nuestros Productos</h2>
-            <p className="text-white/90 text-lg">Descubre nuestra línea completa de productos de limpieza industrial</p>
+            <p className="text-white/90 text-lg">Descubre nuestra línea completa de productos de tenis de mesa: raquetas, gomas, mesas, robots, accesorios y más</p>
           </div>
         </div>
         <div className="container-section py-8 md:py-16">

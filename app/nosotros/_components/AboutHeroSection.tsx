@@ -235,12 +235,12 @@ export function QuienesSomosHero() {
 
           {/* Título y subtítulo */}
           <h1 className="text-4xl md:text-[80px] mb-10 font-bold">{title || "Quiénes somos"}</h1>
-          <p className="text-lg md:text-2xl font-semibold mt-2">{"Facilitamos los procesos de lavado industrial"}</p>
+          <p className="text-lg md:text-2xl font-semibold mt-2">{"Especialistas en tenis de mesa y equipamiento profesional"}</p>
 
           {/* Descripción */}
           <p className="text-base md:text-lg mt-4 leading-relaxed w-full md:w-1/2">
             {subtitle ||
-              "Conocemos de cerca los desafíos del lavado industrial. Día a día asesoramos a empresas que buscan marcar la diferencia en su servicio de lavandería. Escuchar nos ha llevado a innovar. Nuestros productos son usados en numerosos hoteles y lavanderías del Perú, han desafiado las convenciones con un enfoque ecológico y han ayudado a muchas lavanderías a estar más cerca de su éxito comercial al optimizar sus procesos de lavado."}
+              "Somos una tienda especializada en tenis de mesa en Perú. Ofrecemos una amplia gama de productos de alta calidad: raquetas profesionales, gomas de última generación, mesas oficiales, robots entrenadores, accesorios y ropa deportiva. Trabajamos con las mejores marcas del mundo como Butterfly, Xiom, Victas, Sanwei y más, para brindar a nuestros clientes el mejor equipamiento para practicar y competir en tenis de mesa."}
           </p>
 
           {/* Botón si existe */}

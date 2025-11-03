@@ -129,7 +129,7 @@ export function PreFooterContact() {
             <h2 className="text-white mb-3">¡REGÍSTRATE Y AHORRA!</h2>
             <p className="text-white mb-4">
               {shopInfo?.description ||
-                "Estamos aquí para ayudarte. Contáctanos para obtener más información sobre nuestros productos y servicios de limpieza industrial."}
+                "Estamos aquí para ayudarte. Contáctanos para obtener más información sobre nuestros productos de tenis de mesa y accesorios."}
             </p>
 
             <div className="flex gap-4">

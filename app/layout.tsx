@@ -19,26 +19,27 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: "ANJ SPORTs - Detergentes Ecológicos Industriales | Perú",
-    template: "%s | ANJ SPORTs - Detergentes Ecológicos",
+    default: "ANJ SPORTs - Tienda de Tenis de Mesa | Raquetas, Gomas y Accesorios | Perú",
+    template: "%s | ANJ SPORTs - Tienda de Tenis de Mesa",
   },
   description:
-    "ANJ SPORTs es líder en detergentes ecológicos industriales en Perú. Ofrecemos soluciones de limpieza profesional eco-amigables y biodegradables para empresas, hoteles, restaurantes y centros de salud.",
+    "ANJ SPORTs es tu tienda especializada en tenis de mesa en Perú. Ofrecemos raquetas, gomas, mesas, robots, accesorios, ropa y equipamiento profesional de las mejores marcas como Butterfly, Xiom, Victas, Sanwei y más.",
   keywords: [
-    "detergentes ecológicos",
-    "detergentes industriales",
-    "limpieza ecológica",
-    "productos biodegradables",
-    "detergentes eco-amigables",
-    "limpieza profesional",
-    "productos de limpieza",
-    "detergentes comerciales",
-    "limpieza industrial",
-    "desinfectantes ecológicos",
-    "productos químicos verdes",
-    "limpieza hospitalaria",
-    "limpieza hotelera",
-    "detergentes biodegradables",
+    "tenis de mesa",
+    "raquetas de tenis de mesa",
+    "gomas para tenis de mesa",
+    "mesas de ping pong",
+    "accesorios de tenis de mesa",
+    "ropa deportiva",
+    "robots de tenis de mesa",
+    "ping pong",
+    "table tennis",
+    "butterfly",
+    "xiom",
+    "victas",
+    "sanwei",
+    "equipamiento deportivo",
+    "ANJ SPORTs",
     "ANJ",
   ],
   metadataBase: new URL("https://anjsports.com"),
@@ -48,21 +49,21 @@ export const metadata: Metadata = {
     url: "https://anjsports.com/",
     title: "ANJ SPORTs",
     description:
-      "",
+      "Tienda especializada en tenis de mesa. Raquetas, gomas, mesas, robots y accesorios de las mejores marcas.",
     siteName: "ANJ SPORTs",
     images: [
       {
         url: "/fotoportada.jpg", // Imagen principal para compartir
         width: 1200,
         height: 630,
-        alt: "ANJ SPORTs - Detergentes Industriales Ecológicos",
+        alt: "ANJ SPORTs - Tienda de Tenis de Mesa y Accesorios",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "ANJ SPORTs - Detergentes Industriales Ecológicos",
-    description: "Líder en detergentes industriales. Soluciones de limpieza profesional certificadas y eco-amigables.",
+    title: "ANJ SPORTs - Tienda de Tenis de Mesa | Perú",
+    description: "Tienda especializada en tenis de mesa. Raquetas, gomas, mesas, robots y accesorios de las mejores marcas.",
     images: ["/fotoportada.jpg"], // Misma imagen para Twitter
   },
   icons: {
