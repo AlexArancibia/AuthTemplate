@@ -21,10 +21,18 @@ import { ProductCard } from "@/components/ProductCard"
 import { toast } from "sonner"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import type { SearchProductParams } from "@/types/pagination"
 
 interface ProductDetailsProps {
   slug: string
 }
+
+// Componente SVG de WhatsApp
+const WhatsAppIcon = () => (
+  <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.488" />
+  </svg>
+)
 
 // Hook personalizado para el contador de disponibilidad con segundos
 function useReleaseCountdownWithSeconds(releaseDate: Date | string | null | undefined) {
@@ -80,7 +88,7 @@ function useReleaseCountdownWithSeconds(releaseDate: Date | string | null | unde
 }
 
 export default function ProductDetails({ slug }: ProductDetailsProps) {
-  const { products, shopSettings, getProductBySlug } = useMainStore()
+  const { products, shopSettings, getProductBySlug, fetchProducts } = useMainStore()
   const { selectedCurrencyId, acceptedCurrencies } = useCurrencyStore() // Obtener valores del store
   const { addItem } = useCartStore()
   const [product, setProduct] = useState<Product | null>(null)
@@ -94,9 +102,17 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
   const [preloadedImages, setPreloadedImages] = useState<Set<string>>(new Set())
   const [showContinueShopping, setShowContinueShopping] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
+  const [loadingRelated, setLoadingRelated] = useState(false)
 
   // Hook para el cronómetro de disponibilidad
   const { timeLeft: releaseTimeLeft, isReleased: isProductReleased } = useReleaseCountdownWithSeconds(product?.releaseDate)
+  
+  // Verificar si el producto está en prelanzamiento
+  const isPreLaunch = useMemo(() => product?.releaseDate && !isProductReleased, [product?.releaseDate, isProductReleased])
+  
+  // Obtener número de teléfono del shop
+  const phoneNumber = useMemo(() => shopSettings?.[0]?.phone?.replace(/[^0-9]/g, ""), [shopSettings])
 
   // Carrusel para productos relacionados
   const [emblaRef, emblaApi] = useEmblaCarousel({
@@ -223,22 +239,79 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
     return product.variants.find((variant) => variant.imageUrls && variant.imageUrls.includes(imageUrl)) || null
   }
 
-  // Productos relacionados: productos que comparten categorías con el producto actual
-  const relatedProducts = useMemo(() => {
-    if (!product || !product.categories) return []
+  // Productos relacionados: fetch desde la API basado en categorías o colecciones
+  useEffect(() => {
+    const loadRelatedProducts = async () => {
+      if (!product) {
+        setRelatedProducts([])
+        setLoadingRelated(false)
+        return
+      }
 
-    const productCategoryIds = product.categories.map((cat) => cat.id)
+      setLoadingRelated(true)
+      try {
+        const baseParams: SearchProductParams = {
+          status: ['ACTIVE'],
+          limit: 9,
+          sortBy: 'viewCount',
+          sortOrder: 'desc',
+        }
 
-    return products
-      .filter(
-        (p) =>
-          p.id !== product.id &&
-          p.status === "ACTIVE" && // Solo productos activos
-          p.categories &&
-          p.categories.some((cat) => productCategoryIds.includes(cat.id)),
-      )
-      .slice(0, 8)
-  }, [product, products])
+        // Definir los criterios a intentar en orden de prioridad
+        const criteriaToTry: Array<{ params: SearchProductParams }> = []
+
+        // PRIORIDAD 1: Si tiene categorías, intentar primero con categorías
+        if (product.categories?.length) {
+          criteriaToTry.push({
+            params: {
+              ...baseParams,
+              categorySlugs: product.categories.map((cat) => cat.slug),
+            },
+          })
+        }
+
+        // PRIORIDAD 2: Si tiene colecciones, intentar con colecciones
+        if (product.collections?.length) {
+          criteriaToTry.push({
+            params: {
+              ...baseParams,
+              collectionIds: product.collections.map((col) => col.id),
+            },
+          })
+        }
+
+        // Si no hay criterios para intentar, no hacer nada
+        if (criteriaToTry.length === 0) {
+          setRelatedProducts([])
+          setLoadingRelated(false)
+          return
+        }
+
+        // Intentar cada criterio hasta encontrar productos
+        let finalProducts: Product[] = []
+        for (const criterion of criteriaToTry) {
+          const response = await fetchProducts(criterion.params)
+          const filtered = (response.data || [])
+            .filter((p) => p.id !== product.id)
+            .slice(0, 8)
+
+          if (filtered.length > 0) {
+            finalProducts = filtered
+            break
+          }
+        }
+
+        setRelatedProducts(finalProducts)
+      } catch (error) {
+        console.error('Error loading related products:', error)
+        setRelatedProducts([])
+      } finally {
+        setLoadingRelated(false)
+      }
+    }
+
+    loadRelatedProducts()
+  }, [product, fetchProducts])
 
   const optionKeys = Object.keys(variantOptions)
 
@@ -410,6 +483,28 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
 
         const message = encodeURIComponent(
           `Hola! Me interesa consultar sobre el producto: ${product.title} ${attributeDisplay}. ¿Podrían darme más información sobre el precio?`,
+        )
+
+        const whatsappUrl = `https://wa.me/${phone.replace(/[^0-9]/g, "")}?text=${message}`
+        window.open(whatsappUrl, "_blank")
+      }
+    }
+  }
+
+  const handleWhatsAppReserve = () => {
+    if (product && selectedVariant && shopSettings && shopSettings.length > 0) {
+      const phone = shopSettings[0].phone
+      if (phone) {
+        const attributeDisplay = selectedVariant.attributes
+          ? `(${Object.values(selectedVariant.attributes).filter(Boolean).join(", ")})`
+          : ""
+
+        const productName = attributeDisplay 
+          ? `${product.title} ${attributeDisplay}`
+          : product.title
+
+        const message = encodeURIComponent(
+          `Hola! Tengo interés en reservar este producto: ${productName}`,
         )
 
         const whatsappUrl = `https://wa.me/${phone.replace(/[^0-9]/g, "")}?text=${message}`
@@ -606,17 +701,18 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                 </div>
 
                 {/* Cronómetro de disponibilidad */}
-                {product?.releaseDate && !isProductReleased && releaseTimeLeft !== null && (
+                {isPreLaunch && releaseTimeLeft !== null && (
                   <div 
-                    className="relative text-white p-5 rounded-lg overflow-hidden"
+                    className="relative text-white px-3 py-4 rounded-lg overflow-hidden w-fit mx-auto"
                     style={{
                       backgroundImage: "url('/FONDO-TEXTURA.jpg')",
                       backgroundSize: "cover",
                       backgroundPosition: "center"
                     }}
                   >
-                     <h3 className="text-base font-bold mb-4 text-white font-druk">
+                     <h3 className="text-sm font-bold mb-2 text-white font-druk text-center">
                        Producto disponible el {(() => {
+                         if (!product.releaseDate) return ""
                          const releaseDate = product.releaseDate instanceof Date 
                            ? product.releaseDate 
                            : new Date(product.releaseDate)
@@ -627,23 +723,25 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                          })
                        })()}
                      </h3>
-                     <div className="flex items-center gap-4 flex-wrap">
-                       <span className="text-sm font-normal text-white whitespace-nowrap font-adi-regular">Disponible en:</span>
-                       <div className="bg-white/20 rounded-md px-4 py-3 flex flex-col items-center justify-center min-w-[70px]">
-                         <span className="text-4xl font-bold text-white leading-none font-mono tracking-tight">{releaseTimeLeft.days}</span>
-                         <span className="text-xs uppercase font-normal text-white mt-1 font-adi-regular">DÍAS</span>
-                       </div>
-                       <div className="bg-white/20 rounded-md px-4 py-3 flex flex-col items-center justify-center min-w-[70px]">
-                         <span className="text-4xl font-bold text-white leading-none font-mono tracking-tight">{releaseTimeLeft.hours}</span>
-                         <span className="text-xs uppercase font-normal text-white mt-1 font-adi-regular">HORAS</span>
-                       </div>
-                       <div className="bg-white/20 rounded-md px-4 py-3 flex flex-col items-center justify-center min-w-[70px]">
-                         <span className="text-4xl font-bold text-white leading-none font-mono tracking-tight">{releaseTimeLeft.minutes}</span>
-                         <span className="text-xs uppercase font-normal text-white mt-1 font-adi-regular">MIN</span>
-                       </div>
-                       <div className="bg-white/20 rounded-md px-4 py-3 flex flex-col items-center justify-center min-w-[70px]">
-                         <span className="text-4xl font-bold text-white leading-none font-mono tracking-tight">{releaseTimeLeft.seconds}</span>
-                         <span className="text-xs uppercase font-normal text-white mt-1 font-adi-regular">SEG</span>
+                     <div className="flex flex-col sm:flex-row items-center justify-center gap-3 flex-wrap">
+                       <span className="text-xs font-normal text-white whitespace-nowrap font-adi-regular w-full sm:w-auto text-center sm:text-left">Disponible en:</span>
+                       <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+                         <div className="bg-white/20 rounded-md px-2 py-1.5 sm:px-4 sm:py-3 flex flex-col items-center justify-center min-w-[55px] sm:min-w-[70px]">
+                           <span className="text-2xl sm:text-3xl font-bold text-white leading-none font-mono tracking-tight">{releaseTimeLeft.days}</span>
+                           <span className="text-xs uppercase font-normal text-white mt-1 font-adi-regular">DÍAS</span>
+                         </div>
+                         <div className="bg-white/20 rounded-md px-2 py-1.5 sm:px-4 sm:py-3 flex flex-col items-center justify-center min-w-[55px] sm:min-w-[70px]">
+                           <span className="text-2xl sm:text-3xl font-bold text-white leading-none font-mono tracking-tight">{releaseTimeLeft.hours}</span>
+                           <span className="text-xs uppercase font-normal text-white mt-1 font-adi-regular">HORAS</span>
+                         </div>
+                         <div className="bg-white/20 rounded-md px-2 py-1.5 sm:px-4 sm:py-3 flex flex-col items-center justify-center min-w-[55px] sm:min-w-[70px]">
+                           <span className="text-2xl sm:text-3xl font-bold text-white leading-none font-mono tracking-tight">{releaseTimeLeft.minutes}</span>
+                           <span className="text-xs uppercase font-normal text-white mt-1 font-adi-regular">MIN</span>
+                         </div>
+                         <div className="bg-white/20 rounded-md px-2 py-1.5 sm:px-4 sm:py-3 flex flex-col items-center justify-center min-w-[55px] sm:min-w-[70px]">
+                           <span className="text-2xl sm:text-3xl font-bold text-white leading-none font-mono tracking-tight">{releaseTimeLeft.seconds}</span>
+                           <span className="text-xs uppercase font-normal text-white mt-1 font-adi-regular">SEG</span>
+                         </div>
                        </div>
                      </div>
                   </div>
@@ -669,7 +767,16 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                   )}
 
                   <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-                    {hasValidPrice(selectedVariant) ? (
+                    {isPreLaunch ? (
+                      <Button
+                        className="w-full sm:w-[200px] bg-green-600 hover:bg-green-700"
+                        onClick={handleWhatsAppReserve}
+                        disabled={!phoneNumber}
+                      >
+                        <WhatsAppIcon />
+                        Reservar por WhatsApp
+                      </Button>
+                    ) : hasValidPrice(selectedVariant) ? (
                       <Button
                         className="w-full sm:w-[200px]"
                         onClick={handleAddToCart}
@@ -682,17 +789,15 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                       <Button
                         className="w-full md:w-fit bg-green-600 hover:bg-green-700"
                         onClick={handleWhatsAppConsult}
-                        disabled={!shopSettings || !shopSettings[0]?.phone}
+                        disabled={!phoneNumber}
                       >
-                        <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.488" />
-                        </svg>
+                        <WhatsAppIcon />
                         Consultar por WhatsApp
                       </Button>
                     )}
 
                     <AnimatePresence>
-                      {showContinueShopping && hasValidPrice(selectedVariant) && (
+                      {showContinueShopping && hasValidPrice(selectedVariant) && !isPreLaunch && (
                         <motion.div
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -715,17 +820,22 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                   </div>
                 </div>
 
-                {selectedVariant.inventoryQuantity === 0 && product.allowBackorder ? (
-                  <p className="text-sm text-yellow-500">Producto en backorder (máximo 5 unidades)</p>
-                ) : selectedVariant.inventoryQuantity === 0 ? (
-                  <p className="text-sm text-red-500 flex items-center">
-                    <X className="w-4 h-4 mr-1" />
-                    Producto sin stock
-                  </p>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Stock disponible: {selectedVariant.inventoryQuantity} unidades
-                  </p>
+                {/* Mostrar stock solo si el producto NO está en prelanzamiento */}
+                {!isPreLaunch && (
+                  <>
+                    {selectedVariant.inventoryQuantity === 0 && product.allowBackorder ? (
+                      <p className="text-sm text-yellow-500">Producto en backorder (máximo 5 unidades)</p>
+                    ) : selectedVariant.inventoryQuantity === 0 ? (
+                      <p className="text-sm text-red-500 flex items-center">
+                        <X className="w-4 h-4 mr-1" />
+                        Producto sin stock
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Stock disponible: {selectedVariant.inventoryQuantity} unidades
+                      </p>
+                    )}
+                  </>
                 )}
 
                 {/* Display new product fields */}
@@ -745,7 +855,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
             </motion.div>
 
             {/* Product Description Tabs - New Section */}
-            {product.description && product.description.trim() && (
+            {product.description && product.description.trim() && product.description.includes('<h2') && (
               <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
@@ -880,33 +990,22 @@ function ProductSimpleDescription({ description }: { description: string }) {
 }
 
 function ProductTabsDescription({ description }: { description: string }) {
-  const [sections, setSections] = useState<{ title: string; content: string }[]>([])
-  const [defaultTab, setDefaultTab] = useState<string>("")
+  const sections = useMemo(() => {
+    if (!description) return []
 
-  useEffect(() => {
-    if (!description) return
-
-    // Create a temporary div to parse the HTML
     const tempDiv = document.createElement("div")
     tempDiv.innerHTML = description
-
-    // Find all h2 elements
     const h2Elements = tempDiv.querySelectorAll("h2")
 
-    if (h2Elements.length === 0) {
-      // If no h2 elements, there's nothing to show in tabs
-      return
-    }
+    if (h2Elements.length === 0) return []
 
     const parsedSections: { title: string; content: string }[] = []
 
-    // Process each h2 section
-    h2Elements.forEach((h2, index) => {
-      const title = h2.textContent || `Sección ${index + 1}`
-      // Start with empty content instead of h2.outerHTML
+    h2Elements.forEach((h2) => {
+      const title = h2.textContent || ""
       let sectionContent = ""
-
       let nextNode = h2.nextElementSibling
+
       while (nextNode && nextNode.tagName !== "H2") {
         sectionContent += nextNode.outerHTML
         nextNode = nextNode.nextElementSibling
@@ -915,18 +1014,13 @@ function ProductTabsDescription({ description }: { description: string }) {
       parsedSections.push({ title, content: sectionContent })
     })
 
-    setSections(parsedSections)
-    if (parsedSections.length > 0) {
-      setDefaultTab(parsedSections[0].title)
-    }
+    return parsedSections
   }, [description])
 
-  if (sections.length === 0) {
-    return null
-  }
+  if (sections.length === 0) return null
 
   return (
-    <Tabs defaultValue={defaultTab} className="w-full">
+    <Tabs defaultValue={sections[0]?.title} className="w-full">
       <TabsList className="mb-4 w-full flex flex-wrap h-auto">
         {sections.map((section) => (
           <TabsTrigger

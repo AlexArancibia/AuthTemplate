@@ -4,7 +4,6 @@ import { useEffect, useState, useRef } from "react"
 import { motion, useInView } from "framer-motion"
 import Image from "next/image"
 import Link from "next/link"
-import { ShoppingCart } from "lucide-react"
 import type { CurrencyOption } from "@/stores/currency"
 import type { Product } from "@/types/product"
 import type { Collection } from "@/types/collection"
@@ -29,19 +28,10 @@ export function FeatureCollection({
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true, amount: 0.1 })
 
-  // Debug isInView
-  useEffect(() => {
-    console.log('FeatureCollection isInView:', isInView)
-  }, [isInView])
-
   // Force animation after data loads
   useEffect(() => {
     if (!loading && collection && products.length > 0) {
-      // Small delay to ensure DOM is ready
-      setTimeout(() => {
-        console.log('Data loaded, should trigger animations')
-        setShouldAnimate(true)
-      }, 100)
+      setTimeout(() => setShouldAnimate(true), 100)
     }
   }, [loading, collection, products])
 
@@ -53,21 +43,10 @@ export function FeatureCollection({
     ? acceptedCurrencies.find((currency) => currency.id === selectedCurrencyId) || null
     : shopSettings && shopSettings.length > 0 ? shopSettings[0]?.defaultCurrency : null
 
-  // Get secondary image for hover effect
-  const getSecondaryImage = (product: Product) => {
-    return product.imageUrls && product.imageUrls.length > 1 
-      ? product.imageUrls[1] 
-      : null
-  }
-
   // Fetch collection data
   useEffect(() => {
     const fetchData = async () => {
-      // Wait for shopSettings to be available
-      if (!shopSettings || shopSettings.length === 0) {
-        console.log("Waiting for shop settings to be available...")
-        return
-      }
+      if (!shopSettings?.length) return
 
       try {
         setLoading(true)
@@ -85,7 +64,6 @@ export function FeatureCollection({
         
         setProducts(filteredProducts)
       } catch (error) {
-        console.error("Error fetching collection data:", error)
         setCollection(null)
         setProducts([])
       } finally {
@@ -176,10 +154,8 @@ export function FeatureCollection({
           >
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
               {products.map((product, index) => {
-                const productImage = product.imageUrls && product.imageUrls.length > 0 
-                  ? product.imageUrls[0] 
-                  : "/placeholder.png"
-                const secondaryImage = getSecondaryImage(product)
+                const productImage = product.imageUrls?.[0] || "/placeholder.png"
+                const secondaryImage = product.imageUrls?.[1] || null
 
                 return (
                   <motion.div 
@@ -212,12 +188,6 @@ export function FeatureCollection({
                           />
                         )}
                         
-                        {/* Shopping Cart Icon */}
-                        <div className="absolute top-1 right-1 sm:top-2 sm:right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <div className="bg-white/90 backdrop-blur-sm rounded-full p-1.5 sm:p-2 shadow-lg">
-                            <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4 text-gray-700" />
-                          </div>
-                        </div>
                       </div>
 
                       {/* Product Info */}

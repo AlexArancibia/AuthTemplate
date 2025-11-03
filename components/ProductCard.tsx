@@ -5,12 +5,10 @@ import Image from "next/image"
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Clock, Eye, ShoppingCart, ChevronRight } from "lucide-react"
+import { Clock } from "lucide-react"
 import type { Product } from "@/types/product"
 import type { CurrencyOption } from "@/stores/currency";
 import { useMainStore } from "@/stores/mainStore"
-import { useCartStore } from "@/stores/cartStore"
 
 interface ProductCardProps {
   product: Product
@@ -22,54 +20,39 @@ interface ProductCardProps {
 
 // Hook personalizado para el contador de lanzamiento
 function useReleaseCountdown(releaseDate: Date | string | null | undefined) {
-  const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number } | null>(null)
-  const [isReleased, setIsReleased] = useState(false)
+  const [timeLeft, setTimeLeft] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null)
 
   useEffect(() => {
     if (!releaseDate) {
       setTimeLeft(null)
-      setIsReleased(true)
       return
     }
 
     const targetDate = releaseDate instanceof Date ? releaseDate : new Date(releaseDate)
-    const now = new Date()
 
-    // Si la fecha de lanzamiento ya pasó
-    if (targetDate <= now) {
-      setTimeLeft(null)
-      setIsReleased(true)
-      return
-    }
-
-    // Calcular tiempo restante inicialmente
     const calculateTimeLeft = () => {
-      const now = new Date()
-      const difference = targetDate.getTime() - now.getTime()
+      const difference = targetDate.getTime() - Date.now()
 
       if (difference <= 0) {
         setTimeLeft(null)
-        setIsReleased(true)
         return
       }
 
-      const days = Math.floor(difference / (1000 * 60 * 60 * 24))
-      const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60))
-
-      setTimeLeft({ days, hours, minutes })
-      setIsReleased(false)
+      setTimeLeft({
+        days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        minutes: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((difference % (1000 * 60)) / 1000),
+      })
     }
 
     calculateTimeLeft()
-
-    // Actualizar cada minuto
-    const timer = setInterval(calculateTimeLeft, 60000)
+    const timer = setInterval(calculateTimeLeft, 1000)
 
     return () => clearInterval(timer)
   }, [releaseDate])
 
-  return { timeLeft, isReleased }
+  return { timeLeft, isReleased: timeLeft === null }
 }
 
 export function ProductCard({ 
@@ -80,7 +63,6 @@ export function ProductCard({
   salePercentage = 10 
 }: ProductCardProps) {
   const { shopSettings } = useMainStore()
-  const { addItem } = useCartStore()
   const [isPulsing, setIsPulsing] = useState(false)
 
   // Efecto para la animación de pulso
@@ -149,7 +131,6 @@ export function ProductCard({
   // Calcular precio mínimo para display
   const prices = allVariants.map((v) => v.price)
   const lowestPrice = prices.length > 0 ? Math.min(...prices) : 0
-  const highestPrice = prices.length > 0 ? Math.max(...prices) : 0
 
   // Encontrar la variante con el precio mínimo
   const lowestPriceVariant = allVariants.find((v) => v.price === lowestPrice)
@@ -176,28 +157,8 @@ export function ProductCard({
   const { timeLeft, isReleased } = useReleaseCountdown(product.releaseDate)
   const hasUpcomingRelease = timeLeft !== null
 
-  const image = product.imageUrls && product.imageUrls.length > 0 ? product.imageUrls[0] : "/placeholder.png"
-  
-  // Get secondary image for hover effect
-  const getSecondaryImage = (product: Product) => {
-    return product.imageUrls && product.imageUrls.length > 1 
-      ? product.imageUrls[1] 
-      : null
-  }
-  
-  const secondaryImage = getSecondaryImage(product)
-
-  // Función para manejar agregar al carrito
-  const handleAddToCart = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    
-    // Obtener la primera variación del producto
-    const firstVariant = product.variants?.[0]
-    if (firstVariant) {
-      addItem(product, firstVariant, 1)
-    }
-  }
+  const image = product.imageUrls?.[0] || "/placeholder.png"
+  const secondaryImage = product.imageUrls?.[1] || null
 
   return (
     <div className="group relative bg-white rounded-none p-0 flex flex-col h-full">
@@ -247,32 +208,6 @@ export function ProductCard({
             />
           )}
           
-          {/* Shopping Cart Icon */}
-          <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
-            <motion.button 
-              onClick={handleAddToCart}
-              className="bg-white backdrop-blur-sm rounded-full p-2 hover:bg-white transition-all duration-200 cursor-pointer relative"
-              whileTap={{ scale: 0.95 }}
-            >
-              <ShoppingCart className="w-4 h-4 text-gray-700" />
-              
-              {/* Efecto de pulso animado similar al WhatsApp */}
-              <motion.div
-                className="absolute inset-0 rounded-full bg-gray-400 opacity-30"
-                animate={{
-                  scale: [1, 1.2, 1],
-                  opacity: [0.3, 0.5, 0.3],
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Number.POSITIVE_INFINITY,
-                  repeatType: "reverse",
-                }}
-              />
-            </motion.button>
-          </div>
-
-
           {/* Contador de lanzamiento */}
           {hasUpcomingRelease && (
             <motion.div
@@ -285,7 +220,7 @@ export function ProductCard({
               <div className="flex items-center gap-1.5">
                 <Clock className="h-3 w-3 text-blue-200" />
                 <span className="text-xs font-medium tracking-tight">
-                  {timeLeft?.days}d {timeLeft?.hours}h {timeLeft?.minutes}m
+                  {timeLeft?.days}d {timeLeft?.hours}h {timeLeft?.minutes}m {timeLeft?.seconds}s
                 </span>
               </div>
             </motion.div>

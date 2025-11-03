@@ -2,13 +2,12 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { Truck, CreditCard, Package, Phone } from "lucide-react"
+import { Truck, CreditCard, Package, Phone, Loader2 } from "lucide-react"
 import type { Product } from "@/types/product"
 import { useMainStore } from "@/stores/mainStore"
-import { useMemo } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { DeliveryButton } from "./DeliveryButton"
-import { getPriceAndSymbol } from "@/utils/getPriceAndSymbol"
 import type { CurrencyOption } from "@/stores/currency"
 
 interface ProductSidebarProps {
@@ -18,23 +17,41 @@ interface ProductSidebarProps {
 }
 
 export function ProductSidebar({ product, selectedCurrencyId, acceptedCurrencies }: ProductSidebarProps) {
-  const { products, shippingMethods, paymentProviders, shopSettings } = useMainStore()
+  const { shippingMethods, paymentProviders, shopSettings, fetchProducts } = useMainStore()
+  const [latestProducts, setLatestProducts] = useState<Product[]>([])
+  const [loadingLatest, setLoadingLatest] = useState(true)
 
-  const latestProducts = useMemo(() => {
-    return products
-      .filter(
-        (p) => p.id !== product.id && p.status === "ACTIVE", // Solo productos activos
-      )
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 3)
-  }, [products, product])
+  const currencyOption = useMemo(() => {
+    const defaultCurrency = shopSettings[0]?.defaultCurrency
+    return acceptedCurrencies.find((c) => c.id === selectedCurrencyId) || defaultCurrency
+  }, [acceptedCurrencies, selectedCurrencyId, shopSettings])
 
-  const defaultCurrency = shopSettings[0]?.defaultCurrency
-  const currencyOption =
-    acceptedCurrencies.find((c) => c.id === selectedCurrencyId) || defaultCurrency
+  useEffect(() => {
+    const loadLatestProducts = async () => {
+      try {
+        setLoadingLatest(true)
+        const response = await fetchProducts({
+          limit: 4,
+          status: ['ACTIVE'],
+          sortBy: 'createdAt',
+          sortOrder: 'desc',
+        })
+
+        setLatestProducts(
+          response.data.filter((p) => p.id !== product.id).slice(0, 3)
+        )
+      } catch {
+        setLatestProducts([])
+      } finally {
+        setLoadingLatest(false)
+      }
+    }
+
+    loadLatestProducts()
+  }, [product.id, fetchProducts])
 
   const handleWhatsAppClick = () => {
-    const phoneNumber = shopSettings[0].phone?.replace(/\D/g, "") // Remove non-digit characters
+    const phoneNumber = shopSettings[0].phone?.replace(/\D/g, "")
     const message = encodeURIComponent(`Hola, me gustaría obtener más información sobre el producto: ${product.title}`)
     window.open(`https://wa.me/${phoneNumber}?text=${message}`, "_blank")
   }
@@ -59,7 +76,7 @@ export function ProductSidebar({ product, selectedCurrencyId, acceptedCurrencies
                 (price) => price.currencyId === currencyOption?.id
               )
 
-              if (!matchingPrice) return null // ⛔ No hay precio en esta moneda → no mostrar
+              if (!matchingPrice) return null
 
               return (
                 <li key={method.id} className="flex justify-between text-sm text-gray-600">
@@ -86,7 +103,7 @@ export function ProductSidebar({ product, selectedCurrencyId, acceptedCurrencies
             {paymentProviders.map((provider) => (
               <div 
                 key={provider.id} 
-                className="  rounded-lg text-sm flex items-center gap-2  "
+                className="rounded-lg text-sm flex items-center gap-2"
               >
                 {provider.imgUrl ? (
                   <div className="w-6 h-6 flex-shrink-0 overflow-hidden rounded">
@@ -94,7 +111,6 @@ export function ProductSidebar({ product, selectedCurrencyId, acceptedCurrencies
                       src={provider.imgUrl || "/placeholder.svg"}
                       alt={provider.name}
                       className="w-full h-full object-contain"
-              
                     />
                   </div>
                 ) : (
@@ -115,7 +131,11 @@ export function ProductSidebar({ product, selectedCurrencyId, acceptedCurrencies
           Últimos productos
         </h3>
         <div className="space-y-4">
-          {latestProducts.length > 0 ? (
+          {loadingLatest ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : latestProducts.length > 0 ? (
             latestProducts.map((latestProduct) => {
               const matchingPrice = latestProduct.variants?.[0]?.prices?.find(
                 (p) => p.currencyId === currencyOption?.id
