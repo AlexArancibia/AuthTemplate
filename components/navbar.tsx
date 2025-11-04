@@ -35,9 +35,8 @@ import MobileMenu from "./MobileMenu"
 const navItems = [
   { name: "Inicio", href: "/" },
   { name: "Tienda", href: "/productos" },
-  { name: "Contacto", href: "/contactenos" },
-  { name: "Ofertas", href: "/ofertas" },
   { name: "DEPORTISTAS", href: "/nuestros-deportistas" },
+  { name: "Contacto", href: "/contactenos" },
 ]
 
 export default function Navbar() {
