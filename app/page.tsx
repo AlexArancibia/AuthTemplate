@@ -20,6 +20,7 @@ import { BrandsCarousel } from "@/components/BrandsCarousel"
 import { CollectionCarousel } from "@/components/CollectionCarousel"
 import { FeatureCollection } from "@/components/FeatureCollection"
 import { Testimonials } from "@/components/Testimonials"
+import { DeportistasCarousel } from "@/components/DeportistasCarousel"
 
 export default function HomePage() {
   const pathname = usePathname()
@@ -74,6 +75,8 @@ export default function HomePage() {
         selectedCurrencyId={selectedCurrencyId}
         acceptedCurrencies={acceptedCurrencies}
       />
+      <PublishBanner />
+
       <CollectionCarousel
         collectionId="col_6e93d324-65cd"
         selectedCurrencyId={selectedCurrencyId}
@@ -93,8 +96,9 @@ export default function HomePage() {
         className="pt-4 sm:pt-6 lg:pt-8 "
       />
       {/* <DeliveryHeroSection /> */}
-      <PublishBanner />
+      <DeportistasCarousel />
       <BrandsCarousel />
+      
       
 
       {/* <BlogSection /> */}

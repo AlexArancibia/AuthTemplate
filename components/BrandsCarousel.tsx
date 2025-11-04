@@ -97,9 +97,9 @@ export function BrandsCarousel() {
       initial={{ opacity: 0, y: 20 }}
       animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
       transition={{ duration: 0.6 }}
-      className="w-full flex flex-col items-center justify-center py-0 bg-transparent"
+      className="w-full flex flex-col items-center justify-center py-0 bg-transparent overflow-hidden"
     >
-      <div className="container-section">
+      <div className="container-section ">
         <div className="content-section">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
