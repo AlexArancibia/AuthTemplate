@@ -4,35 +4,56 @@ import Image from "next/image"
 import { motion } from "framer-motion"
 import { useState } from "react"
 
-const getAthleteName = (filename: string): string => {
-  const name = filename.replace(/\.(jpg|jpeg)$/i, '')
-  return name.includes('WhatsApp Image') ? 'Deportista' : name
-}
-
 // Codificar paths con espacios para URLs
 const encodePath = (path: string) => 
   path.split('/').map(p => p ? encodeURIComponent(p) : '').join('/')
 
+// Función para obtener el nombre del deportista desde el nombre del archivo
+const getDisplayName = (filename: string): string => {
+  const knownNames: Record<string, string> = {
+    "Yenobi Tafur": "Yenobi Tafur",
+    "Rodrigo Hidalgo": "Rodrigo Hidalgo"
+  }
+  
+  for (const [key, value] of Object.entries(knownNames)) {
+    if (filename.includes(key)) return value
+  }
+  
+  // Archivos genéricos
+  if (filename.includes("WhatsApp Image") || /^\d/.test(filename) || filename.includes("ASD") || filename === "image.png") {
+    return "Deportista"
+  }
+  
+  // Extraer nombre legible del archivo
+  return filename.replace(/\.(jpg|jpeg|png)$/i, '').replace(/[_-]/g, ' ')
+}
+
 // Pre-calcular datos de atletas con imágenes codificadas
-const athletes = [
-  { image: "/deportistas/Yenobi Tafur.JPG", name: "Yenobi Tafur" },
-  { image: "/deportistas/Rodrigo Hidalgo.JPG", name: "Rodrigo Hidalgo" },
-  { image: "/deportistas/7L4A1416.JPG", name: getAthleteName("7L4A1416.JPG") },
-  { image: "/deportistas/DSC_7959.JPG", name: getAthleteName("DSC_7959.JPG") },
-  { image: "/deportistas/DSC_0036.JPG", name: getAthleteName("DSC_0036.JPG") },
-  { image: "/deportistas/DSC_0410.JPG", name: getAthleteName("DSC_0410.JPG") },
-  { image: "/deportistas/ITP_3821.JPG", name: getAthleteName("ITP_3821.JPG") },
-  { image: "/deportistas/7L4A8888.JPG", name: getAthleteName("7L4A8888.JPG") },
-  { image: "/deportistas/7L4A8794.JPG", name: getAthleteName("7L4A8794.JPG") },
-  { image: "/deportistas/7L4A1410.JPG", name: getAthleteName("7L4A1410.JPG") },
-  { image: "/deportistas/7L4A1296.JPG", name: getAthleteName("7L4A1296.JPG") },
-  { image: "/deportistas/WhatsApp Image 2025-10-14 at 13.51.18.jpeg", name: "Deportista" },
-  { image: "/deportistas/WhatsApp Image 2025-10-14 at 13.53.55.jpeg", name: "Deportista" },
-  { image: "/deportistas/WhatsApp Image 2025-10-14 at 13.55.11.jpeg", name: "Deportista" },
-].map(athlete => ({
-  ...athlete,
-  encodedImage: encodePath(athlete.image)
-}))
+const athleteImages = [
+  "Yenobi Tafur.JPG",
+  "Rodrigo Hidalgo.JPG",
+  "7L4A1416.JPG",
+  "DSC_7959.JPG",
+  "DSC_0036.JPG",
+  "ITP_3821.JPG",
+  "7L4A8888.JPG",
+  "7L4A8794.JPG",
+  "7L4A1410.JPG",
+  "7L4A1296.JPG",
+  "WhatsApp Image 2025-10-14 at 13.53.55.jpeg",
+  "123qwe123.png",
+  "ASD123.png",
+  "image.png",
+]
+
+const athletes = athleteImages.map(filename => {
+  const image = `/deportistas/${filename}`
+  return {
+    image,
+    name: getDisplayName(filename),
+    encodedImage: encodePath(image)
+  }
+})
 
 interface AthleteCardProps {
   athlete: typeof athletes[0]
@@ -48,6 +69,9 @@ function AthleteCard({ athlete, index }: AthleteCardProps) {
   const handleInactive = () => {
     setTimeout(() => setIsActive(false), TOUCH_DELAY)
   }
+
+  const isVisible = isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+  const translateY = isActive ? 'translate-y-0' : 'translate-y-full group-hover:translate-y-0'
 
   return (
     <motion.div
@@ -74,12 +98,12 @@ function AthleteCard({ athlete, index }: AthleteCardProps) {
           <span className="text-gray-500 text-sm">Imagen no disponible</span>
         </div>
       )}
-      <div className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`} />
-      <div className={`absolute bottom-0 left-0 right-0 p-4 transition-transform duration-300 ${isActive ? 'translate-y-0' : 'translate-y-full group-hover:translate-y-0'}`}>
-        <h3 className="text-white text-lg font-bold">{athlete.name}</h3>
+      <div className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent transition-opacity duration-300 ${isVisible}`} />
+      <div className={`absolute bottom-0 left-0 right-0 p-4 transition-transform duration-300 ${translateY}`}>
+        <h3 className="text-white text-lg font-bold line-clamp-2 break-words">{athlete.name}</h3>
       </div>
-      <div className={`absolute top-4 left-4 transition-opacity duration-300 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-        <span className="bg-white/90 text-black px-3 py-1 rounded-full text-sm font-medium">
+      <div className={`absolute top-4 left-4 right-4 transition-opacity duration-300 ${isVisible}`}>
+        <span className="bg-white/90 text-black px-3 py-1 rounded-lg text-sm font-medium line-clamp-2 break-words inline-block w-fit max-w-full">
           {athlete.name}
         </span>
       </div>
