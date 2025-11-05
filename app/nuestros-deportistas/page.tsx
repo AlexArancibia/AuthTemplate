@@ -3,6 +3,7 @@
 import Image from "next/image"
 import { motion } from "framer-motion"
 import { useState } from "react"
+import { getDeportistasFilenames, getDeportistaName } from "@/lib/deportistas-config"
 
 // Codificar paths con espacios para URLs
 const encodePath = (path: string) => 
@@ -10,41 +11,11 @@ const encodePath = (path: string) =>
 
 // Función para obtener el nombre del deportista desde el nombre del archivo
 const getDisplayName = (filename: string): string => {
-  const knownNames: Record<string, string> = {
-    "Yenobi Tafur": "Yenobi Tafur",
-    "Rodrigo Hidalgo": "Rodrigo Hidalgo"
-  }
-  
-  for (const [key, value] of Object.entries(knownNames)) {
-    if (filename.includes(key)) return value
-  }
-  
-  // Archivos genéricos
-  if (filename.includes("WhatsApp Image") || /^\d/.test(filename) || filename.includes("ASD") || filename === "image.png") {
-    return "Deportista"
-  }
-  
-  // Extraer nombre legible del archivo
-  return filename.replace(/\.(jpg|jpeg|png)$/i, '').replace(/[_-]/g, ' ')
+  return getDeportistaName(filename)
 }
 
 // Pre-calcular datos de atletas con imágenes codificadas
-const athleteImages = [
-  "Yenobi Tafur.JPG",
-  "Rodrigo Hidalgo.JPG",
-  "7L4A1416.JPG",
-  "DSC_7959.JPG",
-  "DSC_0036.JPG",
-  "ITP_3821.JPG",
-  "7L4A8888.JPG",
-  "7L4A8794.JPG",
-  "7L4A1410.JPG",
-  "7L4A1296.JPG",
-  "WhatsApp Image 2025-10-14 at 13.53.55.jpeg",
-  "123qwe123.png",
-  "ASD123.png",
-  "image.png",
-]
+const athleteImages = getDeportistasFilenames()
 
 const athletes = athleteImages.map(filename => {
   const image = `/deportistas/${filename}`
@@ -98,14 +69,9 @@ function AthleteCard({ athlete, index }: AthleteCardProps) {
           <span className="text-gray-500 text-sm">Imagen no disponible</span>
         </div>
       )}
-      <div className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent transition-opacity duration-300 ${isVisible}`} />
+      <div className={`absolute inset-0 bg-gradient-to-t from-black/40 via-black/20 to-transparent transition-opacity duration-300 ${isVisible}`} />
       <div className={`absolute bottom-0 left-0 right-0 p-4 transition-transform duration-300 ${translateY}`}>
         <h3 className="text-white text-lg font-bold line-clamp-2 break-words">{athlete.name}</h3>
-      </div>
-      <div className={`absolute top-4 left-4 right-4 transition-opacity duration-300 ${isVisible}`}>
-        <span className="bg-white/90 text-black px-3 py-1 rounded-lg text-sm font-medium line-clamp-2 break-words inline-block w-fit max-w-full">
-          {athlete.name}
-        </span>
       </div>
     </motion.div>
   )
@@ -132,3 +98,4 @@ export default function NuestrosDeportistasPage() {
     </>
   )
 }
+
