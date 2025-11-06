@@ -16,6 +16,10 @@ import {
 import { cn } from "@/lib/utils"
 import { getDeportistasFilenames, getDeportistaName } from "@/lib/deportistas-config"
 
+// Codificar paths con espacios para URLs
+const encodePath = (path: string) => 
+  path.split('/').map(p => p ? encodeURIComponent(p) : '').join('/')
+
 const deportistasImages = getDeportistasFilenames()
 
 const BREAKPOINTS = { mobile: 768, desktop: 1024 } as const
@@ -80,7 +84,7 @@ function AthleteCardInCarousel({
         onTouchEnd={handleInactive}
       >
         <Image
-          src={`/deportistas/${image}`}
+          src={encodePath(`/deportistas/${image}`)}
           alt={athleteName}
           fill
           quality={100}
