@@ -37,16 +37,15 @@ export function CollectionCarousel({
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true, amount: 0.3 })
   const [emblaRef, emblaApi] = useEmblaCarousel({
-    align: "center",
+    align: "start",
     loop: false,
     skipSnaps: false,
     dragFree: true,
     containScroll: "trimSnaps",
     slidesToScroll: 1,
     breakpoints: {
-      '(min-width: 1024px)': { slidesToScroll: 3, align: "start" }, // lg: 3 productos, alineación izquierda
-      '(min-width: 768px)': { slidesToScroll: 2, align: "start" },  // md: 2 productos, alineación izquierda
-      '(max-width: 767px)': { slidesToScroll: 1, align: "center" }   // sm y menor: 1 producto, centrado
+      "(min-width: 1024px)": { slidesToScroll: 3 },
+      "(min-width: 768px)": { slidesToScroll: 2 }
     }
   })
 
@@ -88,9 +87,9 @@ export function CollectionCarousel({
         const collection = await getCollectionById(collectionId)
         
         setCollectionTitle(collection.title.toUpperCase())
-        // Filtrar solo productos activos o archivados, ordenados por fecha de creación
+        // Filtrar únicamente productos activos y ordenarlos por fecha de creación
         const filteredProducts = (collection.products ?? [])
-          .filter((product) => product.status === 'ACTIVE' || product.status === 'ARCHIVED')
+          .filter((product) => product.status === 'ACTIVE')
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
           .slice(0, 10)
         
@@ -155,7 +154,7 @@ export function CollectionCarousel({
                 products.map((product) => (
                 <div
                     key={product.id}
-                    className="flex-none w-full lg:w-[32%]"
+                    className="flex-none basis-[calc(50%-0.5rem)] max-w-[calc(50%-0.5rem)] sm:basis-[42%] sm:max-w-[42%] lg:basis-[32%] lg:max-w-[32%]"
                   >
                     <ProductCard
                       product={product}

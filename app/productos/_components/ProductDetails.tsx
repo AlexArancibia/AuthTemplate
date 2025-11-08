@@ -28,6 +28,26 @@ interface ProductDetailsProps {
   id?: string
 }
 
+const filterAndSortVariants = (variants?: ProductVariant[]) => {
+  if (!variants) return []
+
+  return variants
+    .filter((variant) => variant.isActive)
+    .sort((a, b) => {
+      const positionA = typeof a.position === "number" ? a.position : Number.MAX_SAFE_INTEGER
+      const positionB = typeof b.position === "number" ? b.position : Number.MAX_SAFE_INTEGER
+      return positionA - positionB
+    })
+}
+
+const findDefaultVariant = (variants: ProductVariant[], allowBackorder?: boolean) => {
+  return (
+    variants.find((variant) => variant.inventoryQuantity > 0 || Boolean(allowBackorder)) ??
+    variants[0] ??
+    null
+  )
+}
+
 // Componente SVG de WhatsApp
 const WhatsAppIcon = () => (
   <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
@@ -105,6 +125,8 @@ export default function ProductDetails({ slug, id }: ProductDetailsProps) {
   const [error, setError] = useState<string | null>(null)
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
   const [loadingRelated, setLoadingRelated] = useState(false)
+
+  const activeVariants = useMemo(() => filterAndSortVariants(product?.variants), [product?.variants])
 
   // Hook para el cronómetro de disponibilidad
   const { timeLeft: releaseTimeLeft, isReleased: isProductReleased } = useReleaseCountdownWithSeconds(product?.releaseDate)
@@ -198,11 +220,9 @@ export default function ProductDetails({ slug, id }: ProductDetailsProps) {
         })
         
         setProduct(fetchedProduct)
-        
-        // Establecer la primera variante como seleccionada si existen variantes
-        if (fetchedProduct.variants && fetchedProduct.variants.length > 0) {
-          setSelectedVariant(fetchedProduct.variants[0])
-        }
+
+        const availableVariants = filterAndSortVariants(fetchedProduct.variants)
+        setSelectedVariant(findDefaultVariant(availableVariants, fetchedProduct.allowBackorder))
       } catch (error) {
         console.error("[ProductDetails] Error fetching product:", error)
         setError("No se pudo cargar el producto. Por favor, intenta nuevamente.")
@@ -215,10 +235,21 @@ export default function ProductDetails({ slug, id }: ProductDetailsProps) {
     loadProduct()
   }, [slug, id, getProductBySlug, getProductById])
 
+  useEffect(() => {
+    if (activeVariants.length === 0) {
+      setSelectedVariant(null)
+      return
+    }
+
+    if (!selectedVariant || !activeVariants.some((variant) => variant.id === selectedVariant.id)) {
+      setSelectedVariant(findDefaultVariant(activeVariants, product?.allowBackorder))
+    }
+  }, [activeVariants, selectedVariant, product?.allowBackorder])
+
   const variantOptions = useMemo(() => {
-    if (!product || !product.variants) return {}
+    if (activeVariants.length === 0) return {}
     const options: Record<string, Set<string>> = {}
-    product.variants.forEach((variant) => {
+    activeVariants.forEach((variant) => {
       if (variant.attributes) {
         Object.entries(variant.attributes).forEach(([key, value]) => {
           if (key !== "type" && !options[key]) options[key] = new Set()
@@ -227,7 +258,7 @@ export default function ProductDetails({ slug, id }: ProductDetailsProps) {
       }
     })
     return Object.fromEntries(Object.entries(options).map(([key, value]) => [key, Array.from(value)]))
-  }, [product])
+  }, [activeVariants])
 
   // Modificado para mostrar solo las imágenes de la variante seleccionada
   const displayImages = useMemo(() => {
@@ -240,12 +271,12 @@ export default function ProductDetails({ slug, id }: ProductDetailsProps) {
 
     // Si no hay imágenes en la variante seleccionada, mostrar las imágenes del producto principal
     // Asegúrate de que todos los objetos tengan la misma estructura (con variant: null)
-    return product.imageUrls.map((url) => ({ url, variant: null }))
+    return (product.imageUrls || []).map((url) => ({ url, variant: null }))
   }, [product, selectedVariant])
 
   const getVariantForImage = (imageUrl: string): ProductVariant | null => {
-    if (!product || !product.variants) return null
-    return product.variants.find((variant) => variant.imageUrls && variant.imageUrls.includes(imageUrl)) || null
+    if (activeVariants.length === 0) return null
+    return activeVariants.find((variant) => variant.imageUrls && variant.imageUrls.includes(imageUrl)) || null
   }
 
   // Productos relacionados: fetch desde la API basado en categorías o colecciones
@@ -404,9 +435,9 @@ export default function ProductDetails({ slug, id }: ProductDetailsProps) {
   }
 
   const handleVariantChange = (optionKey: string, optionValue: string) => {
-    if (!selectedVariant.attributes || !product.variants) return
+    if (!selectedVariant?.attributes || activeVariants.length === 0) return
 
-    const newVariant = product.variants.find(
+    const newVariant = activeVariants.find(
       (variant) =>
         variant.attributes &&
         variant.attributes[optionKey] === optionValue &&
@@ -462,9 +493,9 @@ export default function ProductDetails({ slug, id }: ProductDetailsProps) {
   }
 
   const isOptionDisabled = (optionKey: string, optionValue: string) => {
-    if (!selectedVariant.attributes || !product.variants) return true
+    if (!selectedVariant?.attributes || activeVariants.length === 0) return true
 
-    const variant = product.variants.find(
+    const variant = activeVariants.find(
       (v) =>
         v.attributes &&
         v.attributes[optionKey] === optionValue &&

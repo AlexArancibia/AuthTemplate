@@ -24,12 +24,7 @@ export default function TrustSection() {
         "Necesitas con urgencia algún producto? Contáctanos y coordinemos la atención de tu necesidad.",
       Icon: Truck,
     },
-    {
-      title: "Cambios y Devoluciones",
-      text:
-        "La confianza es la base de una relación comercial. Nosotros procederemos con cambios y devoluciones si no estás satisfecho con el producto.",
-      Icon: RefreshCcw,
-    },
+ 
     {
       title: "Compra Segura",
       text:
@@ -41,7 +36,7 @@ export default function TrustSection() {
   return (
     <section className="bg-[#f5f9fc]">
       <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-10 text-center">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-10 text-center">
           {items.map(({ title, text, Icon }, i) => (
             <div
               key={i}

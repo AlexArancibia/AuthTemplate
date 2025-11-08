@@ -58,7 +58,7 @@ export function FeatureCollection({
         
         // Filter and limit products to 6 for the grid (same logic as CollectionCarousel)
         const filteredProducts = (collectionData.products ?? [])
-          .filter((product) => product.status === 'ACTIVE' || product.status === 'ARCHIVED')
+          .filter((product) => product.status === 'ACTIVE')
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
           .slice(0, 6)
         
@@ -105,7 +105,7 @@ export function FeatureCollection({
             transition={{ duration: 0.6, delay: 0.2 }}
             className="lg:col-span-2"
           >
-            <div className="bg-white rounded-lg overflow-hidden h-[800px] lg:h-full group relative">
+            <div className="bg-white rounded-lg overflow-hidden h-[550px] md:h-[700px] lg:h-full group relative">
               {/* Collection Image */}
               {collection.imageUrl && (
                 <div className="relative w-full h-full bg-gray-50 overflow-hidden">
