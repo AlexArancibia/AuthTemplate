@@ -16,8 +16,14 @@ interface ConfirmationStepProps {
   currentUser: (User & { addresses?: Address[] }) | null
   formData: Record<string, any>
   items: CartItem[]
-  subtotal: number
+  subtotalOriginal?: number
+  subtotalNetBeforeDiscount: number
+  subtotalNet: number
+  discountAmount: number
+  netDiscount: number
+  taxDiscount: number
   tax: number
+  taxRate: number
   shipping: number
   total: number
   currency: string
@@ -27,6 +33,7 @@ interface ConfirmationStepProps {
   selectedShippingAddressId?: string | null
   selectedBillingAddressId?: string | null
   selectedCurrencyId?: string
+  taxesIncluded: boolean
 }
 
 export function ConfirmationStep({
@@ -35,8 +42,14 @@ export function ConfirmationStep({
   currentUser,
   formData,
   items,
-  subtotal,
+  subtotalOriginal,
+  subtotalNetBeforeDiscount,
+  subtotalNet,
+  discountAmount,
+  netDiscount,
+  taxDiscount,
   tax,
+  taxRate,
   shipping,
   total,
   currency,
@@ -45,6 +58,7 @@ export function ConfirmationStep({
   selectedShippingAddressId = null,
   selectedBillingAddressId = null,
   selectedCurrencyId,
+  taxesIncluded,
 }: ConfirmationStepProps) {
   // Helper function to get shipping address data
   const getShippingAddressData = () => {
@@ -120,6 +134,23 @@ export function ConfirmationStep({
     }
     return "Envío"
   }
+
+  const hasDiscount = discountAmount > 0
+  const subtotalLabel = "Subtotal"
+  const displaySubtotal = taxesIncluded
+    ? (subtotalOriginal ?? subtotalNet + tax + discountAmount)
+    : subtotalNetBeforeDiscount
+  const formattedSubtotal = `${currency}${displaySubtotal.toFixed(2)}`
+  const formattedTax = `${currency}${tax.toFixed(2)}`
+  const formattedShipping = `${currency}${shipping.toFixed(2)}`
+  const formattedTotal = `${currency}${total.toFixed(2)}`
+  const formattedDiscount = `${currency}${(taxesIncluded ? discountAmount : netDiscount).toFixed(2)}`
+  const formattedTaxDiscount = `${currency}${taxDiscount.toFixed(2)}`
+  const taxRatePercent = taxRate * 100
+  const taxRateLabel = Number.isFinite(taxRatePercent)
+    ? (taxRatePercent % 1 === 0 ? taxRatePercent.toFixed(0) : taxRatePercent.toFixed(2))
+    : "0"
+  const taxLabel = taxesIncluded ? `IGV incluido (${taxRateLabel}%)` : `IGV (${taxRateLabel}%)`
 
   return (
     <motion.div
@@ -205,10 +236,17 @@ export function ConfirmationStep({
                 )
                 .join("\n")}
 
-              *Subtotal:* ${currency}${Number(subtotal).toFixed(2)}
-              *IGV (18%):* ${currency}${Number(tax).toFixed(2)}
-              *${getShippingMethodLabel()}:* ${currency}${Number(shipping).toFixed(2)}
-              *Total:* ${currency}${Number(total).toFixed(2)}
+              *${subtotalLabel}:* ${formattedSubtotal}
+              ${
+                hasDiscount
+                  ? `*Descuento:* -${formattedDiscount}${
+                      taxesIncluded && taxDiscount > 0 ? `\n*Descuento IGV:* -${formattedTaxDiscount}` : ""
+                    }\n`
+                  : ""
+              }
+              *${taxLabel}:* ${formattedTax}
+              *${getShippingMethodLabel()}:* ${formattedShipping}
+              *Total:* ${formattedTotal}
 
               *Dirección de envío:*
               ${formData.firstName} ${formData.lastName}

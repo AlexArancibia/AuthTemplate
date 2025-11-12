@@ -17,6 +17,7 @@ import { PaymentProvider } from "@/types/payments"
 import { ShippingMethod } from "@/types/shippingMethod"
 import Image from "next/image"
 import { loadCulqiScript, openCulqiCheckout, setCulqiCallback } from "@/components/checkout/cuqui-checkout";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export function watchCulqiClose(onClose: () => void) {
   const observer = new MutationObserver(() => {
@@ -45,6 +46,7 @@ interface ShippingPaymentStepProps {
   total: number // Subtotal después de descuentos (sin envío)
   resumeItems: string
   orderId: string | null
+  orderError: { title: string; description?: string } | null
 }
 
 export function ShippingPaymentStep({
@@ -61,6 +63,7 @@ export function ShippingPaymentStep({
   total, // Este es el subtotal después de descuentos (sin incluir envío)
   resumeItems,
   orderId,
+  orderError,
 }: ShippingPaymentStepProps) {
   const selectedProvider = paymentProviders.find(
     (p) => p.id === formData.paymentMethod
@@ -234,6 +237,15 @@ export function ShippingPaymentStep({
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-8">
+      {orderError && (
+        <Alert variant="destructive">
+          <AlertTitle>{orderError.title}</AlertTitle>
+          {orderError.description && (
+            <AlertDescription>{orderError.description}</AlertDescription>
+          )}
+        </Alert>
+      )}
+
       {/* Shipping Method Section */}
       <div className="space-y-6">
         <h2 className="text-xl font-semibold mb-4">Método de envío</h2>

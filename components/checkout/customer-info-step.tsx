@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useGeographicDataStore } from "@/stores/locationStore"
 import { useUserStore } from "@/stores/userStore"
 import { toast } from "sonner"; 
@@ -137,6 +137,12 @@ export function CustomerInfoStep({
     fetchCities
   } = useGeographicDataStore()
 
+  const availableCountries = useMemo(() => {
+    const list = Array.isArray(countries) ? countries : []
+    const peruOnlyList = list.filter(c => c.code3 === "PER")
+    return peruOnlyList.length > 0 ? peruOnlyList : list
+  }, [countries])
+
   useEffect(() => {
     fetchCountries()
   }, [fetchCountries])
@@ -163,7 +169,7 @@ export function CustomerInfoStep({
   }, [formData.billingCountryId, formData.billingStateId, fetchCities])
 
   const handleCountryChange = (value: string) => {
-    const country = countries.find(c => c.code3 === value)
+    const country = availableCountries.find(c => c.code3 === value)
     handleInputChange({ target: { name: "country", value: country?.name || "" } } as any)
     handleInputChange({ target: { name: "countryCode3", value } } as any)
     handleInputChange({ target: { name: "countryId", value: country?.id || "" } } as any)
@@ -190,7 +196,7 @@ export function CustomerInfoStep({
   }
 
   const handleBillingCountryChange = (value: string) => {
-    const country = countries.find(c => c.code3 === value)
+    const country = availableCountries.find(c => c.code3 === value)
     handleInputChange({ target: { name: "billingCountry", value: country?.name || "" } } as any)
     handleInputChange({ target: { name: "billingCountryCode3", value } } as any)
     handleInputChange({ target: { name: "billingCountryId", value: country?.id || "" } } as any)
@@ -217,10 +223,8 @@ export function CustomerInfoStep({
   }
 
   // Estados para filtros de búsqueda
-  const [countryFilter, setCountryFilter] = useState("")
   const [stateFilter, setStateFilter] = useState("")
   const [cityFilter, setCityFilter] = useState("")
-  const [billingCountryFilter, setBillingCountryFilter] = useState("")
   const [billingStateFilter, setBillingStateFilter] = useState("")
   const [billingCityFilter, setBillingCityFilter] = useState("")
 
@@ -474,20 +478,8 @@ export function CustomerInfoStep({
                   <SelectValue placeholder="-- Elija --" />
                 </SelectTrigger>
                 <SelectContent className="max-h-[200px] overflow-y-auto">
-                  <div className="p-2">
-                    <Input
-                      placeholder="Buscar país..."
-                      value={countryFilter}
-                      onChange={e => setCountryFilter(e.target.value)}
-                      className="mb-2"
-                      onKeyDown={e => e.stopPropagation()}
-                    />
-                  </div>
-                  {countries
-                    .filter(c => c.name.toLowerCase().includes(countryFilter.toLowerCase()))
-                    .filter(c => c.name.toLowerCase() === 'perú' || c.name.toLowerCase() === 'peru')
-                    .map(c => (
-                      <SelectItem key={c.code} value={c.code3}>{c.name}</SelectItem>
+                  {availableCountries.map(c => (
+                    <SelectItem key={c.code} value={c.code3}>{c.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -682,20 +674,8 @@ export function CustomerInfoStep({
                       <SelectValue placeholder="-- Elija --" />
                     </SelectTrigger>
                     <SelectContent className="max-h-[200px] overflow-y-auto">
-                      <div className="p-2">
-                        <Input
-                          placeholder="Buscar país..."
-                          value={billingCountryFilter}
-                          onChange={e => setBillingCountryFilter(e.target.value)}
-                          className="mb-2"
-                          onKeyDown={e => e.stopPropagation()}
-                        />
-                      </div>
-                      {countries
-                        .filter(c => c.name.toLowerCase().includes(billingCountryFilter.toLowerCase()))
-                        .filter(c => c.name.toLowerCase() === 'perú' || c.name.toLowerCase() === 'peru')
-                        .map(c => (
-                          <SelectItem key={c.code} value={c.code3}>{c.name}</SelectItem>
+                      {availableCountries.map(c => (
+                        <SelectItem key={c.code} value={c.code3}>{c.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

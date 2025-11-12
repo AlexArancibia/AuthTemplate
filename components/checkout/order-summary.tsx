@@ -11,14 +11,18 @@ import { Address } from "@/stores/userStore"
 
 interface OrderSummaryProps {
   items: CartItem[]
-  subtotal: number
+  subtotalOriginal: number
+  subtotalNetBeforeDiscount: number
+  subtotalAfterDiscount: number
+  subtotalNet: number
+  discountAmount: number
   tax: number
+  taxRate: number
   shipping: number
   total: number
   currency: string
   currentStep: number
   formData: Record<string, any>
-  totalDiscounts: number
   shippingMethods: ShippingMethod[]
   paymentProviders: PaymentProvider[]
   // Add new props for address handling
@@ -27,6 +31,7 @@ interface OrderSummaryProps {
   selectedShippingAddressId?: string | null
   selectedBillingAddressId?: string | null
   selectedCurrencyId?: string
+  taxesIncluded: boolean
 }
 
 interface AddressData {
@@ -101,77 +106,41 @@ const getDeliveryDateRange = (minDays: number, maxDays: number, availableDays: s
 };
 
 // Helper function to safely get price from variant
-const getSafePrice = (variant: CartItem['variant'], currencyId?: string): number => {
-  try {
-    if (!variant) {
-      console.warn("Variant is undefined or null")
-      return 0
-    }
+const getSafePrice = (variant: CartItem["variant"], currencyId?: string): number => {
+  const prices = variant?.prices
+  if (!prices?.length) return 0
 
-    if (!variant.prices || !Array.isArray(variant.prices)) {
-      console.warn("Variant prices is undefined or not an array:", variant)
-      return 0
-    }
+  const matchedPrice = currencyId
+    ? prices.find(price => price.currencyId === currencyId)?.price
+    : prices[0]?.price
 
-    if (variant.prices.length === 0) {
-      console.warn("Variant prices array is empty:", variant)
-      return 0
-    }
-
-    // Si se proporciona currencyId, buscar precio específico para esa moneda
-    let price = variant.prices[0]?.price
-    if (currencyId) {
-      const priceObj = variant.prices.find(p => p.currencyId === currencyId)
-      price = priceObj?.price ?? variant.prices[0]?.price
-    }
-    
-    // Convert to number and validate
-    const numericPrice = Number(price)
-    if (isNaN(numericPrice) || numericPrice < 0) {
-      console.warn("Invalid price value:", price, "for variant:", variant)
-      return 0
-    }
-
-    return numericPrice
-  } catch (error) {
-    console.error("Error getting price from variant:", error, variant)
-    return 0
-  }
+  const numericPrice = Number(matchedPrice ?? prices[0]?.price ?? 0)
+  return Number.isFinite(numericPrice) && numericPrice >= 0 ? numericPrice : 0
 }
 
-// Helper function to safely get item total
 const getSafeItemTotal = (item: CartItem, currencyId?: string): number => {
-  try {
-    if (!item) {
-      console.warn("Item is undefined or null")
-      return 0
-    }
+  if (!item) return 0
 
-    const price = getSafePrice(item.variant, currencyId)
-    const quantity = item.quantity || 1
+  const quantity = Number(item.quantity ?? 0)
+  if (!Number.isFinite(quantity) || quantity <= 0) return 0
 
-    if (typeof quantity !== "number" || isNaN(quantity) || quantity < 0) {
-      console.warn("Invalid quantity:", quantity, "for item:", item)
-      return 0
-    }
-
-    return price * quantity
-  } catch (error) {
-    console.error("Error calculating item total:", error, item)
-    return 0
-  }
+  return getSafePrice(item.variant, currencyId) * quantity
 }
 
 export function OrderSummary({
   items,
-  subtotal,
+  subtotalOriginal,
+  subtotalNetBeforeDiscount,
+  subtotalAfterDiscount,
+  subtotalNet,
+  discountAmount,
   tax,
+  taxRate,
   shipping,
   total,
   currency,
   currentStep,
   formData,
-  totalDiscounts,
   shippingMethods,
   paymentProviders,
   isAuthenticated = false,
@@ -179,6 +148,7 @@ export function OrderSummary({
   selectedShippingAddressId = null,
   selectedBillingAddressId = null,
   selectedCurrencyId,
+  taxesIncluded,
 }: OrderSummaryProps) {
   const { couponCode, setCouponCode } = useMainStore()
   const [inputValue, setInputValue] = useState("")
@@ -256,9 +226,17 @@ export function OrderSummary({
 
   // Determinar si mostrar mensaje de cupón y su estilo
   const showCouponMessage = couponCode && couponCode.trim() !== ""
-  const couponMessageStyle = totalDiscounts > 0 
-    ? "text-green-600" 
-    : "text-red-500"
+  const grossDiscount = Math.max(0, discountAmount)
+  const netDiscount = Math.max(0, subtotalNetBeforeDiscount - subtotalNet)
+  const couponMessageStyle = grossDiscount > 0 ? "text-green-600" : "text-red-500"
+
+  const grossSubtotal = Math.max(0, subtotalOriginal)
+  const grossAfterDiscount = Math.max(0, subtotalAfterDiscount)
+  const subtotalLabel = "Subtotal"
+  const subtotalValue = grossSubtotal
+  const displayDiscount = taxesIncluded ? grossDiscount : netDiscount
+  const baseDiscountLabel = couponCode && couponCode.trim() !== "" ? `Descuento (${couponCode})` : "Descuento"
+  const discountLabel = baseDiscountLabel
 
   return (
     <div className="bg-white rounded-xl shadow-md border border-slate-100 p-6 sticky top-24">
@@ -312,7 +290,7 @@ export function OrderSummary({
         </div>
         {showCouponMessage && (
           <p className={`mt-1 text-sm ${couponMessageStyle}`}>
-            {totalDiscounts > 0 
+            {discountAmount > 0 
               ? `Cupón aplicado: ${couponCode}` 
               : "Cupón no válido o no aplicable"}
           </p>
@@ -323,25 +301,16 @@ export function OrderSummary({
 
       <div className="space-y-2">
         <div className="flex justify-between">
-          <span>Subtotal</span>
+          <span>{subtotalLabel}</span>
           <span>
             {currency}
-            {(typeof subtotal === "number" && !isNaN(subtotal) ? subtotal : 0).toFixed(2)}
+            {(typeof subtotalValue === "number" && !isNaN(subtotalValue) ? subtotalValue : 0).toFixed(2)}
           </span>
         </div>
-        {couponCode && totalDiscounts > 0 && (
+        {displayDiscount > 0 && (
           <div className="flex justify-between text-sm text-green-600">
-            <span>Descuento ({couponCode})</span>
-            <span>-{currency}{totalDiscounts.toFixed(2)}</span>
-          </div>
-        )}
-        {tax > 0 && (
-          <div className="flex justify-between">
-            <span>IGV (18%)</span>
-            <span>
-              {currency}
-              {(typeof tax === "number" && !isNaN(tax) ? tax : 0).toFixed(2)}
-            </span>
+            <span>{discountLabel}</span>
+            <span>-{currency}{displayDiscount.toFixed(2)}</span>
           </div>
         )}
         <div className="flex justify-between">
@@ -398,16 +367,16 @@ export function OrderSummary({
           const priceData = selectedMethod.prices[0]
           // Convertir a número para asegurar comparaciones y .toFixed()
           const freeThreshold = Number(priceData?.freeShippingThreshold || 100)
-          const subtotalAfterDiscount = subtotal - totalDiscounts
+          const subtotalForThreshold = taxesIncluded ? grossAfterDiscount : subtotalNet
           
-          if (shipping === 0 && subtotalAfterDiscount >= freeThreshold) {
+          if (shipping === 0 && subtotalForThreshold >= freeThreshold) {
             return (
               <div className="text-xs text-green-600 mt-1 font-medium">
                 ✓ ¡Calificaste para envío gratis!
               </div>
             )
-          } else if (freeThreshold && subtotalAfterDiscount < freeThreshold) {
-            const remaining = freeThreshold - subtotalAfterDiscount
+          } else if (freeThreshold && subtotalForThreshold < freeThreshold) {
+            const remaining = freeThreshold - subtotalForThreshold
             return (
               <div className="text-xs text-blue-600 mt-1">
                 Envío gratis desde {currency}{freeThreshold.toFixed(2)} (Te faltan {currency}{remaining.toFixed(2)})

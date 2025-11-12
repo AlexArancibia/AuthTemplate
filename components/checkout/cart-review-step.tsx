@@ -21,9 +21,10 @@ interface CartReviewStepProps {
   currency: string
   nextStep: () => void
   selectedCurrencyId?: string
+  orderSubtotal?: number
 }
 
-export function CartReviewStep({ items, currency, nextStep, selectedCurrencyId }: CartReviewStepProps) {
+export function CartReviewStep({ items, currency, nextStep, selectedCurrencyId, orderSubtotal }: CartReviewStepProps) {
   const { updateQuantity, removeItem } = useCartStore()
 
   // Función helper para obtener el precio de manera segura
@@ -52,6 +53,28 @@ export function CartReviewStep({ items, currency, nextStep, selectedCurrencyId }
   const cartTotal = items.reduce((total, item) => {
     return total + getItemTotal(item.variant, item.quantity)
   }, 0)
+
+  const displaySubtotal = typeof orderSubtotal === "number" ? orderSubtotal : cartTotal
+
+  const handleNextStep = () => {
+    const simulatedBody = {
+      currency,
+      subtotal: Number(displaySubtotal).toFixed(2),
+      items: items.map((item) => ({
+        productId: item.product.id,
+        productTitle: item.product.title,
+        variantId: item.variant.id,
+        variantTitle: item.variant.title,
+        quantity: item.quantity,
+        price: Number(getItemPrice(item.variant)).toFixed(2),
+        total: Number(getItemTotal(item.variant, item.quantity)).toFixed(2),
+        attributes: item.variant.attributes ?? {},
+      })),
+    }
+
+    console.log("Simulando envío de orden al backend:", simulatedBody)
+    nextStep()
+  }
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
@@ -160,7 +183,7 @@ export function CartReviewStep({ items, currency, nextStep, selectedCurrencyId }
               <span className="text-lg font-semibold">Subtotal:</span>
               <span className="text-xl font-bold text-primary">
                 {currency}
-                {Number(cartTotal).toFixed(2)}
+                {Number(displaySubtotal).toFixed(2)}
               </span>
             </div>
           </div>
@@ -173,7 +196,7 @@ export function CartReviewStep({ items, currency, nextStep, selectedCurrencyId }
               </Link>
             </Button>
             <Button
-              onClick={nextStep}
+              onClick={handleNextStep}
               disabled={cartTotal === 0}
               className="px-6 gap-2 bg-primary hover:bg-primary/90 transition-all shadow-md shadow-primary/10 hover:shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
             >

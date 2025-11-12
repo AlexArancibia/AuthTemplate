@@ -167,7 +167,6 @@ export default function ProductDetails({ slug, id }: ProductDetailsProps) {
   // Precargar todas las imágenes de variantes cuando se carga el producto
   useEffect(() => {
     if (!product) return
-    console.log("estructura del product: ", product)
 
     const imagesToPreload: string[] = []
 
@@ -190,9 +189,7 @@ export default function ProductDetails({ slug, id }: ProductDetailsProps) {
       preloadImage(url).catch((err) => console.warn(`Failed to preload image: ${url}`, err)),
     )
 
-    Promise.allSettled(preloadPromises).then(() => {
-      console.log("All images preloaded")
-    })
+    Promise.allSettled(preloadPromises)
   }, [product])
 
   // Fetch del producto individual por slug o id
@@ -204,20 +201,12 @@ export default function ProductDetails({ slug, id }: ProductDetailsProps) {
       try {
         let fetchedProduct: Product
         if (id) {
-          console.log(`[ProductDetails] Fetching product by id: ${id}`)
           fetchedProduct = await getProductById(id)
         } else if (slug) {
-          console.log(`[ProductDetails] Fetching product by slug: ${slug}`)
           fetchedProduct = await getProductBySlug(slug)
         } else {
           throw new Error("Either slug or id must be provided")
         }
-        
-        console.log("[ProductDetails] Product fetched successfully:", {
-          id: fetchedProduct.id,
-          title: fetchedProduct.title,
-          variantsCount: fetchedProduct.variants?.length || 0,
-        })
         
         setProduct(fetchedProduct)
 
@@ -400,18 +389,21 @@ export default function ProductDetails({ slug, id }: ProductDetailsProps) {
   const getPriceAndSymbol = (
     variant: ProductVariant,
     currencyId: string,
-    acceptedCurrencies: CurrencyOption[]
-  ): { originalPrice: number | string, price: number; symbol: string } => { 
-    if (!variant.prices || variant.prices.length === 0) return { originalPrice:0, price: 0, symbol: "" }
+    acceptedCurrencies: CurrencyOption[],
+  ): { originalPrice: number | string; price: number; symbol: string } => {
+    if (!variant.prices || variant.prices.length === 0) {
+      return { originalPrice: 0, price: 0, symbol: "" }
+    }
 
-    const priceObj = variant.prices.find((p) => p.currencyId === currencyId)
-    const price = priceObj?.price ? Number(priceObj.price) : 0
-    const originalPrice =
-      priceObj?.originalPrice != null
-        ? Number(priceObj.originalPrice)
-        : "";
+    const priceObj = variant.prices.find((p) => p.currencyId === currencyId) ?? variant.prices[0]
+    const price = priceObj?.price != null ? Number(priceObj.price) : 0
+    const originalPrice = priceObj?.originalPrice != null ? Number(priceObj.originalPrice) : ""
 
-    const currency = acceptedCurrencies.find((c) => c.id === currencyId)
+    const currency =
+      acceptedCurrencies.find((c) => c.id === priceObj?.currencyId) ||
+      acceptedCurrencies.find((c) => c.id === currencyId) ||
+      acceptedCurrencies[0]
+
     const symbol = currency?.symbol || ""
 
     return { originalPrice, price, symbol }

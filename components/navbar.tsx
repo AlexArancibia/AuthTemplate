@@ -89,9 +89,11 @@ export default function Navbar() {
 
   useEffect(() => {
     const settings = shopSettings?.[0]
-    if (!settings?.multiCurrencyEnabled || !settings?.acceptedCurrencies?.length) return
+    const accepted = settings?.acceptedCurrencies
 
-    const currencyList = settings.acceptedCurrencies.map((currency) => ({
+    if (!accepted || accepted.length === 0) return
+
+    const currencyList = accepted.map((currency) => ({
       id: currency.id,
       code: currency.code,
       name: currency.name,
@@ -101,16 +103,18 @@ export default function Navbar() {
 
     setAcceptedCurrencies(currencyList)
 
-    const saved = localStorage.getItem("currency") // ahora será un ID como "curr_123"
-    const savedCurrency = currencyList.find((c) => c.id === saved)
+    const savedId = localStorage.getItem("currency")
+    const hasSavedCurrency = savedId && currencyList.some((currency) => currency.id === savedId)
 
-    if (savedCurrency) {
-      setSelectedCurrencyId(savedCurrency.id)
-    } else {
-      const defaultCurrencyId = settings.defaultCurrency?.id || currencyList[0]?.id
-      setSelectedCurrencyId(defaultCurrencyId)
+    const currencyId =
+      hasSavedCurrency
+        ? savedId
+        : settings?.defaultCurrency?.id || currencyList[0]?.id
+
+    if (currencyId) {
+      setSelectedCurrencyId(currencyId)
     }
-  }, [shopSettings])
+  }, [shopSettings, setAcceptedCurrencies, setSelectedCurrencyId])
 
   const activeCurrency = acceptedCurrencies.find(c => c.id === selectedCurrencyId)
 

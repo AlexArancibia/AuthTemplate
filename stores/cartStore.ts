@@ -65,7 +65,6 @@ export const useCartStore = create<CartStore>()(
           const price = priceObj?.price ?? 0
           return total + price * item.quantity
         }, 0)
-        console.log("[CART] Calculated total:", total)
         return total
       },
 

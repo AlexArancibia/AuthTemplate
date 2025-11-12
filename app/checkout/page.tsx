@@ -62,6 +62,66 @@ const getSafePrice = (variant: { prices?: Array<{ price: number; currencyId?: st
   }
 }
 
+type PricingInput = {
+  subtotal: number
+  discountTotal: number
+  shipping: number
+  taxRate: number
+  taxesIncluded: boolean
+}
+
+type PricingSummary = {
+  subtotalOriginal: number
+  subtotalNetBeforeDiscount: number
+  discountAmount: number
+  netDiscount: number
+  taxDiscount: number
+  subtotalAfterDiscount: number
+  subtotalNet: number
+  taxAmount: number
+  shipping: number
+  total: number
+}
+
+const computePricing = ({ subtotal, discountTotal, shipping, taxRate, taxesIncluded }: PricingInput): PricingSummary => {
+  const subtotalOriginal = Math.max(0, Number(subtotal) || 0)
+  const shippingAmount = Number.isFinite(shipping) ? Number(shipping) : 0
+
+  const discountRequested = Math.max(0, Number(discountTotal) || 0)
+  const discountAmount = Math.min(discountRequested, subtotalOriginal)
+
+  const subtotalAfterDiscount = Math.max(0, subtotalOriginal - discountAmount)
+  const divisor = taxesIncluded && taxRate > 0 ? 1 + taxRate : 1
+
+  const subtotalNetBeforeDiscount = divisor !== 0 ? subtotalOriginal / divisor : subtotalOriginal
+  const subtotalNet = divisor !== 0 ? subtotalAfterDiscount / divisor : subtotalAfterDiscount
+
+  const taxAmount =
+    taxRate > 0
+      ? taxesIncluded
+        ? subtotalAfterDiscount - subtotalNet
+        : subtotalNet * taxRate
+      : 0
+
+  const netDiscount = Math.max(0, subtotalNetBeforeDiscount - subtotalNet)
+  const taxDiscount = taxesIncluded ? Math.max(0, discountAmount - netDiscount) : discountAmount - netDiscount
+
+  const total = subtotalNet + taxAmount + shippingAmount
+
+  return {
+    subtotalOriginal,
+    subtotalNetBeforeDiscount,
+    discountAmount,
+    netDiscount,
+    taxDiscount,
+    subtotalAfterDiscount,
+    subtotalNet,
+    taxAmount,
+    shipping: shippingAmount,
+    total,
+  }
+}
+
 const STEPS = {
   CART_REVIEW: 0,
   CUSTOMER_INFO: 1,
@@ -100,6 +160,7 @@ export default function CheckoutPage() {
   const [pageLoading, setPageLoading] = useState(true)
   const [customerId, setCustomerId] = useState<string | null>(null)
   const [orderId, setOrderId] = useState<string | null>(null)
+  const [orderError, setOrderError] = useState<{ title: string; description?: string } | null>(null)
   const [shippingAddressId, setShippingAddressId] = useState<string | null>(null)
   const [billingAddressId, setBillingAddressId] = useState<string | null>(null)
 
@@ -806,8 +867,115 @@ const applyCouponIfExists = () => {
   return foundCoupon;
 };
 
-  // Submit the order
+  const normalizeErrorMessage = (value: unknown): string => {
+    if (!value) {
+      return ""
+    }
+
+    if (Array.isArray(value)) {
+      return value
+        .map(item => normalizeErrorMessage(item))
+        .filter(Boolean)
+        .join(" · ")
+    }
+
+    if (typeof value === "string") {
+      return value
+    }
+
+    if (typeof value === "object") {
+      const maybeMessage = (value as { message?: unknown; details?: unknown }).message
+      if (maybeMessage) {
+        return normalizeErrorMessage(maybeMessage)
+      }
+
+      const maybeDetails = (value as { details?: unknown }).details
+      if (maybeDetails) {
+        return normalizeErrorMessage(maybeDetails)
+      }
+
+      const entries = Object.entries(value as Record<string, unknown>)
+        .map(([key, entryValue]) => {
+          const normalizedEntry = normalizeErrorMessage(entryValue)
+          return normalizedEntry ? `${key}: ${normalizedEntry}` : ""
+        })
+        .filter(Boolean)
+      return entries.join(" · ")
+    }
+
+    return String(value)
+  }
+
+  const getOrderCreationErrorState = (error: any): { title: string; description?: string; status?: number } => {
+    const status = error?.response?.status ?? error?.status
+    const data = error?.response?.data
+    const backendMessage = normalizeErrorMessage(data?.message) || normalizeErrorMessage(error?.message)
+
+    if (!status) {
+      return {
+        title: "No se pudo contactar al servidor",
+        description: backendMessage || "Verifica tu conexión a internet e intenta nuevamente.",
+      }
+    }
+
+    switch (status) {
+      case 400: {
+        const description =
+          backendMessage ||
+          normalizeErrorMessage(data?.errors) ||
+          "Algunos datos del pedido no cumplen las validaciones requeridas."
+        return {
+          title: "Revisa la información del pedido",
+          description,
+          status,
+        }
+      }
+      case 404: {
+        const description =
+          backendMessage ||
+          "No encontramos alguno de los recursos necesarios (tienda, moneda, cupón, método de envío o líneas del pedido)."
+        return {
+          title: "No pudimos completar tu pedido",
+          description,
+          status,
+        }
+      }
+      case 409: {
+        const description =
+          backendMessage ||
+          "El número de pedido ya existe para esta tienda. Intenta nuevamente para generar uno nuevo."
+        return {
+          title: "Número de pedido en uso",
+          description,
+          status,
+        }
+      }
+      case 500: {
+        const description =
+          backendMessage ||
+          "Ocurrió un problema inesperado en el servidor. Intenta nuevamente en unos instantes."
+        return {
+          title: "Tuvimos un problema al procesar tu pedido",
+          description,
+          status,
+        }
+      }
+      default: {
+        const description =
+          backendMessage ||
+          "No pudimos procesar el pedido. Intenta nuevamente o contáctanos si el problema persiste."
+        return {
+          title: "No pudimos procesar el pedido",
+          description,
+          status,
+        }
+      }
+    }
+  }
+
+    // Submit the order
   const submitOrder = async () => {
+    setOrderError(null)
     setIsSubmitting(true)
 
     try {
@@ -857,29 +1025,27 @@ const lineItems = prepareLineItems()
 // Calcular el total de descuentos
 
       // 4. Calculate totals
-      const subtotalPrice = getTotal(selectedCurrencyId);
-      const totalDiscounts = lineItems.reduce((sum, item) => sum + item.totalDiscount, 0);
-      const subtotalAfterDiscount = subtotalPrice - totalDiscounts;
-
-      // Calcular IGV basado en configuración de la tienda
-      const taxesIncluded = shopSettings?.[0]?.taxesIncluded || false
-      const taxRate = Number(shopSettings?.[0]?.taxValue || 18) / 100
-      
-      let totalTax = 0;
-      let totalPrice = 0;
-
-      if (taxesIncluded) {
-        // Si los impuestos están incluidos en el precio:
-        const taxDivisor = 1 + taxRate
-        totalTax = subtotalAfterDiscount - subtotalAfterDiscount / taxDivisor
-        totalPrice = subtotalAfterDiscount + Number(getShippingCost())
-      } else {
-        // Si los impuestos NO están incluidos:
-        totalTax = subtotalAfterDiscount * taxRate
-        totalPrice = subtotalAfterDiscount + totalTax + Number(getShippingCost())
-      }
-
+      const subtotalPriceBeforeDiscount = Number(getTotal(selectedCurrencyId));
+      const lineItemDiscountTotal = lineItems.reduce((sum, item) => sum + item.totalDiscount, 0);
+      const taxesIncluded = Boolean(shopSettings?.[0]?.taxesIncluded)
+      const configuredTaxValue = Number(shopSettings?.[0]?.taxValue ?? 18)
+      const taxRate = Number.isFinite(configuredTaxValue) ? configuredTaxValue / 100 : 0
       const shippingCost = Number(getShippingCost())
+
+      const orderPricing = computePricing({
+        subtotal: subtotalPriceBeforeDiscount,
+        discountTotal: lineItemDiscountTotal,
+        shipping: shippingCost,
+        taxRate,
+        taxesIncluded,
+      })
+
+      const subtotalNetOrder = orderPricing.subtotalNet
+      const totalTax = orderPricing.taxAmount
+      const totalPrice = orderPricing.total
+      const discountAmountOrder = orderPricing.discountAmount
+      const netDiscountOrder = orderPricing.netDiscount
+      const taxDiscountOrder = orderPricing.taxDiscount
 
       // Get currency information
       const currencyId = activeCurrency?.id || shopSettings?.[0]?.defaultCurrency?.id || "curr_0536edd0-2193"
@@ -889,13 +1055,12 @@ const lineItems = prepareLineItems()
       const orderNumber = Math.floor(Math.random() * 1000) + 1
 
       const orderData = {
-        storeId: process.env.NEXT_PUBLIC_STORE_ID || "store_default", // Use environment variable with fallback
         orderNumber: orderNumber, // Add the orderNumber field
         currencyId: currencyId,
         totalPrice,
-        subtotalPrice,
+        subtotalPrice: subtotalNetOrder,
         totalTax,
-        totalDiscounts,
+        totalDiscounts: discountAmountOrder,
         
         lineItems,
         // Create customerInfo JSON object with properly formatted name
@@ -906,8 +1071,10 @@ const lineItems = prepareLineItems()
             lastName: formData.lastName || currentUser?.lastName || null,
             name: currentUser?.name || null,
           })
+          const fullName = `${firstName ?? ""} ${lastName ?? ""}`.trim()
 
           return {
+            name: fullName || currentUser?.name || formData.firstName || "",
             firstName,
             lastName,
             email: formData.email || currentUser?.email || "",
@@ -922,13 +1089,16 @@ const lineItems = prepareLineItems()
           isAuthenticated && calculatedShippingAddressId
             ? { id: calculatedShippingAddressId }
             : {
+                name: `${formData.firstName || currentUser?.firstName || ""} ${formData.lastName || currentUser?.lastName || ""}`.trim() || undefined,
                 address1: formData.address,
                 address2: formData.apartment || undefined,
                 city: formData.city,
-                province: formData.state,
-                zip: formData.zipCode,
+                state: formData.state,
+                province: formData.state || undefined,
+                postalCode: formData.zipCode,
+                zip: formData.zipCode || undefined,
                 country: "PE",
-                phone: formData.shippingPhone,
+                phone: formData.shippingPhone || formData.phone || currentUser?.phone || undefined,
               },
         // Create billingAddress JSON object
         billingAddress: formData.sameBillingAddress
@@ -936,13 +1106,16 @@ const lineItems = prepareLineItems()
           : isAuthenticated && calculatedBillingAddressId
             ? { id: calculatedBillingAddressId }
             : {
+                name: `${formData.firstName || currentUser?.firstName || ""} ${formData.lastName || currentUser?.lastName || ""}`.trim() || undefined,
                 address1: formData.billingAddress,
                 address2: formData.billingApartment || undefined,
                 city: formData.billingCity,
-                province: formData.billingState,
-                zip: formData.billingZipCode,
+                state: formData.billingState,
+                province: formData.billingState || undefined,
+                postalCode: formData.billingZipCode,
+                zip: formData.billingZipCode || undefined,
                 country: "PE",
-                phone: formData.billingPhone,
+                phone: formData.billingPhone || formData.phone || currentUser?.phone || undefined,
               },
         couponId: coupon?.id || undefined,
         paymentProviderId: formData.paymentMethod || undefined, // Set to undefined when no payment method
@@ -954,18 +1127,18 @@ const lineItems = prepareLineItems()
         fulfillmentStatus: OrderFulfillmentStatus.UNFULFILLED,
         shippingStatus: ShippingStatus.PENDING,
         customerNotes: formData.notes || "",
-        internalNotes: "",
         source: "web",
-        preferredDeliveryDate: new Date(formData.preferredDeliveryDate),
+        preferredDeliveryDate: formData.preferredDeliveryDate ? new Date(formData.preferredDeliveryDate) : undefined,
       }
 
       // 6. Create the order
       let orderCreationSuccess = false
-      let retryCount = 0
       const maxRetries = 3
+      let lastCreationError: any = null
 
-      while (!orderCreationSuccess && retryCount < maxRetries) {
+      for (let attempt = 0; attempt < maxRetries && !orderCreationSuccess; attempt++) {
         try {
+          console.log("Checkout – sending order payload", orderData)
           const order = await createOrder(orderData)
 
           if (!order || !order.id) {
@@ -1041,9 +1214,9 @@ const lineItems = prepareLineItems()
                 createdAt: new Date(),
                 updatedAt: new Date(),
               })),
-              subtotalPrice: subtotalPrice,
+              subtotalPrice: subtotalNetOrder,
               totalTax: totalTax,
-              totalDiscounts: totalDiscounts, // ✅ CORREGIDO: usar valor real
+              totalDiscounts: discountAmountOrder,
               totalPrice: totalPrice,
               financialStatus: OrderFinancialStatus.PENDING,
               fulfillmentStatus: OrderFulfillmentStatus.UNFULFILLED,
@@ -1077,17 +1250,35 @@ const lineItems = prepareLineItems()
             console.error("Error enviando emails:", emailError)
             // El pedido se creó exitosamente, el error de email no es crítico
           }
-        } catch (error) {
-          retryCount++
-          if (retryCount < maxRetries) {
-            // Generate a new orderNumber for the retry
-            orderData.orderNumber = Math.floor(Math.random() * 1000) + 1
+        } catch (error: any) {
+          if (error?.response) {
+            console.error("Checkout – order create response error", {
+              status: error.response.status,
+              data: error.response.data,
+            })
+          } else if (error?.request) {
+            console.error("Checkout – order create request error (no response)", error.request)
           } else {
-            toast.error("Error al procesar el pedido. Por favor, intenta nuevamente.")
-            setIsSubmitting(false)
-            return
+            console.error("Checkout – order create unexpected error", error)
           }
+          lastCreationError = error
+          const status = error?.response?.status ?? error?.status
+          const canRetry = status === 409 && attempt < maxRetries - 1
+
+          if (canRetry) {
+            toast.info("Generamos un nuevo número de pedido y reintentaremos.", {
+              description: "Si el problema persiste, contáctanos.",
+            })
+            orderData.orderNumber = Math.floor(Math.random() * 1000) + 1
+            continue
+          }
+
+          throw error
         }
+      }
+
+      if (!orderCreationSuccess) {
+        throw lastCreationError ?? new Error("No se pudo crear la orden")
       }
 
       // 8. Success
@@ -1097,8 +1288,13 @@ const lineItems = prepareLineItems()
 
       clearCart()
       setCurrentStep(STEPS.CONFIRMATION)
-    } catch (error) {
-      toast.error("Error al procesar el pedido. Por favor, intenta nuevamente.")
+    } catch (error: any) {
+      console.error("Error al crear la orden:", error)
+      const errorState = getOrderCreationErrorState(error)
+      setOrderError(errorState)
+      toast.error(errorState.title, {
+        description: errorState.description,
+      })
     } finally {
       setIsSubmitting(false)
     }
@@ -1167,42 +1363,38 @@ const lineItems = prepareLineItems()
     return basePrice
   }
 
-  // Calculate totals
-  const totalDiscounts = calculateDiscounts()
-const subtotal = Number(getTotal(selectedCurrencyId))
+// Calculate pricing summary
+const requestedDiscount = calculateDiscounts()
+const subtotalOriginal = Number(getTotal(selectedCurrencyId))
 const shipping = Number(getShippingCost())
-const taxesIncluded = shopSettings?.[0]?.taxesIncluded || false
-const taxRate = Number(shopSettings?.[0]?.taxValue || 18) / 100
+const taxesIncluded = Boolean(shopSettings?.[0]?.taxesIncluded)
+const configuredTaxValue = Number(shopSettings?.[0]?.taxValue ?? 18)
+const taxRate = Number.isFinite(configuredTaxValue) ? configuredTaxValue / 100 : 0
 
-// Calcular subtotal después de descuentos
-const subtotalAfterDiscount = Math.max(0, subtotal - totalDiscounts)
+const pricing = computePricing({
+  subtotal: subtotalOriginal,
+  discountTotal: requestedDiscount,
+  shipping,
+  taxRate,
+  taxesIncluded,
+})
 
-let tax = 0
-let total = 0
-
-if (taxesIncluded) {
-  // Si los impuestos están incluidos en el precio:
-  // 1. Extraer el impuesto del subtotal original (antes de descuentos)
-  const taxDivisor = 1 + taxRate
-  const taxBeforeDiscount = subtotal - subtotal / taxDivisor
-  
-  // 2. Calcular qué porcentaje del impuesto corresponde al subtotal después de descuentos
-  tax = (subtotalAfterDiscount / subtotal) * taxBeforeDiscount
-  
-  // 3. Calcular total (subtotal con descuento + envío)
-  total = subtotalAfterDiscount + shipping
-} else {
-  // Si los impuestos NO están incluidos:
-  // Calcular impuestos sobre el subtotal después de descuentos
-  tax = subtotalAfterDiscount * taxRate
-  total = subtotalAfterDiscount + tax + shipping
-}
+const {
+  subtotalAfterDiscount,
+  subtotalNet,
+  subtotalNetBeforeDiscount,
+  discountAmount,
+  netDiscount,
+  taxDiscount,
+  taxAmount: tax,
+  total,
+} = pricing
 
   const prepareLineItems = () => {
     if (!appliedCoupon) {
       return items.map((item) => {
         const priceObj = item.variant.prices.find(p => p.currencyId === selectedCurrencyId)
-        const price = priceObj?.price ?? item.variant.prices[0]?.price ?? 0
+        const price = Number(priceObj?.price ?? item.variant.prices[0]?.price ?? 0)
         return {
           variantId: item.variant.id,
           title: `${item.product.title} - ${item.variant.title}`,
@@ -1222,7 +1414,7 @@ if (taxesIncluded) {
 
     return items.map((item) => {
       const priceObj = item.variant.prices.find(p => p.currencyId === selectedCurrencyId)
-      const itemPrice = priceObj?.price ?? item.variant.prices[0]?.price ?? 0
+      const itemPrice = Number(priceObj?.price ?? item.variant.prices[0]?.price ?? 0)
       
       let discount = 0
       
@@ -1425,7 +1617,13 @@ if (taxesIncluded) {
               >
                 {/* Step 1: Cart Review */}
                 {currentStep === STEPS.CART_REVIEW && (
-                  <CartReviewStep items={items} currency={currency} nextStep={nextStep} selectedCurrencyId={selectedCurrencyId} />
+                  <CartReviewStep
+                    items={items}
+                    currency={currency}
+                    nextStep={nextStep}
+                    selectedCurrencyId={selectedCurrencyId}
+                    orderSubtotal={taxesIncluded ? subtotalOriginal : subtotalNetBeforeDiscount}
+                  />
                 )}
 
                 {/* Step 2: Customer Information */}
@@ -1471,6 +1669,7 @@ if (taxesIncluded) {
                     total={subtotalAfterDiscount}
                     resumeItems={resumeItems}
                     orderId={orderId}
+                    orderError={orderError}
                   />
                 )}
 
@@ -1482,8 +1681,13 @@ if (taxesIncluded) {
                   currentUser={currentUser as (User & { addresses?: Address[] }) | null}
                   formData={formData}
                   items={items}
-                  subtotal={subtotal}
+                  subtotalNetBeforeDiscount={subtotalNetBeforeDiscount}
+                  subtotalNet={subtotalNet}
+                  discountAmount={discountAmount}
+                  netDiscount={netDiscount}
+                  taxDiscount={taxDiscount}
                   tax={tax}
+                  taxRate={taxRate}
                   shipping={shipping}
                   total={total}
                   currency={currency}
@@ -1492,6 +1696,7 @@ if (taxesIncluded) {
                   selectedShippingAddressId={selectedShippingAddressId}
                   selectedBillingAddressId={selectedBillingAddressId}
                   selectedCurrencyId={selectedCurrencyId}
+                  taxesIncluded={taxesIncluded}
                 />
                 )}
               </motion.div>
@@ -1502,14 +1707,18 @@ if (taxesIncluded) {
               <div className="lg:col-span-1">
                 <OrderSummary
                   items={items}
-                  subtotal={subtotal}
+                  subtotalOriginal={subtotalOriginal}
+                  subtotalNetBeforeDiscount={subtotalNetBeforeDiscount}
+                  subtotalAfterDiscount={subtotalAfterDiscount}
+                  subtotalNet={subtotalNet}
+                  discountAmount={discountAmount}
                   tax={tax}
+                  taxRate={taxRate}
                   shipping={shipping}
                   total={total}
                   currency={currency}
                   currentStep={currentStep}
                   formData={formData}
-                  totalDiscounts={totalDiscounts}
                   shippingMethods={shippingMethods}
                   paymentProviders={paymentProviders}
                   isAuthenticated={isAuthenticated}
@@ -1517,6 +1726,7 @@ if (taxesIncluded) {
                   selectedShippingAddressId={selectedShippingAddressId}
                   selectedBillingAddressId={selectedBillingAddressId}
                   selectedCurrencyId={selectedCurrencyId}
+                  taxesIncluded={taxesIncluded}
                 />
               </div>
             )}

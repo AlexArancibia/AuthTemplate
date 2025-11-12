@@ -795,13 +795,8 @@ export const useMainStore = create<MainStore>((set, get) => ({
         throw new Error("No store ID provided in environment variables")
       }
 
-      // Asegurarse de que el storeId esté incluido en los datos
-      const orderData = {
-        ...data,
-        storeId: STORE_ID,
-      }
-
-      const response = await apiClient.post<Order>(`/orders/${STORE_ID}` , orderData)
+      const { storeId, ...orderPayload } = data ?? {}
+      const response = await apiClient.post<Order>(`/orders/${STORE_ID}`, orderPayload)
       const newOrder = extractApiData<Order>(response)
       set((state) => ({
         orders: [...state.orders, newOrder],
