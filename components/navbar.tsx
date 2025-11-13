@@ -41,7 +41,7 @@ const navItems = [
 
 export default function Navbar() {
   const pathname = usePathname()
-  const { currentUser } = useUserStore()
+  const { currentUser, fetchUserByEmail } = useUserStore()
   const {
     fetchShopSettings,
     fetchShippingMethods,
@@ -69,6 +69,10 @@ export default function Navbar() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [showInitialLoading, setShowInitialLoading] = useState(true)
   const [isScrolled, setIsScrolled] = useState(false)
+  const sessionFetchAttempted = useRef(false)
+  const [isSessionLoading, setIsSessionLoading] = useState(!currentUser)
+  const [logoStatus, setLogoStatus] = useState<"idle" | "loading" | "loaded" | "error">("idle")
+  const lastLogoRef = useRef<string | null>(null)
 
   const sortedCategories = useMemo(() => {
     if (!categories) return []
@@ -125,6 +129,48 @@ export default function Navbar() {
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  useEffect(() => {
+    if (currentUser) {
+      setIsSessionLoading(false)
+      return
+    }
+
+    if (sessionFetchAttempted.current) {
+      return
+    }
+
+    sessionFetchAttempted.current = true
+    let active = true
+
+    const loadSession = async () => {
+      try {
+        const response = await fetch("/api/auth/session", { cache: "no-store" })
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch session: ${response.status}`)
+        }
+
+        const session = await response.json()
+
+        if (session?.user?.email) {
+          await fetchUserByEmail(session.user.email)
+        }
+      } catch (error) {
+        console.error("[NAVBAR] Error loading session:", error)
+      } finally {
+        if (active) {
+          setIsSessionLoading(false)
+        }
+      }
+    }
+
+    loadSession()
+
+    return () => {
+      active = false
+    }
+  }, [currentUser, fetchUserByEmail])
 
   // Handle scroll effect for navbar background
   useEffect(() => {
@@ -215,6 +261,46 @@ export default function Navbar() {
 
   const shopName = shopSettings?.[0]?.name ?? "Mi Tienda"
   const shopLogo = shopSettings?.[0]?.logo ?? null
+
+  useEffect(() => {
+    if (!shopLogo) {
+      lastLogoRef.current = null
+      setLogoStatus("idle")
+      return
+    }
+
+    if (shopLogo === lastLogoRef.current) {
+      setLogoStatus("loaded")
+      return
+    }
+
+    let cancelled = false
+    setLogoStatus("loading")
+
+    const img = new Image()
+
+    const handleLoad = () => {
+      if (cancelled) return
+      lastLogoRef.current = shopLogo
+      setLogoStatus("loaded")
+    }
+
+    const handleError = () => {
+      if (cancelled) return
+      lastLogoRef.current = null
+      setLogoStatus("error")
+    }
+
+    img.addEventListener("load", handleLoad)
+    img.addEventListener("error", handleError)
+    img.src = shopLogo
+
+    return () => {
+      cancelled = true
+      img.removeEventListener("load", handleLoad)
+      img.removeEventListener("error", handleError)
+    }
+  }, [shopLogo])
   const totalItems = getItemsCount()
   const totalPrice = getTotal(selectedCurrencyId)
 
@@ -285,10 +371,17 @@ export default function Navbar() {
           {/* Logo */}
           <div className="w-1/2 lg:w-1/4">
             <Link href="/" aria-label="Ir a la página de inicio" className="flex items-center">
-              {loading ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : shopLogo ? (
-                <img src={shopLogo || "/placeholder.svg"} alt={shopName} className="h-6 lg:h-7 w-auto mr-2" />
+              {shopLogo && logoStatus !== "error" ? (
+                logoStatus === "loading" ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <img
+                    src={shopLogo}
+                    alt={shopName}
+                    className="h-6 lg:h-7 w-auto mr-2"
+                    onError={() => setLogoStatus("error")}
+                  />
+                )
               ) : (
                 <Store className="h-5 w-5 mr-2" />
               )}
@@ -527,7 +620,9 @@ export default function Navbar() {
             }
 
             {/* User Menu */}
-            {currentUser ? (
+            {isSessionLoading ? (
+              <Skeleton className="h-8 w-8 rounded-full" />
+            ) : currentUser ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full p-0">

@@ -26,6 +26,22 @@ export function ProductSidebar({ product, selectedCurrencyId, acceptedCurrencies
     return acceptedCurrencies.find((c) => c.id === selectedCurrencyId) || defaultCurrency
   }, [acceptedCurrencies, selectedCurrencyId, shopSettings])
 
+  const activeShopSettings = shopSettings?.[0]
+  const paymentProvidersForCurrency = useMemo(() => {
+    if (!Array.isArray(paymentProviders)) return []
+    const targetCurrencyId = activeShopSettings?.multiCurrencyEnabled
+      ? currencyOption?.id || activeShopSettings?.defaultCurrencyId
+      : activeShopSettings?.defaultCurrencyId
+
+    if (!targetCurrencyId) return paymentProviders
+    return paymentProviders.filter((provider) => provider.currencyId === targetCurrencyId)
+  }, [
+    paymentProviders,
+    currencyOption?.id,
+    activeShopSettings?.multiCurrencyEnabled,
+    activeShopSettings?.defaultCurrencyId,
+  ])
+
   useEffect(() => {
     const loadLatestProducts = async () => {
       try {
@@ -100,27 +116,31 @@ export function ProductSidebar({ product, selectedCurrencyId, acceptedCurrencies
             Métodos de pago
           </h3>
           <div className="flex flex-wrap gap-3">
-            {paymentProviders.map((provider) => (
-              <div 
-                key={provider.id} 
-                className="rounded-lg text-sm flex items-center gap-2"
-              >
-                {provider.imgUrl ? (
-                  <div className="w-6 h-6 flex-shrink-0 overflow-hidden rounded">
-                    <img
-                      src={provider.imgUrl || "/placeholder.svg"}
-                      alt={provider.name}
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-6 h-6 flex-shrink-0 bg-gradient-to-br from-blue-100 to-blue-200 rounded flex items-center justify-center">
-                    <CreditCard className="w-3 h-3 text-blue-600" />
-                  </div>
-                )}
-                <span className="text-gray-700 font-normal">{provider.name}</span>
-              </div>
-            ))}
+            {paymentProvidersForCurrency.length > 0 ? (
+              paymentProvidersForCurrency.map((provider) => (
+                <div 
+                  key={provider.id} 
+                  className="rounded-lg text-sm flex items-center gap-2"
+                >
+                  {provider.imgUrl ? (
+                    <div className="w-6 h-6 flex-shrink-0 overflow-hidden rounded">
+                      <img
+                        src={provider.imgUrl || "/placeholder.svg"}
+                        alt={provider.name}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-6 h-6 flex-shrink-0 bg-gradient-to-br from-blue-100 to-blue-200 rounded flex items-center justify-center">
+                      <CreditCard className="w-3 h-3 text-blue-600" />
+                    </div>
+                  )}
+                  <span className="text-gray-700 font-normal">{provider.name}</span>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-gray-500">No hay métodos de pago disponibles para esta moneda.</p>
+            )}
           </div>
         </div>
 

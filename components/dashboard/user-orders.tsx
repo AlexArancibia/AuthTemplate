@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -12,62 +12,121 @@ import { formatDate } from "@/lib/utils"
 import { OrderFinancialStatus, OrderFulfillmentStatus, ShippingStatus } from "@/types/common"
 import { useMainStore } from "@/stores/mainStore"
 import { Package, Truck, CreditCard, Eye, ShoppingBag, AlertCircle } from "lucide-react"
+import type { Order } from "@/types/order"
+
+const normalizeOrderAddresses = (order: Order) => {
+  const shipping =
+    (order.shippingAddress as any)?.shipping ?? order.shippingAddress ?? null
+
+  const billing =
+    (order.shippingAddress as any)?.billing ?? order.billingAddress ?? null
+
+  return { shipping, billing }
+}
 
 interface UserOrdersProps {
   userId: string
   userEmail: string
 }
 
+const parseAmount = (value: unknown): number => {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : 0
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+
+  return 0
+}
+
+const formatAmount = (value: unknown): string => {
+  return parseAmount(value).toFixed(2)
+}
+
+const PAGE_SIZE = 10
+
 export function UserOrders({ userId, userEmail }: UserOrdersProps) {
-  const { orders, fetchOrders, loading: ordersLoading, error: ordersError, paginationMeta } = useMainStore()
+  const { orders, fetchAllOrders, loading: ordersLoading, error: ordersError } = useMainStore()
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
 
-  // Simple fetch control
-  const hasFetched = useRef(false)
+  const requestAllOrders = useCallback(async () => {
+    await fetchAllOrders({
+      sortBy: "createdAt",
+      sortOrder: "desc",
+    })
+  }, [fetchAllOrders])
 
   useEffect(() => {
-    const loadOrders = async () => {
-      // Skip if already fetched or already loading
-      if (hasFetched.current || ordersLoading) {
-        console.log("[USER_ORDERS] Orders already fetched or loading, skipping")
-        return
-      }
-
-      console.log("[USER_ORDERS] Fetching orders with pagination")
-      hasFetched.current = true
-
-      try {
-        // Fetch con email del usuario como filtro y paginación
-        await fetchOrders({ 
-          customerEmail: userEmail,
-          page: currentPage,
-          limit: 10,
-          sortBy: 'createdAt',
-          sortOrder: 'desc'
-        })
-        console.log("[USER_ORDERS] Orders loaded successfully")
-      } catch (error) {
-        console.error("[USER_ORDERS] Error fetching orders:", error)
-        toast.error("Error al cargar los pedidos")
-      }
+    if (ordersLoading || orders.length > 0) {
+      return
     }
 
-    loadOrders()
-  }, [fetchOrders, ordersLoading, userEmail, currentPage])
+    requestAllOrders().catch(() => {
+      toast.error("Error al cargar los pedidos")
+    })
+  }, [ordersLoading, orders.length, requestAllOrders])
 
-  // Debug logs
-  console.log("[USER_ORDERS] orders type:", typeof orders)
-  console.log("[USER_ORDERS] orders value:", orders)
-  console.log("[USER_ORDERS] orders.data exists:", orders && "data" in orders)
-  console.log("[USER_ORDERS] userId:", userId)
+  const handleReload = useCallback(() => {
+    setCurrentPage(1)
+    requestAllOrders().catch(() => {
+      toast.error("Error al cargar los pedidos")
+    })
+  }, [requestAllOrders])
 
-  // Los orders ya vienen filtrados por el backend usando customerEmail
-  const userOrders = Array.isArray(orders) ? orders : []
-  
-  console.log("[USER_ORDERS] User orders length:", userOrders.length)
-  console.log("[USER_ORDERS] Pagination meta:", paginationMeta.orders)
+  const normalizedUserEmail = userEmail?.trim().toLowerCase() || ""
+  const userOrders = useMemo(() => {
+    if (!Array.isArray(orders)) {
+      return []
+    }
+
+    return orders.filter((order: any) => {
+      const customerInfo = order?.customerInfo ?? {}
+
+      const matchesUserId =
+        typeof customerInfo?.userId === "string" && customerInfo.userId === userId
+
+      const customerEmail =
+        typeof customerInfo?.email === "string" ? customerInfo.email.trim().toLowerCase() : ""
+
+      const fallbackEmail =
+        typeof customerInfo?.contactEmail === "string"
+          ? customerInfo.contactEmail.trim().toLowerCase()
+          : ""
+
+      const matchesEmail =
+        normalizedUserEmail.length > 0 &&
+        (customerEmail === normalizedUserEmail || fallbackEmail === normalizedUserEmail)
+
+      return matchesUserId || matchesEmail
+    })
+  }, [orders, userId, normalizedUserEmail])
+
+  const hasOrders = userOrders.length > 0
+  const totalPages = Math.max(1, Math.ceil(userOrders.length / PAGE_SIZE))
+  const safePage = Math.min(Math.max(currentPage, 1), totalPages)
+
+  useEffect(() => {
+    if (safePage !== currentPage) {
+      setCurrentPage(safePage)
+    }
+  }, [safePage, currentPage])
+
+  const paginatedOrders = useMemo(() => {
+    if (!hasOrders) {
+      return []
+    }
+
+    const startIndex = (safePage - 1) * PAGE_SIZE
+    return userOrders.slice(startIndex, startIndex + PAGE_SIZE)
+  }, [userOrders, hasOrders, safePage])
+
+  const hasPrevPage = safePage > 1
+  const hasNextPage = hasOrders && safePage < totalPages
 
   const getStatusBadge = (order: any) => {
     // Financial status
@@ -157,15 +216,11 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
   }
 
   if (ordersError) {
-    console.error("[USER_ORDERS] Error:", ordersError)
     return (
       <div className="text-center py-8">
         <AlertCircle className="h-10 w-10 text-red-500 mx-auto mb-4" />
         <p className="text-muted-foreground mb-4">{ordersError}</p>
-        <Button variant="outline" className="mt-4" onClick={() => {
-          hasFetched.current = false
-          fetchOrders({ customerEmail: userEmail, page: currentPage, limit: 10 })
-        }}>
+        <Button variant="outline" className="mt-4" onClick={handleReload}>
           Intentar de nuevo
         </Button>
       </div>
@@ -180,10 +235,7 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
         <ShoppingBag className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
         <p className="text-muted-foreground mb-2">No hay pedidos disponibles</p>
  
-        <Button variant="outline" className="mt-4" onClick={() => {
-          hasFetched.current = false
-          fetchOrders({ customerEmail: userEmail, page: currentPage, limit: 10 })
-        }}>
+        <Button variant="outline" className="mt-4" onClick={handleReload}>
           Recargar pedidos
         </Button>
       </div>
@@ -194,7 +246,7 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
     <div className="space-y-4">
  
 
-      {userOrders.map((order: any) => (
+      {paginatedOrders.map((order: any) => (
         <Card key={order.id} className="overflow-hidden">
           <CardContent className="p-0">
             <div className="p-4">
@@ -214,7 +266,7 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
                 </div>
                 <p className="font-medium">
                   {order.currency?.symbol || "S/"}
-                  {Number(order.totalPrice).toFixed(2)}
+                  {formatAmount(order.totalPrice)}
                 </p>
               </div>
             </div>
@@ -237,32 +289,30 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
       ))}
 
       {/* Paginación */}
-      {paginationMeta.orders && paginationMeta.orders.totalPages > 1 && (
+      {hasOrders && totalPages > 1 && (
         <div className="flex justify-center items-center gap-4 mt-6">
           <Button
             variant="outline"
             size="sm"
             onClick={() => {
-              setCurrentPage(prev => prev - 1)
-              hasFetched.current = false
+              setCurrentPage(prev => Math.max(prev - 1, 1))
             }}
-            disabled={!paginationMeta.orders.hasPrev || ordersLoading}
+            disabled={!hasPrevPage || ordersLoading}
           >
             Anterior
           </Button>
           
           <span className="text-sm text-muted-foreground">
-            Página {paginationMeta.orders.page} de {paginationMeta.orders.totalPages}
+            Página {safePage} de {totalPages}
           </span>
           
           <Button
             variant="outline"
             size="sm"
             onClick={() => {
-              setCurrentPage(prev => prev + 1)
-              hasFetched.current = false
+              setCurrentPage(prev => Math.min(prev + 1, totalPages))
             }}
-            disabled={!paginationMeta.orders.hasNext || ordersLoading}
+            disabled={!hasNextPage || ordersLoading}
           >
             Siguiente
           </Button>
@@ -297,7 +347,7 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
                       </div>
                       <p className="text-sm font-medium">
                         {selectedOrder.currency?.symbol || "S/"}
-                        {(item.price * item.quantity).toFixed(2)}
+                        {formatAmount(parseAmount(item.price) * parseAmount(item.quantity))}
                       </p>
                     </div>
                   ))}
@@ -313,22 +363,22 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
                     <span>Subtotal</span>
                     <span>
                       {selectedOrder.currency?.symbol || "S/"}
-                      {selectedOrder.subtotalPrice.toFixed(2)}
+                      {formatAmount(selectedOrder.subtotalPrice)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span>Impuestos</span>
                     <span>
                       {selectedOrder.currency?.symbol || "S/"}
-                      {selectedOrder.totalTax.toFixed(2)}
+                      {formatAmount(selectedOrder.totalTax)}
                     </span>
                   </div>
-                  {selectedOrder.totalDiscounts > 0 && (
+                  {parseAmount(selectedOrder.totalDiscounts) > 0 && (
                     <div className="flex justify-between text-sm">
                       <span>Descuentos</span>
                       <span>
                         -{selectedOrder.currency?.symbol || "S/"}
-                        {selectedOrder.totalDiscounts.toFixed(2)}
+                        {formatAmount(selectedOrder.totalDiscounts)}
                       </span>
                     </div>
                   )}
@@ -336,30 +386,58 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
                     <span>Total</span>
                     <span>
                       {selectedOrder.currency?.symbol || "S/"}
-                      {selectedOrder.totalPrice.toFixed(2)}
+                      {formatAmount(selectedOrder.totalPrice)}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {selectedOrder.shippingAddress && (
+              {(() => {
+                const { shipping: shippingAddress, billing: billingAddress } = normalizeOrderAddresses(selectedOrder)
+
+                if (!shippingAddress) {
+                  return null
+                }
+
+                const hasDistinctBilling =
+                  billingAddress &&
+                  JSON.stringify(billingAddress) !== JSON.stringify(shippingAddress)
+
+                return (
                 <>
                   <Separator />
                   <div>
                     <h4 className="font-medium mb-2">Dirección de envío</h4>
                     <p className="text-sm">
-                      {selectedOrder.shippingAddress.address1}
-                      {selectedOrder.shippingAddress.address2 && `, ${selectedOrder.shippingAddress.address2}`}
+                      {shippingAddress.address1}
+                      {shippingAddress.address2 && `, ${shippingAddress.address2}`}
                     </p>
                     <p className="text-sm">
-                      {selectedOrder.shippingAddress.city}
-                      {selectedOrder.shippingAddress.province && `, ${selectedOrder.shippingAddress.province}`}{" "}
-                      {selectedOrder.shippingAddress.zip}
+                      {shippingAddress.city}
+                      {shippingAddress.province && `, ${shippingAddress.province}`} {shippingAddress.zip}
                     </p>
-                    <p className="text-sm">{selectedOrder.shippingAddress.country}</p>
+                    <p className="text-sm">{shippingAddress.country}</p>
                   </div>
+                  {hasDistinctBilling && (
+                    <>
+                      <Separator />
+                      <div>
+                        <h4 className="font-medium mb-2">Dirección de facturación</h4>
+                        <p className="text-sm">
+                          {billingAddress?.address1}
+                          {billingAddress?.address2 && `, ${billingAddress.address2}`}
+                        </p>
+                        <p className="text-sm">
+                          {billingAddress?.city}
+                          {billingAddress?.province && `, ${billingAddress.province}`} {billingAddress?.zip}
+                        </p>
+                        <p className="text-sm">{billingAddress?.country}</p>
+                      </div>
+                    </>
+                  )}
                 </>
-              )}
+                )
+              })()}
             </div>
           </DialogContent>
         </Dialog>

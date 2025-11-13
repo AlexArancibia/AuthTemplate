@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import type { Address } from "@/stores/userStore"
 import { AddressType } from "@/types/auth"
 import { User } from "@/types/user"
+import { ShippingMethod } from "@/types/shippingMethod"
 
 interface CustomerInfoStepProps {
   formData: Record<string, any>
@@ -51,6 +52,7 @@ interface CustomerInfoStepProps {
   copyShippingToBilling: () => void
   onEditAddress: (addressId: string) => void
   onDeleteAddress: (addressId: string) => void
+  shippingMethods: ShippingMethod[]
 }
 
 export function CustomerInfoStep({
@@ -75,6 +77,7 @@ export function CustomerInfoStep({
   copyShippingToBilling,
   onEditAddress,
   onDeleteAddress,
+  shippingMethods,
 }: CustomerInfoStepProps) {
 
   const router = useRouter()
@@ -117,6 +120,11 @@ export function CustomerInfoStep({
     }
   }
 
+  const selectedShippingAddressData = useMemo(() => {
+    if (!selectedShippingAddressId) return null
+    return currentUser?.addresses?.find((addr) => addr.id === selectedShippingAddressId) || null
+  }, [currentUser?.addresses, selectedShippingAddressId])
+
   const handleContinue = () => {
     // Si el campo de dirección está vacío, muestra error visual y toast
     if (!formData.address || formData.address.trim() === "") {
@@ -125,6 +133,7 @@ export function CustomerInfoStep({
       return;
     }
     setAddressError(false);
+
     nextStep();
   };
 
@@ -172,10 +181,12 @@ export function CustomerInfoStep({
     const country = availableCountries.find(c => c.code3 === value)
     handleInputChange({ target: { name: "country", value: country?.name || "" } } as any)
     handleInputChange({ target: { name: "countryCode3", value } } as any)
+    handleInputChange({ target: { name: "countryCode", value: country?.code || "" } } as any)
     handleInputChange({ target: { name: "countryId", value: country?.id || "" } } as any)
     // Limpiar estado y ciudad
     handleInputChange({ target: { name: "state", value: "" } } as any)
     handleInputChange({ target: { name: "stateId", value: "" } } as any)
+    handleInputChange({ target: { name: "stateCode", value: "" } } as any)
     handleInputChange({ target: { name: "city", value: "" } } as any)
     handleInputChange({ target: { name: "cityId", value: "" } } as any)
   }
@@ -184,6 +195,7 @@ export function CustomerInfoStep({
     const state = (states[formData.countryId] || []).find(s => s.id === value)
     handleInputChange({ target: { name: "state", value: state?.name || "" } } as any)
     handleInputChange({ target: { name: "stateId", value } } as any)
+    handleInputChange({ target: { name: "stateCode", value: state?.code || "" } } as any)
     // Limpiar ciudad
     handleInputChange({ target: { name: "city", value: "" } } as any)
     handleInputChange({ target: { name: "cityId", value: "" } } as any)
@@ -199,10 +211,12 @@ export function CustomerInfoStep({
     const country = availableCountries.find(c => c.code3 === value)
     handleInputChange({ target: { name: "billingCountry", value: country?.name || "" } } as any)
     handleInputChange({ target: { name: "billingCountryCode3", value } } as any)
+    handleInputChange({ target: { name: "billingCountryCode", value: country?.code || "" } } as any)
     handleInputChange({ target: { name: "billingCountryId", value: country?.id || "" } } as any)
     // Limpiar estado y ciudad de billing
     handleInputChange({ target: { name: "billingState", value: "" } } as any)
     handleInputChange({ target: { name: "billingStateId", value: "" } } as any)
+    handleInputChange({ target: { name: "billingStateCode", value: "" } } as any)
     handleInputChange({ target: { name: "billingCity", value: "" } } as any)
     handleInputChange({ target: { name: "billingCityId", value: "" } } as any)
   }
@@ -211,6 +225,7 @@ export function CustomerInfoStep({
     const state = (states[formData.billingCountryId] || []).find(s => s.id === value)
     handleInputChange({ target: { name: "billingState", value: state?.name || "" } } as any)
     handleInputChange({ target: { name: "billingStateId", value } } as any)
+    handleInputChange({ target: { name: "billingStateCode", value: state?.code || "" } } as any)
     // Limpiar ciudad de billing
     handleInputChange({ target: { name: "billingCity", value: "" } } as any)
     handleInputChange({ target: { name: "billingCityId", value: "" } } as any)

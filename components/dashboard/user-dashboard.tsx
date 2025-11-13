@@ -60,7 +60,7 @@ export function UserDashboard() {
 
   if (error) {
     return (
-      <div className="container max-w-6xl mx-auto py-10 px-4">
+      <div className="container max-w-6xl mx-auto px-4 pt-24 pb-10">
         <Card className="p-8 text-center">
           <CardTitle className="text-xl mb-4">Error al cargar el dashboard</CardTitle>
           <CardDescription className="text-base mb-6">{error}</CardDescription>
@@ -72,7 +72,7 @@ export function UserDashboard() {
 
   if (!currentUser) {
     return (
-      <div className="container max-w-6xl mx-auto py-10 px-4">
+      <div className="container max-w-6xl mx-auto px-4 pt-24 pb-10">
         <Card className="p-8 text-center">
           <CardTitle className="text-xl mb-4">No se encontró información de usuario</CardTitle>
           <CardDescription className="text-base mb-6">
@@ -89,7 +89,7 @@ export function UserDashboard() {
   const fullName = [firstName, lastName].filter(Boolean).join(" ")
 
   return (
-    <div className="container max-w-6xl mx-auto py-10 px-4">
+    <div className="container max-w-6xl mx-auto px-4 pt-24 pb-10">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Mi Cuenta</h1>
@@ -178,7 +178,7 @@ export function UserDashboard() {
 
 function DashboardSkeleton() {
   return (
-    <div className="container max-w-6xl mx-auto py-10 px-4">
+    <div className="container max-w-6xl mx-auto px-4 pt-24 pb-10">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
           <Skeleton className="h-10 w-40 mb-2" />

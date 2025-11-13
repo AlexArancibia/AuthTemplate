@@ -66,13 +66,21 @@ export const metadata: Metadata = {
     description: "Tienda especializada en tenis de mesa. Raquetas, gomas, mesas, robots y accesorios de las mejores marcas.",
     images: ["/fotoportada.jpg"], // Misma imagen para Twitter
   },
+  manifest: "/favicons/manifest.webmanifest",
   icons: {
     icon: [
-      { url: "/favicon.ico" },
-      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
-      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicons/favicon.ico" },
+      { url: "/favicons/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicons/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicons/favicon-48x48.png", sizes: "48x48", type: "image/png" },
+      { url: "/favicons/android-chrome-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/favicons/android-chrome-512x512.png", sizes: "512x512", type: "image/png" },
     ],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+    apple: [
+      { url: "/favicons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+      { url: "/favicons/apple-touch-icon-152x152.png", sizes: "152x152", type: "image/png" },
+      { url: "/favicons/apple-touch-icon-120x120.png", sizes: "120x120", type: "image/png" },
+    ],
   },
 };
 
@@ -82,14 +90,26 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const session = await auth();
+  const preloadedFonts = [
+    { href: "/fonts/DrukWideBold.woff", type: "font/woff" },
+    { href: "/fonts/AdihausDIN-Bold.woff2", type: "font/woff2" },
+    { href: "/fonts/AdihausDIN-Regular.woff2", type: "font/woff2" },
+  ];
 
   return (
     <html lang="es" className="light">
       <head>
-        {/* Fuentes personalizadas - Druk Wide Bold y AdihausDIN */}
-        <link href="https://fonts.cdnfonts.com/css/druk-wide-bold" rel="stylesheet"/>
-        <link href="https://db.onlinewebfonts.com/c/c2001d0359daadcd014fba0e808555d0?family=AdihausDIN+Bold" rel="stylesheet"/>
-        <script src="https://c.webfontfree.com/c.js?f=AdihausDIN-Regular" type="text/javascript"></script>
+        {/* Fuentes personalizadas - Auto-hospedadas para evitar CORS */}
+        {preloadedFonts.map((font) => (
+          <link
+            key={font.href}
+            rel="preload"
+            href={font.href}
+            as="font"
+            type={font.type}
+            crossOrigin="anonymous"
+          />
+        ))}
         {/* Force Light Theme */}
         <script
           dangerouslySetInnerHTML={{

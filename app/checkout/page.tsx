@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
 import { useCartStore } from "@/stores/cartStore"
@@ -138,6 +138,15 @@ export default function CheckoutPage() {
   
   const { selectedCurrencyId, acceptedCurrencies } = useCurrencyStore()
   const activeCurrency = acceptedCurrencies.find(c => c.id === selectedCurrencyId)
+  const activeShopSettings = shopSettings?.[0]
+  const targetCurrencyId = activeShopSettings?.multiCurrencyEnabled
+    ? selectedCurrencyId || activeShopSettings?.defaultCurrencyId
+    : activeShopSettings?.defaultCurrencyId
+  const filteredPaymentProviders = useMemo(() => {
+    if (!Array.isArray(paymentProviders)) return []
+    if (!targetCurrencyId) return paymentProviders
+    return paymentProviders.filter((provider) => provider.currencyId === targetCurrencyId)
+  }, [paymentProviders, targetCurrencyId])
 
   const [session, setSession] = useState<any>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -174,11 +183,13 @@ export default function CheckoutPage() {
     apartment: "",
     city: "",
     state: "",
+    stateCode: "",
     zipCode: "",
     shippingPhone: "",
     country: "",
     countryId: "",
     countryCode3: "",
+    countryCode: "",
     stateId: "",
     cityId: "",
     sameBillingAddress: true,
@@ -186,11 +197,13 @@ export default function CheckoutPage() {
     billingApartment: "",
     billingCity: "",
     billingState: "",
+    billingStateCode: "",
     billingZipCode: "",
     billingPhone: "",
     billingCountry: "",
     billingCountryId: "",
     billingCountryCode3: "",
+    billingCountryCode: "",
     billingStateId: "",
     billingCityId: "",
     shippingMethod: "",
@@ -258,6 +271,16 @@ export default function CheckoutPage() {
     
     setAppliedCoupon(foundCoupon)
     toast.success(`Cupón "${foundCoupon.code}" aplicado correctamente`)
+  }
+
+  const deriveStateCode = (name?: string | null) => {
+    if (!name) return ""
+    const normalized = name
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "")
+      .replace(/\s+/g, "")
+      .toUpperCase()
+    return normalized.slice(0, 3)
   }
 
   const calculateDiscounts = () => {
@@ -489,21 +512,27 @@ export default function CheckoutPage() {
 
   // Set default shipping and payment methods once data is loaded
   useEffect(() => {
-    // Comentado: ahora el usuario debe seleccionar el método de envío manualmente
-    // if (shippingMethods.length > 0 && !formData.shippingMethod) {
-    //   setFormData((prev) => ({
-    //     ...prev,
-    //     shippingMethod: shippingMethods[0].id,
-    //   }))
-    // }
+    if (!filteredPaymentProviders.length) {
+      if (formData.paymentMethod) {
+        setFormData((prev) => ({
+          ...prev,
+          paymentMethod: "",
+        }))
+      }
+      return
+    }
 
-    if (paymentProviders.length > 0 && !formData.paymentMethod) {
+    const hasSelectedProvider = filteredPaymentProviders.some(
+      (provider) => provider.id === formData.paymentMethod
+    )
+
+    if (!hasSelectedProvider) {
       setFormData((prev) => ({
         ...prev,
-        paymentMethod: paymentProviders[0].id,
+        paymentMethod: filteredPaymentProviders[0].id,
       }))
     }
-  }, [shippingMethods, paymentProviders, formData.shippingMethod, formData.paymentMethod])
+  }, [filteredPaymentProviders, formData.paymentMethod])
 
   // Handle form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -544,8 +573,15 @@ export default function CheckoutPage() {
             billingApartment: prev.apartment,
             billingCity: prev.city,
             billingState: prev.state,
+            billingStateCode: prev.stateCode,
             billingZipCode: prev.zipCode,
             billingPhone: prev.shippingPhone,
+            billingCountry: prev.country,
+            billingCountryId: prev.countryId,
+            billingCountryCode3: prev.countryCode3,
+            billingCountryCode: prev.countryCode,
+            billingStateId: prev.stateId,
+            billingCityId: prev.cityId,
           }
         : {}),
     }))
@@ -566,8 +602,15 @@ export default function CheckoutPage() {
       billingApartment: prev.apartment,
       billingCity: prev.city,
       billingState: prev.state,
+      billingStateCode: prev.stateCode,
       billingZipCode: prev.zipCode,
       billingPhone: prev.shippingPhone,
+      billingCountry: prev.country,
+      billingCountryId: prev.countryId,
+      billingCountryCode3: prev.countryCode3,
+      billingCountryCode: prev.countryCode,
+      billingStateId: prev.stateId,
+      billingCityId: prev.cityId,
     }))
   }
 
@@ -581,14 +624,23 @@ export default function CheckoutPage() {
     // Poblar el formulario con los datos de la dirección seleccionada
     const selectedAddress = currentUser?.addresses?.find(addr => addr.id === addressId)
     if (selectedAddress) {
+      const derivedStateCode = deriveStateCode(selectedAddress.province)
+      const derivedCountryCode = selectedAddress.country || ""
       setFormData((prev) => ({
         ...prev,
         address: selectedAddress.address1,
         apartment: selectedAddress.address2 || "",
         city: selectedAddress.city,
         state: selectedAddress.province || "",
+        stateCode: derivedStateCode,
         zipCode: selectedAddress.zip,
         shippingPhone: selectedAddress.phone || currentUser?.phone || "",
+        country: selectedAddress.country || prev.country,
+        countryCode: derivedCountryCode,
+        countryCode3: prev.countryCode3 || "",
+        countryId: prev.countryId,
+        stateId: prev.stateId,
+        cityId: prev.cityId,
       }))
     }
 
@@ -609,14 +661,23 @@ export default function CheckoutPage() {
     // Poblar el formulario con los datos de la dirección seleccionada
     const selectedAddress = currentUser?.addresses?.find(addr => addr.id === addressId)
     if (selectedAddress) {
+      const derivedStateCode = deriveStateCode(selectedAddress.province)
+      const derivedCountryCode = selectedAddress.country || ""
       setFormData((prev) => ({
         ...prev,
         billingAddress: selectedAddress.address1,
         billingApartment: selectedAddress.address2 || "",
         billingCity: selectedAddress.city,
         billingState: selectedAddress.province || "",
+        billingStateCode: derivedStateCode,
         billingZipCode: selectedAddress.zip,
         billingPhone: selectedAddress.phone || currentUser?.phone || "",
+        billingCountry: selectedAddress.country || prev.billingCountry,
+        billingCountryCode: derivedCountryCode,
+        billingCountryCode3: prev.billingCountryCode3 || "",
+        billingCountryId: prev.billingCountryId,
+        billingStateId: prev.billingStateId,
+        billingCityId: prev.billingCityId,
       }))
     }
   }
@@ -633,8 +694,15 @@ export default function CheckoutPage() {
       apartment: "",
       city: "",
       state: "",
+      stateCode: "",
       zipCode: "",
       shippingPhone: "",
+      country: "",
+      countryId: "",
+      countryCode3: "",
+      countryCode: "",
+      stateId: "",
+      cityId: "",
     }))
   }
 
@@ -650,8 +718,15 @@ export default function CheckoutPage() {
       billingApartment: "",
       billingCity: "",
       billingState: "",
+      billingStateCode: "",
       billingZipCode: "",
       billingPhone: "",
+      billingCountry: "",
+      billingCountryId: "",
+      billingCountryCode3: "",
+      billingCountryCode: "",
+      billingStateId: "",
+      billingCityId: "",
     }))
   }
 
@@ -1054,6 +1129,98 @@ const lineItems = prepareLineItems()
       // Generate a random order number between 1 and 1000
       const orderNumber = Math.floor(Math.random() * 1000) + 1
 
+      const getAddressName = () =>
+        `${formData.firstName || currentUser?.firstName || ""} ${formData.lastName || currentUser?.lastName || ""}`.trim() ||
+        currentUser?.name ||
+        formData.firstName ||
+        ""
+
+      const findSavedAddress = (addressId: string | null | undefined) => {
+        if (!isAuthenticated || !addressId || !currentUser?.addresses?.length) {
+          return null
+        }
+        return currentUser.addresses.find((addr) => addr.id === addressId) ?? null
+      }
+
+      const buildAddressPayload = (
+        type: "shipping" | "billing",
+        savedAddress: any | null,
+      ) => {
+        if (savedAddress) {
+          return {
+            id: savedAddress.id,
+            name: getAddressName() || undefined,
+            address1: savedAddress.address1,
+            address2: savedAddress.address2 || undefined,
+            city: savedAddress.city,
+            state: savedAddress.province || undefined,
+            province: savedAddress.province || undefined,
+            postalCode: savedAddress.zip,
+            zip: savedAddress.zip || undefined,
+            country: savedAddress.country,
+            phone:
+              savedAddress.phone ||
+              (type === "shipping" ? formData.shippingPhone : formData.billingPhone) ||
+              formData.phone ||
+              currentUser?.phone ||
+              undefined,
+            company: savedAddress.company || formData.company || currentUser?.company || undefined,
+          }
+        }
+
+        const shippingFields = {
+          address1: formData.address,
+          address2: formData.apartment,
+          city: formData.city,
+          state: formData.state,
+          province: formData.state,
+          postalCode: formData.zipCode,
+          zip: formData.zipCode,
+          phone: formData.shippingPhone,
+        }
+
+        const billingFields = {
+          address1: formData.billingAddress,
+          address2: formData.billingApartment,
+          city: formData.billingCity,
+          state: formData.billingState,
+          province: formData.billingState,
+          postalCode: formData.billingZipCode,
+          zip: formData.billingZipCode,
+          phone: formData.billingPhone,
+        }
+
+        const source = type === "shipping" ? shippingFields : billingFields
+
+        return {
+          name: getAddressName() || undefined,
+          address1: source.address1,
+          address2: source.address2 || undefined,
+          city: source.city,
+          state: source.state,
+          province: source.province || undefined,
+          postalCode: source.postalCode,
+          zip: source.zip || undefined,
+          country: "PE",
+          phone: source.phone || formData.phone || currentUser?.phone || undefined,
+          company: formData.company || currentUser?.company || undefined,
+        }
+      }
+
+      const shippingAddressPayload = buildAddressPayload(
+        "shipping",
+        findSavedAddress(calculatedShippingAddressId),
+      )
+
+      const billingAddressPayload = formData.sameBillingAddress
+        ? shippingAddressPayload
+        : buildAddressPayload("billing", findSavedAddress(calculatedBillingAddressId))
+
+      const combinedAddresses = {
+        shipping: shippingAddressPayload,
+        billing: billingAddressPayload,
+      }
+
       const orderData = {
         orderNumber: orderNumber, // Add the orderNumber field
         currencyId: currencyId,
@@ -1085,38 +1252,7 @@ const lineItems = prepareLineItems()
           }
         })(),
         // Create shippingAddress JSON object
-        shippingAddress:
-          isAuthenticated && calculatedShippingAddressId
-            ? { id: calculatedShippingAddressId }
-            : {
-                name: `${formData.firstName || currentUser?.firstName || ""} ${formData.lastName || currentUser?.lastName || ""}`.trim() || undefined,
-                address1: formData.address,
-                address2: formData.apartment || undefined,
-                city: formData.city,
-                state: formData.state,
-                province: formData.state || undefined,
-                postalCode: formData.zipCode,
-                zip: formData.zipCode || undefined,
-                country: "PE",
-                phone: formData.shippingPhone || formData.phone || currentUser?.phone || undefined,
-              },
-        // Create billingAddress JSON object
-        billingAddress: formData.sameBillingAddress
-          ? undefined
-          : isAuthenticated && calculatedBillingAddressId
-            ? { id: calculatedBillingAddressId }
-            : {
-                name: `${formData.firstName || currentUser?.firstName || ""} ${formData.lastName || currentUser?.lastName || ""}`.trim() || undefined,
-                address1: formData.billingAddress,
-                address2: formData.billingApartment || undefined,
-                city: formData.billingCity,
-                state: formData.billingState,
-                province: formData.billingState || undefined,
-                postalCode: formData.billingZipCode,
-                zip: formData.billingZipCode || undefined,
-                country: "PE",
-                phone: formData.billingPhone || formData.phone || currentUser?.phone || undefined,
-              },
+        shippingAddress: combinedAddresses,
         couponId: coupon?.id || undefined,
         paymentProviderId: formData.paymentMethod || undefined, // Set to undefined when no payment method
         shippingMethodId: formData.shippingMethod || undefined, // Set to undefined when no shipping method
@@ -1179,29 +1315,9 @@ const lineItems = prepareLineItems()
                 isAuthenticated: isAuthenticated,
               },
               // shippingAddress as Record<string, any> to match schema
-              shippingAddress: {
-                name: `${formData.firstName || currentUser?.firstName || ""} ${formData.lastName || currentUser?.lastName || ""}`.trim(),
-                address1: formData.address,
-                address2: formData.apartment || "",
-                city: formData.city,
-                state: formData.state || "",
-                postalCode: formData.zipCode,
-                country: "PE",
-                phone: formData.shippingPhone || formData.phone || currentUser?.phone || "",
-              },
-              // billingAddress as Record<string, any> to match schema
-              billingAddress: formData.sameBillingAddress
-                ? null
-                : {
-                    name: `${formData.firstName || currentUser?.firstName || ""} ${formData.lastName || currentUser?.lastName || ""}`.trim(),
-                    address1: formData.billingAddress,
-                    address2: formData.billingApartment || "",
-                    city: formData.billingCity,
-                    state: formData.billingState || "",
-                    postalCode: formData.billingZipCode,
-                    country: "PE",
-                    phone: formData.billingPhone || formData.phone || currentUser?.phone || "",
-                  },
+              shippingAddress: combinedAddresses,
+              // billingAddress se mantiene para compatibilidad con plantillas y UIs que aún lo consumen
+              billingAddress: formData.sameBillingAddress ? shippingAddressPayload : combinedAddresses.billing,
               lineItems: lineItems.map((item) => ({
                 id: `item_${Date.now()}_${Math.random()}`,
                 orderId: order.id,
@@ -1650,6 +1766,7 @@ const {
                     copyShippingToBilling={copyShippingToBilling}
                     onEditAddress={handleEditAddress}
                     onDeleteAddress={handleDeleteAddress}
+                    shippingMethods={shippingMethods}
                   />
                 )}
 
@@ -1664,7 +1781,7 @@ const {
                     isSubmitting={isSubmitting}
                     isLoading={isLoading}
                     shippingMethods={shippingMethods}
-                    paymentProviders={paymentProviders}
+                    paymentProviders={filteredPaymentProviders}
                     getPaymentIcon={getPaymentIcon}
                     total={subtotalAfterDiscount}
                     resumeItems={resumeItems}
@@ -1720,7 +1837,7 @@ const {
                   currentStep={currentStep}
                   formData={formData}
                   shippingMethods={shippingMethods}
-                  paymentProviders={paymentProviders}
+                  paymentProviders={filteredPaymentProviders}
                   isAuthenticated={isAuthenticated}
                   currentUser={currentUser as (User & { addresses?: Address[] }) | null}
                   selectedShippingAddressId={selectedShippingAddressId}

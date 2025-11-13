@@ -38,10 +38,14 @@ import type {
 
 // Obtener el storeId del entorno
 const STORE_ID = process.env.NEXT_PUBLIC_STORE_ID
+const debugLog =
+  process.env.NEXT_PUBLIC_ENABLE_DEBUG_LOGS === "true"
+    ? console.log.bind(console)
+    : () => {}
 
 // Helper function para construir query params
 const buildQueryParams = (params: any = {}) => {
-  console.log("🔧 [buildQueryParams] Input params:", params)
+  debugLog("🔧 [buildQueryParams] Input params:", params)
   const queryParams = new URLSearchParams()
   
   Object.entries(params).forEach(([key, value]) => {
@@ -57,12 +61,12 @@ const buildQueryParams = (params: any = {}) => {
           // Para categorySlugs y collectionIds: usar formato de comas
           if (['categorySlugs', 'collectionIds'].includes(key)) {
             const joinedValue = value.join(',')
-            console.log(`🔧 [buildQueryParams] Adding array param (comma format): ${key} = ${joinedValue}`)
+            debugLog(`🔧 [buildQueryParams] Adding array param (comma format): ${key} = ${joinedValue}`)
             queryParams.append(key, joinedValue)
           } else {
             // Para status y otros arrays: enviar múltiples valores con el mismo nombre
             value.forEach((item) => {
-              console.log(`🔧 [buildQueryParams] Adding array param (multiple values): ${key} = ${item}`)
+              debugLog(`🔧 [buildQueryParams] Adding array param (multiple values): ${key} = ${item}`)
               queryParams.append(key, String(item))
             })
           }
@@ -70,16 +74,16 @@ const buildQueryParams = (params: any = {}) => {
       } else {
         // Para strings, usar trim() antes de agregar
         const stringValue = typeof value === 'string' ? value.trim() : String(value)
-        console.log(`🔧 [buildQueryParams] Adding param: ${key} = ${stringValue}`)
+        debugLog(`🔧 [buildQueryParams] Adding param: ${key} = ${stringValue}`)
         queryParams.append(key, stringValue)
       }
     } else {
-      console.log(`🔧 [buildQueryParams] Skipping param: ${key} (value is undefined/null/empty)`)
+      debugLog(`🔧 [buildQueryParams] Skipping param: ${key} (value is undefined/null/empty)`)
     }
   })
   
   const result = queryParams.toString()
-  console.log("🔧 [buildQueryParams] Final query string:", result)
+  debugLog("🔧 [buildQueryParams] Final query string:", result)
   return result
 }
 
@@ -139,6 +143,7 @@ interface MainStore {
   fetchTeamSections: () => Promise<TeamSection[]>
   fetchTeamMembers: (teamSectionId: string) => Promise<TeamMember[]>
   fetchOrders: (params?: SearchOrderParams, forceRefresh?: boolean) => Promise<PaginatedResponse<Order>>
+  fetchAllOrders: (params?: SearchOrderParams) => Promise<PaginatedResponse<Order>>
   fetchCoupons: (params?: SearchCouponParams, forceRefresh?: boolean) => Promise<PaginatedResponse<Coupon>>
   setCouponCode: (code: string) => Promise<void>
   clearCoupon: () =>  Promise<void>
@@ -261,29 +266,29 @@ export const useMainStore = create<MainStore>((set, get) => ({
   // Soporta filtros: query, categorySlugs, collectionIds, status, vendor, minPrice, maxPrice, currencyId
   // Paginación: page, limit, sortBy, sortOrder
   fetchProducts: async (params: SearchProductParams = {}, forceRefresh = false) => {
-    console.log("🚀 [MainStore fetchProducts] START - Params received:", params)
-    console.log("🔑 [MainStore fetchProducts] STORE_ID:", STORE_ID)
+    debugLog("🚀 [MainStore fetchProducts] START - Params received:", params)
+    debugLog("🔑 [MainStore fetchProducts] STORE_ID:", STORE_ID)
     
     if (!STORE_ID) {
       console.error("❌ [MainStore fetchProducts] No store ID provided in environment variables")
       throw new Error("No store ID provided in environment variables")
     }
 
-    console.log("⏳ [MainStore fetchProducts] Setting loading to true")
+    debugLog("⏳ [MainStore fetchProducts] Setting loading to true")
     set({ loading: true, error: null })
     
     try {
       const queryParams = buildQueryParams(params)
       const url = `/products/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`
-      console.log("🌐 [MainStore fetchProducts] Full URL:", url)
-      console.log("🌐 [MainStore fetchProducts] Query params:", queryParams)
+      debugLog("🌐 [MainStore fetchProducts] Full URL:", url)
+      debugLog("🌐 [MainStore fetchProducts] Query params:", queryParams)
       
-      console.log("📡 [MainStore fetchProducts] Making API call...")
+      debugLog("📡 [MainStore fetchProducts] Making API call...")
       const response = await apiClient.get<PaginatedResponse<Product>>(url)
       
-      console.log("✅ [MainStore fetchProducts] Response received!")
-      console.log("📦 [MainStore fetchProducts] Products count:", response.data?.data?.length || 0)
-      console.log("📦 [MainStore fetchProducts] Pagination:", response.data?.pagination)
+      debugLog("✅ [MainStore fetchProducts] Response received!")
+      debugLog("📦 [MainStore fetchProducts] Products count:", response.data?.data?.length || 0)
+      debugLog("📦 [MainStore fetchProducts] Pagination:", response.data?.pagination)
       
       // Validar estructura de respuesta
       if (!response.data || !response.data.data) {
@@ -291,7 +296,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
         throw new Error("Invalid response structure from API")
       }
       
-      console.log("💾 [MainStore fetchProducts] Updating store state...")
+      debugLog("💾 [MainStore fetchProducts] Updating store state...")
       const { data, pagination } = extractPaginatedData<Product[]>(response)
       const newState = {
         products: data,
@@ -301,8 +306,8 @@ export const useMainStore = create<MainStore>((set, get) => ({
       
       set(newState)
       
-      console.log("✅ [MainStore fetchProducts] Store updated successfully")
-      console.log("🔍 [MainStore fetchProducts] Products in store:", get().products.length)
+      debugLog("✅ [MainStore fetchProducts] Store updated successfully")
+      debugLog("🔍 [MainStore fetchProducts] Products in store:", get().products.length)
       
       return { data, pagination }
     } catch (error: any) {
@@ -472,6 +477,66 @@ export const useMainStore = create<MainStore>((set, get) => ({
         loading: false,
       })
       return { data, pagination }
+    } catch (error) {
+      set({ error: "Failed to fetch orders", loading: false })
+      throw error
+    }
+  },
+
+  // Método para obtener todas las órdenes sin depender de la paginación del backend
+  fetchAllOrders: async (params: SearchOrderParams = {}) => {
+    if (!STORE_ID) {
+      throw new Error("No store ID provided in environment variables")
+    }
+
+    set({ loading: true, error: null })
+
+    try {
+      const { page: _ignorePage, limit: _ignoreLimit, ...restParams } = params
+      const limit = Math.max(1, params.limit ?? 100)
+      let page = Math.max(1, params.page ?? 1)
+      let hasNext = true
+      const allOrders: Order[] = []
+      let backendMeta: PaginationMeta | null = null
+
+      while (hasNext) {
+        const queryParams = buildQueryParams({
+          ...restParams,
+          page,
+          limit,
+        })
+
+        const response = await apiClient.get<PaginatedResponse<Order>>(
+          `/orders/${STORE_ID}${queryParams ? `?${queryParams}` : ""}`,
+        )
+
+        const { data, pagination } = extractPaginatedData<Order[]>(response)
+
+        allOrders.push(...data)
+        backendMeta = pagination
+        hasNext = pagination.hasNext
+        page += 1
+      }
+
+      const aggregatedMeta: PaginationMeta = {
+        total: allOrders.length,
+        page: 1,
+        limit: allOrders.length > 0 ? allOrders.length : limit,
+        totalPages: 1,
+        hasNext: false,
+        hasPrev: false,
+      }
+
+      set({
+        orders: allOrders,
+        paginationMeta: { ...get().paginationMeta, orders: aggregatedMeta },
+        loading: false,
+      })
+
+      return {
+        data: allOrders,
+        pagination: backendMeta ?? aggregatedMeta,
+      }
     } catch (error) {
       set({ error: "Failed to fetch orders", loading: false })
       throw error

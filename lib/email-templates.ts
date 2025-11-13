@@ -423,9 +423,34 @@ const getFinancialStatusText = (status: string) => {
 }
 
 // 1. Plantilla para confirmación de pedido al cliente
+const extractAddress = (addressData: any, type: "shipping" | "billing"): AddressInfo | null => {
+  if (!addressData) return null
+
+  if (addressData[type]) {
+    return addressData[type] as AddressInfo
+  }
+
+  // Si el objeto no es estructurado, asumir que ya es una dirección individual
+  return addressData as AddressInfo
+}
+
+const normalizeOrderAddresses = (
+  shippingAddressPayload: Order["shippingAddress"],
+  fallbackBilling?: Order["billingAddress"],
+) => {
+  const shipping = extractAddress(shippingAddressPayload, "shipping") || (shippingAddressPayload as AddressInfo | null)
+
+  const billing =
+    extractAddress(shippingAddressPayload, "billing") ||
+    (fallbackBilling as AddressInfo | null) ||
+    null
+
+  return { shipping, billing }
+}
+
 export const orderConfirmationClientTemplate = (order: Order, shopSettings?: ShopSettings) => {
   const customerInfo = order.customerInfo as CustomerInfo
-  const shippingAddress = order.shippingAddress as AddressInfo
+  const { shipping: shippingAddress } = normalizeOrderAddresses(order.shippingAddress, order.billingAddress)
 
   const content = `
     <h1 class="title" style="color: #092b4e;">¡Gracias por tu pedido!</h1> 
@@ -529,8 +554,10 @@ ${order.lineItems.map(
 // 2. Plantilla para notificación de nuevo pedido al administrador
 export const orderNotificationAdminTemplate = (order: Order, shopSettings?: ShopSettings) => {
   const customerInfo = order.customerInfo as CustomerInfo
-  const shippingAddress = order.shippingAddress as AddressInfo
-  const billingAddress = order.billingAddress as AddressInfo
+  const { shipping: shippingAddress, billing: billingAddress } = normalizeOrderAddresses(
+    order.shippingAddress,
+    order.billingAddress,
+  )
 
   const content = `
     <h1 class="title">🎉 Nuevo Pedido Recibido</h1>

@@ -21,9 +21,16 @@ export interface AddressInfo {
   address2?: string;     // Dirección secundaria (opcional)
   city?: string;         // Ciudad
   state?: string;        // Provincia/Estado
+  province?: string;     // Provincia (alias adicional)
   postalCode?: string;   // Código postal
+  zip?: string;          // Código postal alternativo
   country?: string;      // País
   phone?: string;        // Teléfono de contacto
+}
+
+export interface OrderAddresses {
+  shipping?: AddressInfo | null;
+  billing?: AddressInfo | null;
 }
 
 export interface Order {
@@ -41,8 +48,8 @@ export interface Order {
   totalTax: number;
   totalDiscounts: number;
   lineItems: OrderItem[];
-  shippingAddress?: Record<string, any> | null; // Json en schema
-  billingAddress?: Record<string, any> | null; // Json en schema
+  shippingAddress?: OrderAddresses | AddressInfo | Record<string, any> | null; // Json en schema
+  billingAddress?: AddressInfo | Record<string, any> | null; // Json en schema
   refunds: Refund[];
   couponId?: string | null;
   coupon?: Coupon | null;
@@ -128,8 +135,8 @@ export interface CreateOrderDto {
   totalTax: number;
   totalDiscounts: number;
   lineItems: CreateOrderItemDto[];
-  shippingAddress?: Record<string, any>;
-  billingAddress?: Record<string, any>;
+  shippingAddress?: OrderAddresses | AddressInfo | Record<string, any>;
+  billingAddress?: AddressInfo | Record<string, any>;
   couponId?: string;
   paymentProviderId?: string;
   paymentStatus?: PaymentStatus;
@@ -156,8 +163,8 @@ export interface UpdateOrderDto {
   totalDiscounts?: number;
   lineItems?: UpdateOrderItemDto[];
   currencyId?: string;
-  shippingAddress?: Record<string, any> | null;
-  billingAddress?: Record<string, any> | null;
+  shippingAddress?: OrderAddresses | AddressInfo | Record<string, any> | null;
+  billingAddress?: AddressInfo | Record<string, any> | null;
   couponId?: string | null;
   paymentProviderId?: string | null;
   paymentStatus?: PaymentStatus | null;

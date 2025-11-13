@@ -71,6 +71,13 @@ export function ShippingPaymentStep({
   const isCulqui = selectedProvider?.name?.toLowerCase() === "culqui";
   const [isOpeningCulqi, setIsOpeningCulqi] = useState(false);
 
+  const normalizeText = (value?: string) =>
+    (value || "")
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "")
+      .trim()
+      .toLowerCase();
+
   // Función para detectar el tipo de días disponibles
   const getDayType = (availableDays: string[]) => {
     const allDays = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
@@ -196,40 +203,122 @@ export function ShippingPaymentStep({
   };
 
 
-  const filteredShippingMethods = shippingMethods.filter((method) =>
-    method.prices.some((price) =>
-      price.cityNames?.some(
-        (city) => city.toLowerCase() === formData.city.toLowerCase()
-      )
-    )
-  )
+  const normalizedCity = normalizeText(formData.city)
+  const normalizedState = normalizeText(formData.state)
+  const normalizedStateCompact = normalizedState.replace(/\s+/g, "")
+  const normalizedStateCode = normalizeText(formData.stateCode)
+  const normalizedCountryCandidates = [formData.countryCode, formData.countryCode3, formData.country]
+    .filter(Boolean)
+    .map((code) => normalizeText(code))
+  const numericTotal = Number(total || 0)
+
+  const priceMatchesLocation = (price: ShippingMethod["prices"][number]) => {
+    const cityNames = Array.isArray(price.cityNames) ? price.cityNames : []
+    const stateCodes = Array.isArray(price.stateCodes) ? price.stateCodes : []
+    const countryCodes = Array.isArray(price.countryCodes) ? price.countryCodes : []
+
+    const hasCityRestriction = cityNames.length > 0
+    const hasStateRestriction = stateCodes.length > 0
+    const hasCountryRestriction = countryCodes.length > 0
+
+    const matchesCity = hasCityRestriction
+      ? cityNames.some((city) => normalizeText(city) === normalizedCity)
+      : false
+
+    const matchesState = hasStateRestriction
+      ? stateCodes.some((code) => {
+          const normalizedCode = normalizeText(code)
+          if (normalizedStateCode && normalizedCode === normalizedStateCode) return true
+          if (normalizedStateCompact) {
+            const stateShort = normalizedStateCompact.slice(0, 3)
+            if (normalizedCode === stateShort) return true
+          }
+          return false
+        })
+      : false
+
+    const matchesCountry = hasCountryRestriction
+      ? countryCodes.some((code) => {
+          const normalizedCode = normalizeText(code)
+          return normalizedCountryCandidates.includes(normalizedCode)
+        })
+      : false
+
+    if (hasCityRestriction) return matchesCity
+    if (hasStateRestriction) return matchesState
+    if (hasCountryRestriction) return matchesCountry
+
+    return true
+  }
+
+  const methodPriceCandidates = shippingMethods.reduce<
+    Array<{
+      method: ShippingMethod
+      price: ShippingMethod["prices"][number]
+      matchesLocation: boolean
+    }>
+  >((acc, method) => {
+    if (!Array.isArray(method.prices) || method.prices.length === 0) {
+      return acc
+    }
+
+    const locationPrice = method.prices.find((price) => priceMatchesLocation(price))
+    const effectivePrice = locationPrice ?? method.prices[0]
+
+    acc.push({
+      method,
+      price: effectivePrice,
+      matchesLocation: Boolean(locationPrice),
+    })
+
+    return acc
+  }, [])
+
+  const hasMatches = methodPriceCandidates.some((item) => item.matchesLocation)
+
+  let methodsToShow = (hasMatches
+    ? methodPriceCandidates.filter((item) => item.matchesLocation)
+    : methodPriceCandidates
+  ).map(({ method, price }) => ({ method, price }))
+
+  const appendMethodIfNeeded = (method?: ShippingMethod, condition = true) => {
+    if (!method || !condition || !Array.isArray(method.prices) || method.prices.length === 0) {
+      return
+    }
+
+    if (methodsToShow.some((item) => item.method.id === method.id)) {
+      return
+    }
+
+    const locationPrice = method.prices.find((price) => priceMatchesLocation(price))
+    methodsToShow.push({
+      method,
+      price: locationPrice ?? method.prices[0],
+    })
+  }
 
   const pickupMethod = shippingMethods.find((method) =>
     method.name.toLowerCase().includes("recojo")
   )
+  appendMethodIfNeeded(pickupMethod)
 
   const agencyMethod = shippingMethods.find((method) =>
     method.name.toLowerCase().includes("envio solo hasta agencia") ||
     method.name.toLowerCase().includes("envío solo hasta agencia")
   )
-
   const isNotLimaProvincia = formData.state?.toLowerCase() !== "lima"
+  appendMethodIfNeeded(agencyMethod, isNotLimaProvincia)
 
-  let methodsToShow = [...filteredShippingMethods]
-  
-  if (pickupMethod && !methodsToShow.find(m => m.id === pickupMethod.id)) {
-    methodsToShow.push(pickupMethod)
-  }
-  
-  if (agencyMethod && isNotLimaProvincia && !methodsToShow.find(m => m.id === agencyMethod.id)) {
-    methodsToShow.push(agencyMethod)
-  }
-
-  // Ordenar para que recojo aparezca primero
   methodsToShow.sort((a, b) => {
-    const aIsPickup = a.name.toLowerCase().includes("recojo") || a.name.toLowerCase().includes("pickup") || a.name.toLowerCase().includes("tienda")
-    const bIsPickup = b.name.toLowerCase().includes("recojo") || b.name.toLowerCase().includes("pickup") || b.name.toLowerCase().includes("tienda")
-    
+    const aIsPickup =
+      a.method.name.toLowerCase().includes("recojo") ||
+      a.method.name.toLowerCase().includes("pickup") ||
+      a.method.name.toLowerCase().includes("tienda")
+    const bIsPickup =
+      b.method.name.toLowerCase().includes("recojo") ||
+      b.method.name.toLowerCase().includes("pickup") ||
+      b.method.name.toLowerCase().includes("tienda")
+
     if (aIsPickup && !bIsPickup) return -1
     if (!aIsPickup && bIsPickup) return 1
     return 0
@@ -260,21 +349,18 @@ export function ShippingPaymentStep({
             onValueChange={(value) => handleSelectChange("shippingMethod", value)}
             className="space-y-4"
           >
-            {methodsToShow.map((method) => {
-              const priceData = method.prices[0]
+            {methodsToShow.map(({ method, price }) => {
+              const priceData = price
               const basePrice = Number(priceData?.price || 0)
-              // TEMPORAL: Usar 100 como threshold por defecto mientras el backend no lo guarda
-              // Convertir a número para asegurar que tenga el método .toFixed()
-              const freeThreshold = Number(priceData?.freeShippingThreshold || 100)
-              
-              // DEBUG: Ver qué datos llegan
-              console.log('🔍 DEBUG Método:', method.name)
-              console.log('📦 priceData completo:', priceData)
-              console.log('💰 freeThreshold:', freeThreshold)
-              console.log('🛒 subtotal después de descuentos:', total)
-              
+              const hasThresholdDefined =
+                priceData?.freeShippingThreshold !== null &&
+                priceData?.freeShippingThreshold !== undefined
+              const freeThreshold = hasThresholdDefined
+                ? Number(priceData?.freeShippingThreshold)
+                : undefined
+
               // Calcular si califica para envío gratis (usando subtotal después de descuentos)
-              const qualifiesForFreeShipping = freeThreshold && total >= freeThreshold
+              const qualifiesForFreeShipping = typeof freeThreshold === "number" && numericTotal >= freeThreshold
               const isFree = basePrice === 0 || qualifiesForFreeShipping
               const finalPrice = qualifiesForFreeShipping ? 0 : basePrice
               
@@ -323,19 +409,19 @@ export function ShippingPaymentStep({
                         })()}
                         
                         {/* Mostrar progreso hacia envío gratis (solo si NO es recojo) */}
-                        {!isPickup && freeThreshold && !qualifiesForFreeShipping && (
+                        {!isPickup && typeof freeThreshold === "number" && !qualifiesForFreeShipping && (
                           <p className="text-xs text-blue-600 mt-1">
                             ¡Envío gratis desde {paymentProviders[0]?.currency.symbol}{freeThreshold.toFixed(2)}!
-                            {total > 0 && (
+                            {numericTotal > 0 && (
                               <span className="ml-1 text-gray-500">
-                                (Te faltan {paymentProviders[0]?.currency.symbol}{(freeThreshold - total).toFixed(2)})
+                                (Te faltan {paymentProviders[0]?.currency.symbol}{(freeThreshold - numericTotal).toFixed(2)})
                               </span>
                             )}
                           </p>
                         )}
                         
                         {/* Mensaje cuando ya califica (solo si NO es recojo) */}
-                        {!isPickup && qualifiesForFreeShipping && (
+                        {!isPickup && typeof freeThreshold === "number" && qualifiesForFreeShipping && (
                           <p className="text-xs text-green-600 mt-1 font-medium">
                             ✓ ¡Calificaste para envío gratis!
                           </p>
