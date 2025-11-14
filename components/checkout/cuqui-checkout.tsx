@@ -27,12 +27,12 @@ export async function openCulqiCheckout(amount: number, description: string) {
 
     window.Culqi.options({
         style: {
-            logo: "https://pub-a15fad1bb05e4ecbb92c9d83b643a721.r2.dev/Clefast/Group%202%20(8).png",
+            logo: "/favicons/anj-sports-favicon.jpg",
         },
     });
 
     window.Culqi.settings({
-        title: "Clefast",
+        title: "ANJSPORTS",
         currency: "PEN",
         description,
         amount,
