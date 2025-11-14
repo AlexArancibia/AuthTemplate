@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSecretKey } from "@/lib/culqui-pk";
 
+const sanitizePhone = (value?: string) => (value ?? "").replace(/\D/g, "");
+
 export async function OPTIONS() {
   return NextResponse.json({}, {
     status: 200,
@@ -20,6 +22,19 @@ export async function POST(req: NextRequest) {
       orderNumber
     } = await req.json();
     const secretKey = await getSecretKey();
+    const sanitizedPhone = sanitizePhone(phone);
+
+    if (sanitizedPhone.length < 6 || sanitizedPhone.length > 14) {
+      return NextResponse.json(
+        { error: "Número de teléfono inválido. Debe tener entre 6 y 14 dígitos." },
+        {
+          status: 400,
+          headers: {
+            "Access-Control-Allow-Origin": "https://anj.com/",
+          },
+        }
+      );
+    }
 
     const response = await fetch("https://api.culqi.com/v2/charges", {
       method: "POST",
@@ -37,12 +52,12 @@ export async function POST(req: NextRequest) {
         metadata: {
           firstName,
           lastName,
-          phone,
+          phone: sanitizedPhone,
         },
         antifraud_details: {
           first_name: firstName,
           last_name: lastName,
-          phone_number: phone,
+          phone_number: sanitizedPhone,
           address,
           address_city: city,
           country_code: countryCode
