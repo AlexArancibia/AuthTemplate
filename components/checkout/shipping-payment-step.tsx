@@ -47,6 +47,9 @@ interface ShippingPaymentStepProps {
   resumeItems: string
   orderId: string | null
   orderError: { title: string; description?: string } | null
+  onPaymentSuccess?: (details: Record<string, any>) => void
+  onPaymentFailure?: (details?: Record<string, any>) => void
+  onPaymentReset?: () => void
 }
 
 export function ShippingPaymentStep({
@@ -64,6 +67,9 @@ export function ShippingPaymentStep({
   resumeItems,
   orderId,
   orderError,
+  onPaymentSuccess,
+  onPaymentFailure,
+  onPaymentReset,
 }: ShippingPaymentStepProps) {
   const selectedProvider = paymentProviders.find(
     (p) => p.id === formData.paymentMethod
@@ -143,6 +149,7 @@ export function ShippingPaymentStep({
     const amount = Math.round(Number(total) * 100);
 
     try {
+      onPaymentReset?.();
       setIsOpeningCulqi(true);
       await loadCulqiScript();
 
@@ -178,20 +185,45 @@ export function ShippingPaymentStep({
               const data = await res.json();
 
               if (!res.ok) {
+                onPaymentFailure?.({
+                  provider: selectedProvider?.name || "Culqi",
+                  status: "FAILED",
+                  response: data,
+                });
                 toast.error(data.error || "Error procesando el pago");
                 return;
               }
 
               handleSelectChange("culqiToken", token);
+              onPaymentSuccess?.({
+                provider: selectedProvider?.name || "Culqi",
+                status: "COMPLETED",
+                chargeId: data?.data?.id,
+                amount: data?.data?.amount,
+                currency: data?.data?.currency_code,
+                sourceId: data?.data?.source_id,
+                outcome: data?.data?.outcome,
+                raw: data,
+              });
               await submitOrder();
             } catch (error) {
               console.error("Error de conexión con el backend", error);
+              onPaymentFailure?.({
+                provider: selectedProvider?.name || "Culqi",
+                status: "FAILED",
+                error,
+              });
               toast.error("Error de conexión con el backend");
             }
           }
         },
         (error) => {
           setIsOpeningCulqi(false);
+          onPaymentFailure?.({
+            provider: selectedProvider?.name || "Culqi",
+            status: "FAILED",
+            error,
+          });
           toast.error("Error en el pago con Culqi");
         }
       );
@@ -199,6 +231,11 @@ export function ShippingPaymentStep({
       await openCulqiCheckout(amount, "Pago de productos:\n" + resumeItems);
     } catch (err) {
       setIsOpeningCulqi(false);
+      onPaymentFailure?.({
+        provider: selectedProvider?.name || "Culqi",
+        status: "FAILED",
+        error: err,
+      });
       toast.error("No se pudo iniciar el pago con Culqi");    }
   };
 

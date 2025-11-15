@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
 import { toast } from "sonner"
-import { OrderFinancialStatus, OrderFulfillmentStatus, ShippingStatus } from "@/types/common"
+import { OrderFinancialStatus, OrderFulfillmentStatus, ShippingStatus, PaymentStatus } from "@/types/common"
 import { type AddressCreateData, useUserStore } from "@/stores/userStore"
 import { formatUserName } from "@/lib/user-utils"
 import type { Order } from "@/types/order"
@@ -215,6 +215,8 @@ export default function CheckoutPage() {
     notes: "",
     preferredDeliveryDate: new Date().toISOString(),
   })
+  const [paymentStatusState, setPaymentStatusState] = useState<PaymentStatus>(PaymentStatus.PENDING)
+  const [paymentDetails, setPaymentDetails] = useState<Record<string, any> | null>(null)
 
 
   useEffect(() => {
@@ -510,6 +512,11 @@ export default function CheckoutPage() {
     setIsLoading(false)
   }, [])
 
+  useEffect(() => {
+    setPaymentStatusState(PaymentStatus.PENDING)
+    setPaymentDetails(null)
+  }, [formData.paymentMethod])
+
   // Set default shipping and payment methods once data is loaded
   useEffect(() => {
     if (!filteredPaymentProviders.length) {
@@ -612,6 +619,21 @@ export default function CheckoutPage() {
       billingStateId: prev.stateId,
       billingCityId: prev.cityId,
     }))
+  }
+
+  const handlePaymentSuccess = (details: Record<string, any>) => {
+    setPaymentStatusState(PaymentStatus.COMPLETED)
+    setPaymentDetails(details)
+  }
+
+  const handlePaymentFailure = (details?: Record<string, any>) => {
+    setPaymentStatusState(PaymentStatus.FAILED)
+    setPaymentDetails(details ?? null)
+  }
+
+  const resetPaymentState = () => {
+    setPaymentStatusState(PaymentStatus.PENDING)
+    setPaymentDetails(null)
   }
 
   // Handle selecting an existing address for shipping
@@ -1221,6 +1243,21 @@ const lineItems = prepareLineItems()
         billing: billingAddressPayload,
       }
 
+      const selectedPaymentProvider = paymentProviders.find(
+        (provider) => provider.id === formData.paymentMethod
+      )
+      const resolvedPaymentStatus = paymentStatusState ?? PaymentStatus.PENDING
+      const resolvedFinancialStatus =
+        resolvedPaymentStatus === PaymentStatus.COMPLETED
+          ? OrderFinancialStatus.PAID
+          : OrderFinancialStatus.PENDING
+      const paymentDetailsPayload = {
+        ...(paymentDetails ?? {}),
+        providerId: selectedPaymentProvider?.id,
+        providerName: selectedPaymentProvider?.name,
+        providerType: selectedPaymentProvider?.type,
+      }
+
       const orderData = {
         orderNumber: orderNumber, // Add the orderNumber field
         currencyId: currencyId,
@@ -1256,12 +1293,11 @@ const lineItems = prepareLineItems()
         couponId: coupon?.id || undefined,
         paymentProviderId: formData.paymentMethod || undefined, // Set to undefined when no payment method
         shippingMethodId: formData.shippingMethod || undefined, // Set to undefined when no shipping method
-        financialStatus:
-          formData.paymentMethod === "pp_9c77d30e-6d2b"
-            ? OrderFinancialStatus.PAID
-            : OrderFinancialStatus.PENDING,
+        financialStatus: resolvedFinancialStatus,
         fulfillmentStatus: OrderFulfillmentStatus.UNFULFILLED,
         shippingStatus: ShippingStatus.PENDING,
+        paymentStatus: resolvedPaymentStatus,
+        paymentDetails: paymentDetails ? paymentDetailsPayload : undefined,
         customerNotes: formData.notes || "",
         source: "web",
         preferredDeliveryDate: formData.preferredDeliveryDate ? new Date(formData.preferredDeliveryDate) : undefined,
@@ -1281,6 +1317,7 @@ const lineItems = prepareLineItems()
             throw new Error("Failed to create order")
           }
           setOrderId(order.id)
+          resetPaymentState()
           orderCreationSuccess = true
 
           // 7. Send order confirmation emails using emailStore
@@ -1787,6 +1824,9 @@ const {
                     resumeItems={resumeItems}
                     orderId={orderId}
                     orderError={orderError}
+                    onPaymentSuccess={handlePaymentSuccess}
+                    onPaymentFailure={handlePaymentFailure}
+                    onPaymentReset={resetPaymentState}
                   />
                 )}
 
