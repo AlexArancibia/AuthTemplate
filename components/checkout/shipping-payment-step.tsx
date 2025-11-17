@@ -18,6 +18,11 @@ import { ShippingMethod } from "@/types/shippingMethod"
 import Image from "next/image"
 import { loadCulqiScript, openCulqiCheckout, setCulqiCallback } from "@/components/checkout/cuqui-checkout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import type { Product } from "@/types/product"
+import type { ProductVariant } from "@/types/productVariant"
+import apiClient from "@/lib/axiosConfig"
+import { extractApiData } from "@/lib/apiHelpers"
+import type { CartItem } from "@/stores/cartStore"
 
 export function watchCulqiClose(onClose: () => void) {
   const observer = new MutationObserver(() => {
@@ -32,6 +37,7 @@ export function watchCulqiClose(onClose: () => void) {
 
   return observer;
 }
+
 interface ShippingPaymentStepProps {
   formData: Record<string, any>
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void
@@ -50,6 +56,7 @@ interface ShippingPaymentStepProps {
   onPaymentSuccess?: (details: Record<string, any>) => void
   onPaymentFailure?: (details?: Record<string, any>) => void
   onPaymentReset?: () => void
+  items: CartItem[]
 }
 
 export function ShippingPaymentStep({
@@ -70,12 +77,65 @@ export function ShippingPaymentStep({
   onPaymentSuccess,
   onPaymentFailure,
   onPaymentReset,
+  items,
 }: ShippingPaymentStepProps) {
   const selectedProvider = paymentProviders.find(
     (p) => p.id === formData.paymentMethod
   );
   const isCulqui = selectedProvider?.name?.toLowerCase() === "culqui";
   const [isOpeningCulqi, setIsOpeningCulqi] = useState(false);
+  const [isValidatingStock, setIsValidatingStock] = useState(false);
+
+  const STORE_ID = process.env.NEXT_PUBLIC_STORE_ID;
+
+  // Función para obtener el stock actualizado de un variant
+  const fetchVariantStock = async (variantId: string): Promise<number | null> => {
+    if (!STORE_ID) {
+      console.error("STORE_ID no está definido")
+      return null
+    }
+
+    try {
+      const response = await apiClient.get<ProductVariant>(`/products/${STORE_ID}/variants/${variantId}`)
+      const variant = extractApiData<ProductVariant>(response)
+      return variant?.inventoryQuantity ?? null
+    } catch (error) {
+      console.error(`Error al obtener stock del variant ${variantId}:`, error)
+      return null
+    }
+  }
+
+  // Función para validar el stock de todos los items
+  const validateStock = async (): Promise<boolean> => {
+    setIsValidatingStock(true)
+    
+    const errors: string[] = []
+    let hasErrors = false
+
+    // Validar stock de cada item
+    for (const item of items) {
+      const currentStock = await fetchVariantStock(item.variant.id)
+      
+      if (currentStock === null) {
+        errors.push(`No se pudo verificar el stock de ${item.product.title}. Intenta nuevamente.`)
+        hasErrors = true
+      } else if (item.quantity > currentStock) {
+        errors.push(`${item.product.title}: Stock insuficiente. Solo hay ${currentStock} unidades disponibles.`)
+        hasErrors = true
+      }
+    }
+
+    setIsValidatingStock(false)
+
+    if (hasErrors) {
+      toast.error("Error de stock", {
+        description: errors.join(" "),
+      })
+      return false
+    }
+
+    return true
+  }
 
   const normalizeText = (value?: string) =>
     (value || "")
@@ -146,6 +206,13 @@ export function ShippingPaymentStep({
   };
 
   const handleCulqiPay = async () => {
+    // Validar stock antes de procesar el pago
+    const isValid = await validateStock()
+    
+    if (!isValid) {
+      return
+    }
+
     const amount = Math.round(Number(total) * 100);
 
     try {
@@ -615,11 +682,26 @@ export function ShippingPaymentStep({
           Atrás
         </Button>
         <Button
-          onClick={isCulqui ? handleCulqiPay : submitOrder}
-          disabled={isSubmitting}
+          onClick={async () => {
+            if (isCulqui) {
+              await handleCulqiPay()
+            } else {
+              // Validar stock antes de finalizar compra (otros métodos de pago)
+              const isValid = await validateStock()
+              if (isValid) {
+                submitOrder()
+              }
+            }
+          }}
+          disabled={isSubmitting || isValidatingStock}
           className="px-8 py-2.5 bg-primary hover:bg-primary/90 transition-all shadow-md shadow-primary/10 hover:shadow-primary/20"
         >
-          {isOpeningCulqi ? (
+          {isValidatingStock ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Verificando stock...
+            </>
+          ) : isOpeningCulqi ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Cargando Culqi...

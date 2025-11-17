@@ -1148,9 +1148,6 @@ const lineItems = prepareLineItems()
       const currencyId = activeCurrency?.id || shopSettings?.[0]?.defaultCurrency?.id || "curr_0536edd0-2193"
 
       // 5. Prepare order data
-      // Generate a random order number between 1 and 1000
-      const orderNumber = Math.floor(Math.random() * 1000) + 1
-
       const getAddressName = () =>
         `${formData.firstName || currentUser?.firstName || ""} ${formData.lastName || currentUser?.lastName || ""}`.trim() ||
         currentUser?.name ||
@@ -1259,7 +1256,6 @@ const lineItems = prepareLineItems()
       }
 
       const orderData = {
-        orderNumber: orderNumber, // Add the orderNumber field
         currencyId: currencyId,
         totalPrice,
         subtotalPrice: subtotalNetOrder,
@@ -1326,7 +1322,7 @@ const lineItems = prepareLineItems()
             const emailOrderData: Order = {
               id: order.id,
               storeId: order.storeId || process.env.NEXT_PUBLIC_STORE_ID || "store_default",
-              orderNumber: order.orderNumber || orderNumber,
+              orderNumber: order.orderNumber,
               currencyId: currencyId,
               // Use the complete Currency object from activeCurrency or shopSettings
               currency: {
@@ -1419,10 +1415,9 @@ const lineItems = prepareLineItems()
           const canRetry = status === 409 && attempt < maxRetries - 1
 
           if (canRetry) {
-            toast.info("Generamos un nuevo número de pedido y reintentaremos.", {
+            toast.info("Reintentando crear la orden...", {
               description: "Si el problema persiste, contáctanos.",
             })
-            orderData.orderNumber = Math.floor(Math.random() * 1000) + 1
             continue
           }
 
@@ -1827,6 +1822,7 @@ const {
                     onPaymentSuccess={handlePaymentSuccess}
                     onPaymentFailure={handlePaymentFailure}
                     onPaymentReset={resetPaymentState}
+                    items={items}
                   />
                 )}
 

@@ -9,6 +9,10 @@ import { useCartStore } from "@/stores/cartStore"
 import { Minus, Plus, Trash2 } from "lucide-react"
 import type { Product } from "@/types/product"
 import type { ProductVariant } from "@/types/productVariant"
+import { useState, useEffect } from "react"
+import { toast } from "sonner"
+import apiClient from "@/lib/axiosConfig"
+import { extractApiData } from "@/lib/apiHelpers"
 
 type CartItem = {
   product: Product
@@ -26,6 +30,26 @@ interface CartReviewStepProps {
 
 export function CartReviewStep({ items, currency, nextStep, selectedCurrencyId, orderSubtotal }: CartReviewStepProps) {
   const { updateQuantity, removeItem } = useCartStore()
+  const [isValidatingStock, setIsValidatingStock] = useState(false)
+  const [stockErrors, setStockErrors] = useState<Record<string, string>>({})
+  const [updatedStock, setUpdatedStock] = useState<Record<string, number>>({})
+
+  const STORE_ID = process.env.NEXT_PUBLIC_STORE_ID
+
+  // Cargar stock guardado al montar el componente
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedStock = sessionStorage.getItem('cart-updated-stock')
+      if (savedStock) {
+        try {
+          const parsed = JSON.parse(savedStock)
+          setUpdatedStock(parsed)
+        } catch (error) {
+          console.error('Error al cargar stock guardado:', error)
+        }
+      }
+    }
+  }, [])
 
   // Función helper para obtener el precio de manera segura
   const getItemPrice = (variant: ProductVariant): number => {
@@ -56,7 +80,84 @@ export function CartReviewStep({ items, currency, nextStep, selectedCurrencyId, 
 
   const displaySubtotal = typeof orderSubtotal === "number" ? orderSubtotal : cartTotal
 
-  const handleNextStep = () => {
+  // Función para obtener el stock actualizado de un variant
+  const fetchVariantStock = async (variantId: string): Promise<number | null> => {
+    if (!STORE_ID) {
+      console.error("STORE_ID no está definido")
+      return null
+    }
+
+    try {
+      const response = await apiClient.get<ProductVariant>(`/products/${STORE_ID}/variants/${variantId}`)
+      const variant = extractApiData<ProductVariant>(response)
+      return variant?.inventoryQuantity ?? null
+    } catch (error) {
+      console.error(`Error al obtener stock del variant ${variantId}:`, error)
+      return null
+    }
+  }
+
+  // Función para validar el stock de todos los items
+  const validateStock = async (): Promise<boolean> => {
+    setIsValidatingStock(true)
+    setStockErrors({})
+    
+    const errors: Record<string, string> = {}
+    const stockUpdates: Record<string, number> = {}
+    let hasErrors = false
+
+    // Validar stock de cada item
+    for (const item of items) {
+      const currentStock = await fetchVariantStock(item.variant.id)
+      
+      if (currentStock === null) {
+        errors[item.variant.id] = "No se pudo verificar el stock. Intenta nuevamente."
+        hasErrors = true
+      } else {
+        // Actualizar el stock en el estado
+        stockUpdates[item.variant.id] = currentStock
+        
+        if (item.quantity > currentStock) {
+          errors[item.variant.id] = `Stock insuficiente. Solo hay ${currentStock} unidades disponibles.`
+          hasErrors = true
+        }
+      }
+    }
+
+    // Actualizar el stock de todos los variants
+    const newUpdatedStock = { ...updatedStock, ...stockUpdates }
+    setUpdatedStock(newUpdatedStock)
+    
+    // Guardar en sessionStorage para persistir entre recargas
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('cart-updated-stock', JSON.stringify(newUpdatedStock))
+    }
+    
+    setStockErrors(errors)
+    setIsValidatingStock(false)
+
+    if (hasErrors) {
+      // Mostrar mensajes de error
+      const errorMessages = Object.values(errors)
+      if (errorMessages.length > 0) {
+        toast.error("Error de stock", {
+          description: errorMessages.join(" "),
+        })
+      }
+      return false
+    }
+
+    return true
+  }
+
+  const handleNextStep = async () => {
+    // Validar stock antes de avanzar
+    const isValid = await validateStock()
+    
+    if (!isValid) {
+      return
+    }
+
     const simulatedBody = {
       currency,
       subtotal: Number(displaySubtotal).toFixed(2),
@@ -126,39 +227,82 @@ export function CartReviewStep({ items, currency, nextStep, selectedCurrencyId, 
 
                   {itemPrice === 0 && <p className="text-sm text-red-500 mt-1">Precio no disponible</p>}
 
-                  <div className="flex items-center mt-3 space-x-4">
-                    <div className="flex items-center border rounded-md">
+                  {stockErrors[item.variant.id] && (
+                    <p className="text-sm text-red-500 mt-1 font-medium">{stockErrors[item.variant.id]}</p>
+                  )}
+
+                  <div className="mt-3 space-y-1">
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center border rounded-md">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-none"
+                          onClick={() => updateQuantity(item.variant.id, Math.max(1, item.quantity - 1))}
+                          disabled={item.quantity <= 1}
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <span className="w-8 text-center text-sm">{item.quantity}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-none"
+                          onClick={() => {
+                            updateQuantity(item.variant.id, item.quantity + 1)
+                            // Limpiar error de stock cuando se cambia la cantidad
+                            if (stockErrors[item.variant.id]) {
+                              setStockErrors((prev) => {
+                                const newErrors = { ...prev }
+                                delete newErrors[item.variant.id]
+                                return newErrors
+                              })
+                            }
+                          }}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
                       <Button
                         type="button"
                         variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-none"
-                        onClick={() => updateQuantity(item.variant.id, Math.max(1, item.quantity - 1))}
-                        disabled={item.quantity <= 1}
+                        size="sm"
+                        className="h-8 text-red-500 hover:text-red-700 hover:bg-red-50 px-2"
+                        onClick={() => {
+                          removeItem(item.variant.id)
+                          // Limpiar el stock guardado de este variant
+                          if (typeof window !== 'undefined') {
+                            const savedStock = sessionStorage.getItem('cart-updated-stock')
+                            if (savedStock) {
+                              try {
+                                const parsed = JSON.parse(savedStock)
+                                delete parsed[item.variant.id]
+                                sessionStorage.setItem('cart-updated-stock', JSON.stringify(parsed))
+                                setUpdatedStock((prev) => {
+                                  const newStock = { ...prev }
+                                  delete newStock[item.variant.id]
+                                  return newStock
+                                })
+                              } catch (error) {
+                                console.error('Error al limpiar stock guardado:', error)
+                              }
+                            }
+                          }
+                        }}
                       >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <span className="w-8 text-center text-sm">{item.quantity}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-none"
-                        onClick={() => updateQuantity(item.variant.id, item.quantity + 1)}
-                      >
-                        <Plus className="h-3 w-3" />
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Eliminar
                       </Button>
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 text-red-500 hover:text-red-700 hover:bg-red-50 px-2"
-                      onClick={() => removeItem(item.variant.id)}
-                    >
-                      <Trash2 className="h-3 w-3 mr-1" />
-                      Eliminar
-                    </Button>
+                    <p className="text-xs text-slate-500">
+                      Stock disponible:{" "}
+                      <span className="font-semibold text-slate-700">
+                        {updatedStock[item.variant.id] ?? item.variant.inventoryQuantity}
+                      </span>{" "}
+                      unidades
+                    </p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -197,11 +341,19 @@ export function CartReviewStep({ items, currency, nextStep, selectedCurrencyId, 
             </Button>
             <Button
               onClick={handleNextStep}
-              disabled={cartTotal === 0}
+              disabled={cartTotal === 0 || isValidatingStock}
               className="px-6 gap-2 bg-primary hover:bg-primary/90 transition-all shadow-md shadow-primary/10 hover:shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span>Continuar</span>
-              <ArrowRight className="h-4 w-4" />
+              {isValidatingStock ? (
+                <>
+                  <span>Verificando stock...</span>
+                </>
+              ) : (
+                <>
+                  <span>Continuar</span>
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
             </Button>
           </div>
         </>
