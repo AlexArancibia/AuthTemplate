@@ -17,6 +17,7 @@ const publicRoutes = [
   "/api/email/send-to-admin",
   "/api/email/send-verification", // Esta ya estaba, es para la verificación de email
   "/api/payments/culqui",
+  "/api/webhooks/culqui",
   "/terminos-y-condiciones",
   "/politica-de-privacidad",
   "/libro-de-reclamaciones",
@@ -37,8 +38,6 @@ const apiAuthPrefix = "/api/auth";
 export default auth((req) => {
   const { nextUrl } = req;
   const isLoggedIn = !!req.auth;
-
-  console.log({ isLoggedIn, path: nextUrl.pathname });
 
   // Permitir todas las rutas de API de autenticación
   if (nextUrl.pathname.startsWith(apiAuthPrefix)) {

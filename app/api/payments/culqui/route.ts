@@ -80,10 +80,10 @@ export async function POST(req: NextRequest) {
       return createErrorResponse("Formato de solicitud inválido", 400, requestId);
     }
 
-    const { token, amount: reqAmount, currency, description, email, firstName, lastName, phone, address, city, countryCode, orderNumber } = requestBody;
+    const { token, amount: reqAmount, currency, description, email, firstName, lastName, phone, address, city, countryCode, orderId } = requestBody;
 
     // 2. Validar campos requeridos
-    const missingFields = [token ? null : "token", reqAmount ? null : "amount", currency ? null : "currency", email ? null : "email", orderNumber ? null : "orderNumber"].filter(Boolean) as string[];
+    const missingFields = [token ? null : "token", reqAmount ? null : "amount", currency ? null : "currency", email ? null : "email", orderId ? null : "orderId"].filter(Boolean) as string[];
     if (missingFields.length > 0) {
       return createErrorResponse(`Faltan campos requeridos: ${missingFields.join(", ")}`, 400, requestId);
     }
@@ -127,9 +127,8 @@ export async function POST(req: NextRequest) {
           currency_code: currency,
           email,
           source_id: token,
-          description: description || `Orden ${orderNumber}`,
-          orderNumber,
-          metadata: { firstName, lastName, phone: sanitizedPhone, orderNumber, requestId },
+          description: description || `Orden ${orderId}`,
+          metadata: { firstName, lastName, phone: sanitizedPhone, orderId, requestId },
           antifraud_details: {
             first_name: firstName,
             last_name: lastName,
@@ -184,7 +183,6 @@ export async function POST(req: NextRequest) {
     );
   } catch (error) {
     console.error("[Culqi Payment] Unexpected error:", error);
-    const fallbackRequestId = `req-${Date.now()}`;
-    return createErrorResponse("Error interno al procesar el pago. Contacta con soporte si el problema persiste.", 500, fallbackRequestId);
+    return createErrorResponse("Error interno al procesar el pago. Contacta con soporte si el problema persiste.", 500, requestId);
   }
 }

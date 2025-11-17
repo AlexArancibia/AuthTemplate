@@ -1071,9 +1071,36 @@ const applyCouponIfExists = () => {
   }
 
     // Submit the order
-  const submitOrder = async () => {
+  const submitOrder = async (options?: {
+    skipEmails?: boolean;
+    skipCartClear?: boolean;
+    skipConfirmation?: boolean;
+    returnOrder?: boolean;
+    forcePaymentStatus?: PaymentStatus;
+    forceFinancialStatus?: OrderFinancialStatus;
+  }) => {
+    const {
+      skipEmails = false,
+      skipCartClear = false, 
+      skipConfirmation = false,
+      returnOrder = false,
+      forcePaymentStatus,
+      forceFinancialStatus,
+    } = options || {};
+
+    console.log("[ORDER] 📝 submitOrder iniciado con opciones:", {
+      skipEmails,
+      skipCartClear,
+      skipConfirmation,
+      returnOrder,
+      forcePaymentStatus,
+      forceFinancialStatus,
+    });
+
     setOrderError(null)
     setIsSubmitting(true)
+
+    let createdOrder: Order | null = null;
 
     try {
       // 1. Prepare customer and address data
@@ -1243,11 +1270,21 @@ const lineItems = prepareLineItems()
       const selectedPaymentProvider = paymentProviders.find(
         (provider) => provider.id === formData.paymentMethod
       )
-      const resolvedPaymentStatus = paymentStatusState ?? PaymentStatus.PENDING
-      const resolvedFinancialStatus =
+      
+      // Si se fuerza el estado, usarlo; sino usar la lógica normal
+      const resolvedPaymentStatus = forcePaymentStatus ?? (paymentStatusState ?? PaymentStatus.PENDING)
+      const resolvedFinancialStatus = forceFinancialStatus ?? (
         resolvedPaymentStatus === PaymentStatus.COMPLETED
           ? OrderFinancialStatus.PAID
           : OrderFinancialStatus.PENDING
+      )
+      
+      console.log("[ORDER] 🏷️ Estados resueltos:", {
+        paymentStatus: resolvedPaymentStatus,
+        financialStatus: resolvedFinancialStatus,
+        fueForzado: !!(forcePaymentStatus || forceFinancialStatus),
+        paymentStatusStateOriginal: paymentStatusState,
+      });
       const paymentDetailsPayload = {
         ...(paymentDetails ?? {}),
         providerId: selectedPaymentProvider?.id,
@@ -1306,18 +1343,47 @@ const lineItems = prepareLineItems()
 
       for (let attempt = 0; attempt < maxRetries && !orderCreationSuccess; attempt++) {
         try {
-          console.log("Checkout – sending order payload", orderData)
+          console.log("[ORDER] 📤 Intento", attempt + 1, "de", maxRetries, "- Enviando payload de orden");
+          console.log("[ORDER] 📤 Payload:", orderData);
+          
           const order = await createOrder(orderData)
+          console.log("[ORDER] 📥 Orden creada recibida:", {
+            id: order?.id,
+            orderNumber: order?.orderNumber,
+            paymentStatus: order?.paymentStatus,
+            financialStatus: order?.financialStatus,
+          });
 
           if (!order || !order.id) {
+            console.error("[ORDER] ❌ Orden creada pero sin ID válido:", order);
             throw new Error("Failed to create order")
           }
-          setOrderId(order.id)
-          resetPaymentState()
+          
+          createdOrder = order; // Guardar la orden creada
+          console.log("[ORDER] ✅ Orden guardada en createdOrder:", createdOrder.id);
+          
+          // Solo actualizar orderId y resetPaymentState si NO es returnOrder
+          // Para returnOrder (Culqi), no queremos cambiar el estado aún
+          if (!returnOrder) {
+            console.log("[ORDER] 🔄 Actualizando orderId y resetPaymentState (no es returnOrder)");
+            setOrderId(order.id)
+            resetPaymentState()
+          } else {
+            console.log("[ORDER] ⏭️ Saltando actualización de orderId (returnOrder=true)");
+          }
+          
           orderCreationSuccess = true
+          console.log("[ORDER] ✅ Orden creada exitosamente");
 
-          // 7. Send order confirmation emails using emailStore
-          try {
+          // Si returnOrder es true, retornar la orden aquí y salir del loop
+          if (returnOrder) {
+            console.log("[ORDER] 🔙 Retornando orden (returnOrder=true)");
+            break;
+          }
+
+          // 7. Send order confirmation emails using emailStore (solo si no se omiten)
+          if (!skipEmails) {
+            try {
             // Prepare order data for email templates using the Order schema
             const emailOrderData: Order = {
               id: order.id,
@@ -1393,11 +1459,12 @@ const lineItems = prepareLineItems()
               paymentTransactions: [],
             }
 
-            // Send both emails (client confirmation and admin notification) with shopSettings
-            const emailResults = await sendOrderEmails(emailOrderData, shopSettings?.[0])
-          } catch (emailError) {
-            console.error("Error enviando emails:", emailError)
-            // El pedido se creó exitosamente, el error de email no es crítico
+              // Send both emails (client confirmation and admin notification) with shopSettings
+              const emailResults = await sendOrderEmails(emailOrderData, shopSettings?.[0])
+            } catch (emailError) {
+              console.error("Error enviando emails:", emailError)
+              // El pedido se creó exitosamente, el error de email no es crítico
+            }
           }
         } catch (error: any) {
           if (error?.response) {
@@ -1425,17 +1492,40 @@ const lineItems = prepareLineItems()
         }
       }
 
-      if (!orderCreationSuccess) {
+      if (!orderCreationSuccess || !createdOrder) {
+        console.error("[ORDER] ❌ No se pudo crear la orden después de", maxRetries, "intentos");
+        console.error("[ORDER] ❌ Último error:", lastCreationError);
         throw lastCreationError ?? new Error("No se pudo crear la orden")
       }
 
-      // 8. Success
-      toast.success("¡Pedido realizado con éxito!", {
-        description: `Pedido creado. Recibirás un correo con los detalles de tu compra.`,
-      })
+      // Si returnOrder es true, retornar la orden sin hacer otras acciones
+      if (returnOrder) {
+        console.log("[ORDER] 🔙 Retornando orden sin otras acciones (returnOrder=true)");
+        console.log("[ORDER] 🔙 Orden retornada:", {
+          id: createdOrder.id,
+          orderNumber: createdOrder.orderNumber,
+          paymentStatus: createdOrder.paymentStatus,
+          financialStatus: createdOrder.financialStatus,
+        });
+        return createdOrder;
+      }
 
-      clearCart()
-      setCurrentStep(STEPS.CONFIRMATION)
+      // 8. Success (solo si no se omite)
+      if (!skipConfirmation) {
+        toast.success("¡Pedido realizado con éxito!", {
+          description: `Pedido creado. Recibirás un correo con los detalles de tu compra.`,
+        })
+      }
+
+      if (!skipCartClear) {
+        clearCart()
+      }
+
+      if (!skipConfirmation) {
+        setCurrentStep(STEPS.CONFIRMATION)
+      }
+
+      return createdOrder;
     } catch (error: any) {
       console.error("Error al crear la orden:", error)
       const errorState = getOrderCreationErrorState(error)
@@ -1822,6 +1912,13 @@ const {
                     onPaymentSuccess={handlePaymentSuccess}
                     onPaymentFailure={handlePaymentFailure}
                     onPaymentReset={resetPaymentState}
+                    onOrderCreated={(orderId: string) => {
+                      setOrderId(orderId);
+                    }}
+                    onPaymentComplete={() => {
+                      clearCart();
+                      setCurrentStep(STEPS.CONFIRMATION);
+                    }}
                     items={items}
                   />
                 )}

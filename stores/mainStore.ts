@@ -875,16 +875,54 @@ export const useMainStore = create<MainStore>((set, get) => ({
   },
 
   updateOrder: async (id: string, data: any) => {
+    console.log("[UPDATE_ORDER] 🔄 Iniciando actualización de orden");
+    console.log("[UPDATE_ORDER] 📋 Parámetros:", {
+      orderId: id,
+      storeId: STORE_ID,
+      data: data,
+    });
+    
     set({ loading: true, error: null })
     try {
-      const response = await apiClient.put<Order>(`/orders/${id}`, data)
+      if (!STORE_ID) {
+        console.error("[UPDATE_ORDER] ❌ STORE_ID no está definido");
+        throw new Error("No store ID provided in environment variables")
+      }
+      
+      // ✅ CORRECCIÓN: Agregar STORE_ID en la URL según la documentación del API
+      const url = `/orders/${STORE_ID}/${id}`;
+      console.log("[UPDATE_ORDER] 📤 URL de actualización:", url);
+      console.log("[UPDATE_ORDER] 📤 Payload:", data);
+      
+      const response = await apiClient.put<Order>(url, data)
+      console.log("[UPDATE_ORDER] 📥 Respuesta recibida:", {
+        status: response.status,
+        statusText: response.statusText,
+      });
+      
       const updatedOrder = extractApiData<Order>(response)
+      console.log("[UPDATE_ORDER] ✅ Orden actualizada exitosamente:", {
+        id: updatedOrder.id,
+        orderNumber: updatedOrder.orderNumber,
+        paymentStatus: updatedOrder.paymentStatus,
+        financialStatus: updatedOrder.financialStatus,
+      });
+      
       set((state) => ({
         orders: state.orders.map((order) => (order.id === id ? { ...order, ...updatedOrder } : order)),
         loading: false,
       }))
       return updatedOrder
-    } catch (error) {
+    } catch (error: any) {
+      console.error("[UPDATE_ORDER] ❌ Error al actualizar orden:", error);
+      console.error("[UPDATE_ORDER] ❌ Detalles del error:", {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status,
+        url: error?.config?.url,
+        method: error?.config?.method,
+      });
+      
       set({ error: "Failed to update order", loading: false })
       throw error
     }

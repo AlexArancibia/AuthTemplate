@@ -23,6 +23,11 @@ import type { ProductVariant } from "@/types/productVariant"
 import apiClient from "@/lib/axiosConfig"
 import { extractApiData } from "@/lib/apiHelpers"
 import type { CartItem } from "@/stores/cartStore"
+import { useMainStore } from "@/stores/mainStore"
+import { OrderFinancialStatus, PaymentStatus } from "@/types/common"
+import type { Order } from "@/types/order"
+import { useEmailStore } from "@/stores/emailStore"
+import { useCartStore } from "@/stores/cartStore"
 
 export function watchCulqiClose(onClose: () => void) {
   const observer = new MutationObserver(() => {
@@ -43,7 +48,14 @@ interface ShippingPaymentStepProps {
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void
   handleSelectChange: (name: string, value: string) => void
   prevStep: () => void
-  submitOrder: () => void
+  submitOrder: (options?: {
+    skipEmails?: boolean;
+    skipCartClear?: boolean;
+    skipConfirmation?: boolean;
+    returnOrder?: boolean;
+    forcePaymentStatus?: PaymentStatus;
+    forceFinancialStatus?: OrderFinancialStatus;
+  }) => Promise<Order | void>
   isSubmitting: boolean
   isLoading: boolean
   shippingMethods: ShippingMethod[]
@@ -56,6 +68,8 @@ interface ShippingPaymentStepProps {
   onPaymentSuccess?: (details: Record<string, any>) => void
   onPaymentFailure?: (details?: Record<string, any>) => void
   onPaymentReset?: () => void
+  onOrderCreated?: (orderId: string) => void
+  onPaymentComplete?: () => void
   items: CartItem[]
 }
 
@@ -77,6 +91,8 @@ export function ShippingPaymentStep({
   onPaymentSuccess,
   onPaymentFailure,
   onPaymentReset,
+  onOrderCreated,
+  onPaymentComplete,
   items,
 }: ShippingPaymentStepProps) {
   const selectedProvider = paymentProviders.find(
@@ -85,6 +101,11 @@ export function ShippingPaymentStep({
   const isCulqui = selectedProvider?.name?.toLowerCase() === "culqui";
   const [isOpeningCulqi, setIsOpeningCulqi] = useState(false);
   const [isValidatingStock, setIsValidatingStock] = useState(false);
+
+  // Obtener updateOrder del store
+  const { updateOrder, shopSettings } = useMainStore();
+  const { sendOrderEmails } = useEmailStore();
+  const { clearCart } = useCartStore();
 
   const STORE_ID = process.env.NEXT_PUBLIC_STORE_ID;
 
@@ -206,60 +227,185 @@ export function ShippingPaymentStep({
   };
 
   const handleCulqiPay = async () => {
-    // Validar stock antes de procesar el pago
-    const isValid = await validateStock()
-    
-    if (!isValid) {
-      return
-    }
+    const isValid = await validateStock();
+    if (!isValid) return;
 
     const amount = Math.round(Number(total) * 100);
 
     try {
       onPaymentReset?.();
       setIsOpeningCulqi(true);
-      await loadCulqiScript();
 
-      watchCulqiClose(() => {
+      // Crear orden previa con estado FAILED/VOIDED
+      let order: Order | null = null;
+      try {
+        order = await submitOrder({
+          skipEmails: true,
+          skipCartClear: true,
+          skipConfirmation: true,
+          returnOrder: true,
+          forcePaymentStatus: PaymentStatus.FAILED,
+          forceFinancialStatus: OrderFinancialStatus.VOIDED,
+        }) as Order | null;
+
+        if (!order?.id || !order.orderNumber) {
+          throw new Error("No se pudo crear la orden");
+        }
+      } catch (error: any) {
+        console.error("[CULQI] Error al crear la orden previa:", error);
         setIsOpeningCulqi(false);
-      });
+        toast.error("Error al procesar el pedido. Por favor, intenta nuevamente.");
+        return;
+      }
+
+      await loadCulqiScript();
+      watchCulqiClose(() => setIsOpeningCulqi(false));
 
       setCulqiCallback(
         async (token) => {
           setIsOpeningCulqi(false);
-          if (token) {
+          if (!token || !order?.id) {
+            if (!order) {
+              toast.error("Error al procesar el pedido. Por favor, intenta nuevamente.");
+            } else if (!token) {
+              toast.error("Error al obtener token de pago. Por favor, intenta nuevamente.");
+            }
+            return;
+          }
 
+          try {
+            const res = await fetch("/api/payments/culqui", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                token,
+                amount,
+                currency: "PEN",
+                description: resumeItems,
+                email: formData.email,
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                phone: formData.phone,
+                address: formData.address,
+                city: formData.city,
+                countryCode: "PE",
+                orderId: order.id,
+              }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+              try {
+                await updateOrder(order.id, {
+                  orderNumber: order.orderNumber,
+                  paymentStatus: PaymentStatus.FAILED,
+                  financialStatus: OrderFinancialStatus.PENDING,
+                  paymentDetails: {
+                    error: data.error || "Error procesando el pago",
+                    provider: selectedProvider?.name || "Culqi",
+                    attemptAt: new Date().toISOString(),
+                    response: data,
+                  },
+                });
+              } catch (updateError) {
+                console.error("[CULQI] Error al actualizar orden:", updateError);
+              }
+
+              onPaymentFailure?.({
+                provider: selectedProvider?.name || "Culqi",
+                status: "FAILED",
+                response: data,
+              });
+              toast.error(data.error || "El pago no pudo ser procesado. Por favor, intenta nuevamente.");
+              return;
+            }
+
+            // Pago exitoso - Actualizar orden
             try {
-              const res = await fetch("/api/payments/culqui", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  token,
-                  amount: amount,
-                  currency: "PEN",
-                  description: resumeItems,
-                  email: formData.email,
-                  firstName: formData.firstName,
-                  lastName: formData.lastName,
-                  phone: formData.phone,
-                  address: formData.address,
-                  city: formData.city,
-                  countryCode: "PE",
-                  orderNumber: orderId,
-                }),
+              await updateOrder(order.id, {
+                orderNumber: order.orderNumber,
+                paymentStatus: PaymentStatus.COMPLETED,
+                financialStatus: OrderFinancialStatus.PAID,
+                paymentDetails: {
+                  provider: selectedProvider?.name || "Culqi",
+                  chargeId: data?.data?.id,
+                  amount: data?.data?.amount,
+                  currency: data?.data?.currency_code,
+                  sourceId: data?.data?.source_id,
+                  outcome: data?.data?.outcome,
+                  completedAt: new Date().toISOString(),
+                  raw: data,
+                },
               });
 
-              const data = await res.json();
-
-              if (!res.ok) {
-                onPaymentFailure?.({
+              const updatedOrderForEmails: Order = {
+                ...order,
+                paymentStatus: PaymentStatus.COMPLETED,
+                financialStatus: OrderFinancialStatus.PAID,
+                paymentDetails: {
                   provider: selectedProvider?.name || "Culqi",
-                  status: "FAILED",
-                  response: data,
-                });
-                toast.error(data.error || "Error procesando el pago");
-                return;
+                  chargeId: data?.data?.id,
+                  amount: data?.data?.amount,
+                  currency: data?.data?.currency_code,
+                  sourceId: data?.data?.source_id,
+                  outcome: data?.data?.outcome,
+                  completedAt: new Date().toISOString(),
+                  raw: data,
+                },
+              };
+
+              try {
+                await sendOrderEmails(updatedOrderForEmails, shopSettings?.[0]);
+              } catch (emailError) {
+                console.error("[CULQI] Error enviando emails:", emailError);
               }
+
+              clearCart();
+              handleSelectChange("culqiToken", token);
+              onPaymentSuccess?.({
+                provider: selectedProvider?.name || "Culqi",
+                status: "COMPLETED",
+                chargeId: data?.data?.id,
+                amount: data?.data?.amount,
+                currency: data?.data?.currency_code,
+                sourceId: data?.data?.source_id,
+                outcome: data?.data?.outcome,
+                raw: data,
+              });
+
+              toast.success("¡Pedido realizado con éxito!", {
+                description: "Recibirás un correo con los detalles de tu compra.",
+              });
+
+              onOrderCreated?.(order.id);
+              onPaymentComplete?.();
+            } catch (updateError) {
+              console.error("[CULQI] Error al actualizar orden:", updateError);
+              
+              const updatedOrderForEmails: Order = {
+                ...order,
+                paymentStatus: PaymentStatus.COMPLETED,
+                financialStatus: OrderFinancialStatus.PAID,
+                paymentDetails: {
+                  provider: selectedProvider?.name || "Culqi",
+                  chargeId: data?.data?.id,
+                  amount: data?.data?.amount,
+                  currency: data?.data?.currency_code,
+                  sourceId: data?.data?.source_id,
+                  outcome: data?.data?.outcome,
+                  completedAt: new Date().toISOString(),
+                  raw: data,
+                },
+              };
+
+              try {
+                await sendOrderEmails(updatedOrderForEmails, shopSettings?.[0]);
+              } catch (emailError) {
+                console.error("[CULQI] Error enviando emails:", emailError);
+              }
+
+              clearCart();
 
               handleSelectChange("culqiToken", token);
               onPaymentSuccess?.({
@@ -272,38 +418,82 @@ export function ShippingPaymentStep({
                 outcome: data?.data?.outcome,
                 raw: data,
               });
-              await submitOrder();
-            } catch (error) {
-              console.error("Error de conexión con el backend", error);
-              onPaymentFailure?.({
-                provider: selectedProvider?.name || "Culqi",
-                status: "FAILED",
-                error,
+
+              toast.success("¡Pago procesado exitosamente!", {
+                description: "Tu pedido ha sido registrado. Recibirás la confirmación por correo.",
               });
-              toast.error("Error de conexión con el backend");
+
+              onOrderCreated?.(order.id);
+              onPaymentComplete?.();
             }
+          } catch (error) {
+            console.error("[CULQI] Error de conexión:", error);
+            
+            if (order) {
+              try {
+                await updateOrder(order.id, {
+                  orderNumber: order.orderNumber,
+                  paymentStatus: PaymentStatus.FAILED,
+                  financialStatus: OrderFinancialStatus.PENDING,
+                  paymentDetails: {
+                    error: "Error de conexión con el procesador de pagos",
+                    provider: selectedProvider?.name || "Culqi",
+                    attemptAt: new Date().toISOString(),
+                  },
+                });
+              } catch (updateError) {
+                console.error("[CULQI] Error al actualizar orden:", updateError);
+              }
+            }
+
+            onPaymentFailure?.({
+              provider: selectedProvider?.name || "Culqi",
+              status: "FAILED",
+              error,
+            });
+            toast.error("Error al procesar el pago. Por favor, intenta nuevamente.");
           }
         },
         (error) => {
           setIsOpeningCulqi(false);
+          
+          if (order) {
+            try {
+              updateOrder(order.id, {
+                orderNumber: order.orderNumber,
+                paymentStatus: PaymentStatus.FAILED,
+                financialStatus: OrderFinancialStatus.PENDING,
+                paymentDetails: {
+                  error: "Pago cancelado o rechazado por el usuario",
+                  provider: selectedProvider?.name || "Culqi",
+                  cancelledAt: new Date().toISOString(),
+                },
+              });
+            } catch (updateError) {
+              console.error("[CULQI] Error al actualizar orden:", updateError);
+            }
+          }
+
           onPaymentFailure?.({
             provider: selectedProvider?.name || "Culqi",
             status: "FAILED",
             error,
           });
-          toast.error("Error en el pago con Culqi");
+          toast.error("El pago fue cancelado. Puedes intentar nuevamente cuando estés listo.");
         }
       );
 
       await openCulqiCheckout(amount, "Pago de productos:\n" + resumeItems);
     } catch (err) {
+      console.error("[CULQI] Error general:", err);
       setIsOpeningCulqi(false);
       onPaymentFailure?.({
         provider: selectedProvider?.name || "Culqi",
         status: "FAILED",
         error: err,
       });
-      toast.error("No se pudo iniciar el pago con Culqi");    }
+      toast.error("Error al iniciar el pago. Por favor, intenta nuevamente.");
+    }
   };
 
 
