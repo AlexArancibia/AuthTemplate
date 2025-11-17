@@ -43,7 +43,7 @@ export function watchCulqiClose(onClose: () => void) {
   return observer;
 }
 
-interface ShippingPaymentStepProps {
+export interface ShippingPaymentStepProps {
   formData: Record<string, any>
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void
   handleSelectChange: (name: string, value: string) => void

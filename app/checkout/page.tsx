@@ -636,6 +636,10 @@ export default function CheckoutPage() {
     setPaymentDetails(null)
   }
 
+  const handleOrderCreated = (orderId: string) => {
+    setOrderId(orderId)
+  }
+
   // Handle selecting an existing address for shipping
   const handleSelectShippingAddress = (addressId: string) => {
     setSelectedShippingAddressId(addressId)
@@ -1912,9 +1916,7 @@ const {
                     onPaymentSuccess={handlePaymentSuccess}
                     onPaymentFailure={handlePaymentFailure}
                     onPaymentReset={resetPaymentState}
-                    onOrderCreated={(orderId: string) => {
-                      setOrderId(orderId);
-                    }}
+                    onOrderCreated={handleOrderCreated}
                     onPaymentComplete={() => {
                       clearCart();
                       setCurrentStep(STEPS.CONFIRMATION);
