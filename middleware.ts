@@ -44,15 +44,15 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
-  if (
-  publicRoutes.includes(nextUrl.pathname) ||
-  publicPrefixes.some((prefix) => nextUrl.pathname.startsWith(prefix))
-) {
-  return NextResponse.next();
-}
+  // Permitir webhooks y pagos de Culqi sin autenticación
+  if (nextUrl.pathname === "/api/webhooks/culqui" || nextUrl.pathname === "/api/payments/culqui") {
+    return NextResponse.next();
+  }
 
-  // Permitir acceso a rutas públicas sin importar el estado de autenticación
-  if (publicRoutes.includes(nextUrl.pathname)) {
+  if (
+    publicRoutes.includes(nextUrl.pathname) ||
+    publicPrefixes.some((prefix) => nextUrl.pathname.startsWith(prefix))
+  ) {
     return NextResponse.next();
   }
 

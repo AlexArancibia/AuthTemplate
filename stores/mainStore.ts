@@ -913,14 +913,15 @@ export const useMainStore = create<MainStore>((set, get) => ({
         loading: false,
       }))
       return updatedOrder
-    } catch (error: any) {
+    } catch (error) {
       console.error("[UPDATE_ORDER] ❌ Error al actualizar orden:", error);
+      const errorDetails: any = error;
       console.error("[UPDATE_ORDER] ❌ Detalles del error:", {
-        message: error?.message,
-        response: error?.response?.data,
-        status: error?.response?.status,
-        url: error?.config?.url,
-        method: error?.config?.method,
+        message: errorDetails?.message,
+        response: errorDetails?.response?.data,
+        status: errorDetails?.response?.status,
+        url: errorDetails?.config?.url,
+        method: errorDetails?.config?.method,
       });
       
       set({ error: "Failed to update order", loading: false })

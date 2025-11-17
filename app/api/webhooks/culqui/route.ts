@@ -33,6 +33,11 @@ export async function POST(req: NextRequest) {
 
     if (!verifySignature(rawBody, signature, secretKey)) {
       if (!skipSignatureCheck) {
+        console.error("[Culqi webhook] Firma inválida", {
+          hasSignature: !!signature,
+          signatureLength: signature?.length,
+          bodyLength: rawBody.length,
+        });
         return NextResponse.json(
           { error: "Invalid Culqi signature" },
           { status: 400 }
