@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react"
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { useMainStore } from "@/stores/mainStore"
 import type { Collection } from "@/types/collection"
@@ -37,7 +37,7 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const { categories, collections, fetchCategories, fetchCollections, shopSettings } = useMainStore()
+  const { categories, collections, vendors, fetchCategories, fetchCollections, fetchVendors, shopSettings } = useMainStore()
   const { selectedCurrencyId, acceptedCurrencies } = useCurrencyStore()
   const isInitialMount = useRef(true)
   const previousCurrencyId = useRef(selectedCurrencyId)
@@ -57,15 +57,12 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     max: getDefaultMaxPrice(currencyCode)
   }), [currencyCode])
 
-  // Load categories and collections on mount
+  // Load categories, collections and vendors on mount
   useEffect(() => {
-    if (categories.length === 0) {
-      fetchCategories({ limit: 100 })
-    }
-    if (collections.length === 0) {
-      fetchCollections({ limit: 100 })
-    }
-  }, [categories.length, collections.length, fetchCategories, fetchCollections])
+    if (categories.length === 0) fetchCategories({ limit: 100 })
+    if (collections.length === 0) fetchCollections({ limit: 100 })
+    if (vendors.length === 0) fetchVendors()
+  }, [categories.length, collections.length, vendors.length, fetchCategories, fetchCollections, fetchVendors])
 
   // Organizar categorías en jerarquía padre-hijo
   const organizeCategories = (categories: any[]) => {
@@ -130,11 +127,16 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
 
   const [priceRange, setPriceRange] = useState<[number, number]>(initialPriceRange)
   const [searchTerm, setSearchTerm] = useState<string>(() => searchParams.get("search") || "")
+  const [selectedVendors, setSelectedVendors] = useState<string[]>(() => {
+    const vendorParam = searchParams.get("vendor")
+    return vendorParam ? vendorParam.split(",") : []
+  })
   const [selectedCollections, setSelectedCollections] = useState<string[]>(() => {
     const collectionParam = searchParams.get("collections")
     return collectionParam ? collectionParam.split(",") : []
   })
   const [showCategories, setShowCategories] = useState(true)
+  const [showVendors, setShowVendors] = useState(true)
   const [showCollections, setShowCollections] = useState(true)
   const [showPriceFilter, setShowPriceFilter] = useState(true)
 
@@ -151,6 +153,7 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
   // Update URL whenever filters change
   const updateURL = useCallback((
     categories: string[],
+    vendors: string[],
     collections: string[],
     price: [number, number],
     search: string
@@ -160,6 +163,11 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     // Add selected categories (comma-separated format)
     if (categories.length > 0) {
       params.set("category", categories.join(","))
+    }
+
+    // Add selected vendors (comma-separated format)
+    if (vendors.length > 0) {
+      params.set("vendor", vendors.join(","))
     }
 
     // Add selected collections (comma-separated format)
@@ -181,7 +189,6 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
   }, [pathname, router, productPriceRange])
 
   // Sync price range ONLY when URL params actually change
-  // Not when productPriceRange or priceRange changes (that would reset while dragging)
   const urlMinPrice = searchParams.get("minPrice")
   const urlMaxPrice = searchParams.get("maxPrice")
   
@@ -190,7 +197,6 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     const newMax = parsePriceFromUrl(urlMaxPrice, productPriceRange.max)
     
     setPriceRange(prev => {
-      // Only update if the URL values are different from current state
       if (prev[0] !== newMin || prev[1] !== newMax) {
         return [newMin, newMax]
       }
@@ -202,98 +208,83 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
   useEffect(() => {
     if (previousCurrencyId.current !== selectedCurrencyId && previousCurrencyId.current !== undefined) {
       setPriceRange([productPriceRange.min, productPriceRange.max])
-      updateURL(selectedCategories, selectedCollections, [productPriceRange.min, productPriceRange.max], searchTerm)
     }
     previousCurrencyId.current = selectedCurrencyId
-  }, [selectedCurrencyId, productPriceRange])
+  }, [selectedCurrencyId, productPriceRange.min, productPriceRange.max])
 
-  // Clean URL if it has old category IDs
+  // Clean URL if it has old category IDs (run only once on mount)
   useEffect(() => {
     const categoryParam = searchParams.get("category")
-    if (categoryParam) {
-      const categoryValues = categoryParam.split(",")
-      const hasOldIds = categoryValues.some(val => val.startsWith("cat_"))
-      
-      if (hasOldIds) {
-        // Remove old IDs from URL
-        const params = new URLSearchParams(window.location.search)
-        params.delete("category")
-        const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname
-        router.replace(newUrl, { scroll: false })
-      }
+    if (categoryParam?.split(",").some(val => val.startsWith("cat_"))) {
+      const params = new URLSearchParams(window.location.search)
+      params.delete("category")
+      router.replace(params.toString() ? `${pathname}?${params.toString()}` : pathname, { scroll: false })
     }
-  }, []) // Run only once on mount
+  }, [pathname, router, searchParams])
 
-  // Debounced search
+  // Consolidated effect to update URL when filters change (with debounce for search)
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false
       return
     }
-    const timer = setTimeout(() => {
-      updateURL(selectedCategories, selectedCollections, priceRange, searchTerm)
-    }, 500)
-    return () => clearTimeout(timer)
-  }, [searchTerm])
 
-  // Immediate update for categories
-  useEffect(() => {
-    if (isInitialMount.current) {
-      return
-    }
-    updateURL(selectedCategories, selectedCollections, priceRange, searchTerm)
-  }, [selectedCategories])
+    const timeoutId = setTimeout(() => {
+      updateURL(selectedCategories, selectedVendors, selectedCollections, priceRange, searchTerm)
+    }, searchTerm ? 500 : 0) // Debounce only for search term
 
-  // Immediate update for collections
-  useEffect(() => {
-    if (isInitialMount.current) {
-      return
-    }
-    updateURL(selectedCategories, selectedCollections, priceRange, searchTerm)
-  }, [selectedCollections])
+    return () => clearTimeout(timeoutId)
+  }, [selectedCategories, selectedVendors, selectedCollections, priceRange, searchTerm, updateURL])
 
   // Clear all filters
   const clearFilters = () => {
     setSelectedCategories([])
+    setSelectedVendors([])
     setSelectedCollections([])
     setPriceRange([productPriceRange.min, productPriceRange.max])
     setSearchTerm("")
     router.push(pathname, { scroll: false })
   }
 
-  // Handle category selection (toggle multiple categories by slug)
-  const handleCategoryChange = (categorySlug: string) => {
-    setSelectedCategories(prev => 
-      prev.includes(categorySlug) 
-        ? prev.filter(slug => slug !== categorySlug)
-        : [...prev, categorySlug]
+  // Generic toggle handler for filters
+  const createToggleHandler = useCallback(<T,>(
+    setter: React.Dispatch<React.SetStateAction<T[]>>,
+    value: T
+  ) => {
+    setter(prev => 
+      prev.includes(value) 
+        ? prev.filter(item => item !== value)
+        : [...prev, value]
     )
-  }
+  }, [])
 
-  // Handle collection selection (toggle multiple collections by ID)
-  const handleCollectionChange = (collectionId: string) => {
-    setSelectedCollections(prev => 
-      prev.includes(collectionId) 
-        ? prev.filter(id => id !== collectionId)
-        : [...prev, collectionId]
-    )
-  }
+  const handleCategoryChange = useCallback(
+    (categorySlug: string) => createToggleHandler(setSelectedCategories, categorySlug),
+    [createToggleHandler]
+  )
+
+  const handleVendorChange = useCallback(
+    (vendorName: string) => createToggleHandler(setSelectedVendors, vendorName),
+    [createToggleHandler]
+  )
+
+  const handleCollectionChange = useCallback(
+    (collectionId: string) => createToggleHandler(setSelectedCollections, collectionId),
+    [createToggleHandler]
+  )
 
   // Helper: Validar y ajustar valor de precio
-  const validateAndClampPrice = (value: number, min: number, max: number, compareValue?: number): number => {
+  const validateAndClampPrice = useCallback((value: number, min: number, max: number, compareValue?: number): number => {
     if (isNaN(value) || value < min) return min
     if (value > max) return max
-    if (compareValue !== undefined) {
-      return compareValue < value ? compareValue : value
-    }
+    if (compareValue !== undefined && compareValue < value) return compareValue
     return value
-  }
+  }, [])
 
   // Handle price change on slider release
   const handlePriceChange = useCallback((value: number[]) => {
-    const newPriceRange = value as [number, number]
-    updateURL(selectedCategories, selectedCollections, newPriceRange, searchTerm)
-  }, [selectedCategories, selectedCollections, searchTerm, updateURL])
+    setPriceRange(value as [number, number])
+  }, [])
 
   // Handle manual input change (solo números)
   const sanitizeNumericInput = (value: string) => value.replace(/[^0-9]/g, "")
@@ -313,27 +304,28 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     const newPriceRange: [number, number] = [validatedValue, priceRange[1]]
     setPriceRange(newPriceRange)
     setMinPriceInput(validatedValue.toString())
-    updateURL(selectedCategories, selectedCollections, newPriceRange, searchTerm)
-  }, [minPriceInput, productPriceRange, priceRange, selectedCategories, selectedCollections, searchTerm, updateURL])
+  }, [minPriceInput, productPriceRange, priceRange, validateAndClampPrice])
 
   // Handle manual input blur (max price)
   const handleMaxPriceBlur = useCallback(() => {
     const numValue = Number.parseInt(maxPriceInput, 10)
     const validatedValue = validateAndClampPrice(numValue, productPriceRange.min, productPriceRange.max)
-    const finalValue = Math.max(validatedValue, priceRange[0]) // No menor que el mínimo
+    const finalValue = Math.max(validatedValue, priceRange[0])
     const newPriceRange: [number, number] = [priceRange[0], finalValue]
     setPriceRange(newPriceRange)
     setMaxPriceInput(finalValue.toString())
-    updateURL(selectedCategories, selectedCollections, newPriceRange, searchTerm)
-  }, [maxPriceInput, productPriceRange, priceRange, selectedCategories, selectedCollections, searchTerm, updateURL])
+  }, [maxPriceInput, productPriceRange, priceRange, validateAndClampPrice])
 
-  // Check if any filter is active
-  const hasActiveFilters =
+  // Check if any filter is active (memoized)
+  const hasActiveFilters = useMemo(() => 
     selectedCategories.length > 0 ||
+    selectedVendors.length > 0 ||
     selectedCollections.length > 0 ||
     priceRange[0] > productPriceRange.min ||
     priceRange[1] < productPriceRange.max ||
-    searchTerm !== ""
+    searchTerm !== "",
+    [selectedCategories.length, selectedVendors.length, selectedCollections.length, priceRange, productPriceRange.min, productPriceRange.max, searchTerm]
+  )
 
   const containerClasses = isMobile
     ? "bg-white p-6 space-y-6 h-full"
@@ -393,84 +385,61 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
       </div>
 
       {/* Categories */}
-      <div className="space-y-3">
-        <button
-          onClick={() => setShowCategories(!showCategories)}
-          className="flex items-center justify-between w-full text-sm font-medium text-gray-700 hover:text-gray-900"
-        >
-          <span>Categorías</span>
-          {showCategories ? (
-            <ChevronUp className="w-4 h-4" />
-          ) : (
-            <ChevronDown className="w-4 h-4" />
-          )}
-        </button>
-        
-        {showCategories && (
-          <div className="max-h-64 overflow-y-auto pr-2 space-y-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 transition-colors">
-            {categories.length > 0 ? (
-              <>
-                {/* Organizar categorías en jerarquía padre-hijo */}
-                {organizeCategories(categories).map((category) => (
-                  <CategoryFilterItem 
-                    key={category.id} 
-                    category={category}
-                    selectedCategories={selectedCategories}
-                    onCategoryChange={handleCategoryChange}
-                  />
-                ))}
-              </>
-            ) : (
-              <p className="text-sm text-gray-500">Cargando categorías...</p>
-            )}
-          </div>
+      <FilterSection
+        title="Categorías"
+        isOpen={showCategories}
+        onToggle={() => setShowCategories(!showCategories)}
+      >
+        {categories.length > 0 ? (
+          organizeCategories(categories).map((category) => (
+            <CategoryFilterItem 
+              key={category.id} 
+              category={category}
+              selectedCategories={selectedCategories}
+              onCategoryChange={handleCategoryChange}
+            />
+          ))
+        ) : (
+          <p className="text-sm text-gray-500">Cargando categorías...</p>
         )}
-      </div>
+      </FilterSection>
+
+      {/* Vendors (Marcas) */}
+      {vendors.length > 0 && (
+        <FilterSection
+          title="Marcas"
+          isOpen={showVendors}
+          onToggle={() => setShowVendors(!showVendors)}
+        >
+          {vendors.map((vendor) => (
+            <CheckboxFilter
+              key={vendor}
+              id={`vendor-${vendor}`}
+              label={vendor}
+              checked={selectedVendors.includes(vendor)}
+              onChange={() => handleVendorChange(vendor)}
+            />
+          ))}
+        </FilterSection>
+      )}
 
       {/* Collections */}
       {collections.length > 0 && (
-        <div className="space-y-3">
-          <button
-            onClick={() => setShowCollections(!showCollections)}
-            className="flex items-center justify-between w-full text-sm font-medium text-gray-700 hover:text-gray-900"
-          >
-            <span>Colecciones</span>
-            {showCollections ? (
-              <ChevronUp className="w-4 h-4" />
-            ) : (
-              <ChevronDown className="w-4 h-4" />
-            )}
-          </button>
-          
-          {showCollections && (
-            <div className="max-h-64 overflow-y-auto pr-2 space-y-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 transition-colors">
-              {collections.length > 0 ? (
-                <>
-                  {/* Collection options con checkboxes para selección múltiple - usando IDs */}
-                  {collections.map((collection) => (
-                    <div key={collection.id} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id={`collection-${collection.id}`}
-                        checked={selectedCollections.includes(collection.id)}
-                        onChange={() => handleCollectionChange(collection.id)}
-                        className="w-4 h-4 text-blue-600 cursor-pointer rounded border-gray-300 focus:ring-blue-500"
-                      />
-                      <label
-                        htmlFor={`collection-${collection.id}`}
-                        className="text-sm text-gray-600 cursor-pointer hover:text-gray-900 flex-1"
-                      >
-                        {collection.title}
-                      </label>
-                    </div>
-                  ))}
-                </>
-              ) : (
-                <p className="text-sm text-gray-500">Cargando colecciones...</p>
-              )}
-            </div>
-          )}
-        </div>
+        <FilterSection
+          title="Colecciones"
+          isOpen={showCollections}
+          onToggle={() => setShowCollections(!showCollections)}
+        >
+          {collections.map((collection) => (
+            <CheckboxFilter
+              key={collection.id}
+              id={`collection-${collection.id}`}
+              label={collection.title}
+              checked={selectedCollections.includes(collection.id)}
+              onChange={() => handleCollectionChange(collection.id)}
+            />
+          ))}
+        </FilterSection>
       )}
 
       {/* Price Range */}
@@ -556,19 +525,12 @@ function CategoryFilterItem({
     <div className="space-y-1">
       {/* Categoría padre */}
       <div className="flex items-center space-x-2">
-        <input
-          type="checkbox"
+        <CheckboxFilter
           id={`category-${category.slug}`}
+          label={category.name}
           checked={selectedCategories.includes(category.slug)}
           onChange={() => onCategoryChange(category.slug)}
-          className="w-4 h-4 text-blue-600 cursor-pointer rounded border-gray-300 focus:ring-blue-500"
         />
-        <label
-          htmlFor={`category-${category.slug}`}
-          className="text-sm text-gray-600 cursor-pointer hover:text-gray-900 flex-1"
-        >
-          {category.name}
-        </label>
         {category.children.length > 0 && (
           <button
             onClick={handleArrowClick}
@@ -587,24 +549,82 @@ function CategoryFilterItem({
       {category.children.length > 0 && showSubcategories && (
         <div className="ml-6 space-y-1 animate-in slide-in-from-top-1 duration-200">
           {category.children.map((child: any) => (
-            <div key={child.id} className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id={`category-${child.slug}`}
-                checked={selectedCategories.includes(child.slug)}
-                onChange={() => onCategoryChange(child.slug)}
-                className="w-4 h-4 text-blue-600 cursor-pointer rounded border-gray-300 focus:ring-blue-500"
-              />
-              <label
-                htmlFor={`category-${child.slug}`}
-                className="text-sm text-gray-500 cursor-pointer hover:text-gray-700 flex-1"
-              >
-                {child.name}
-              </label>
-            </div>
+            <CheckboxFilter
+              key={child.id}
+              id={`category-${child.slug}`}
+              label={child.name}
+              checked={selectedCategories.includes(child.slug)}
+              onChange={() => onCategoryChange(child.slug)}
+            />
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+// Componente reutilizable para secciones de filtro colapsables
+function FilterSection({ 
+  title, 
+  isOpen, 
+  onToggle, 
+  children 
+}: { 
+  title: string
+  isOpen: boolean
+  onToggle: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div className="space-y-3">
+      <button
+        onClick={onToggle}
+        className="flex items-center justify-between w-full text-sm font-medium text-gray-700 hover:text-gray-900"
+      >
+        <span>{title}</span>
+        {isOpen ? (
+          <ChevronUp className="w-4 h-4" />
+        ) : (
+          <ChevronDown className="w-4 h-4" />
+        )}
+      </button>
+      
+      {isOpen && (
+        <div className="max-h-64 overflow-y-auto pr-2 space-y-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 transition-colors">
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Componente reutilizable para checkboxes de filtro
+function CheckboxFilter({
+  id,
+  label,
+  checked,
+  onChange
+}: {
+  id: string
+  label: string
+  checked: boolean
+  onChange: () => void
+}) {
+  return (
+    <div className="flex items-center space-x-2 flex-1">
+      <input
+        type="checkbox"
+        id={id}
+        checked={checked}
+        onChange={onChange}
+        className="w-4 h-4 text-blue-600 cursor-pointer rounded border-gray-300 focus:ring-blue-500"
+      />
+      <label
+        htmlFor={id}
+        className="text-sm text-gray-600 cursor-pointer hover:text-gray-900 flex-1"
+      >
+        {label}
+      </label>
     </div>
   )
 }

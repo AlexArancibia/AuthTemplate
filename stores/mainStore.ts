@@ -58,8 +58,8 @@ const buildQueryParams = (params: any = {}) => {
       // Manejar arrays
       if (Array.isArray(value)) {
         if (value.length > 0) {
-          // Para categorySlugs y collectionIds: usar formato de comas
-          if (['categorySlugs', 'collectionIds'].includes(key)) {
+          // Para categorySlugs, collectionIds y vendor: usar formato de comas
+          if (['categorySlugs', 'collectionIds', 'vendor'].includes(key)) {
             const joinedValue = value.join(',')
             debugLog(`🔧 [buildQueryParams] Adding array param (comma format): ${key} = ${joinedValue}`)
             queryParams.append(key, joinedValue)
@@ -94,6 +94,7 @@ interface MainStore {
   products: Product[]
   productVariants: ProductVariant[]
   collections: Collection[]
+  vendors: string[]  // Lista de vendors únicos
   orders: Order[]
   couponCode: string
   coupons: Coupon[]
@@ -138,6 +139,7 @@ interface MainStore {
   fetchProducts: (params?: SearchProductParams, forceRefresh?: boolean) => Promise<PaginatedResponse<Product>>
   fetchProductVariants: (params?: SearchProductParams, forceRefresh?: boolean) => Promise<PaginatedResponse<ProductVariant>>
   fetchCollections: (params?: SearchCollectionParams, forceRefresh?: boolean) => Promise<PaginatedResponse<Collection>>
+  fetchVendors: (forceRefresh?: boolean) => Promise<string[]>
   fetchHeroSections: (params?: SearchHeroSectionParams, forceRefresh?: boolean) => Promise<PaginatedResponse<HeroSection>>
   fetchCardSections: () => Promise<CardSection[]>
   fetchTeamSections: () => Promise<TeamSection[]>
@@ -190,6 +192,7 @@ export const useMainStore = create<MainStore>((set, get) => ({
   products: [],
   productVariants: [],
   collections: [],
+  vendors: [],
   orders: [],
   customers: [],
   heroSections: [],
@@ -366,6 +369,31 @@ export const useMainStore = create<MainStore>((set, get) => ({
       return { data, pagination }
     } catch (error) {
       set({ error: "Failed to fetch collections", loading: false })
+      throw error
+    }
+  },
+
+  // Método fetchVendors - obtiene lista de vendors únicos de la tienda
+  fetchVendors: async (forceRefresh = false) => {
+    if (!STORE_ID) {
+      throw new Error("No store ID provided in environment variables")
+    }
+
+    // Si ya tenemos vendors y no es un refresh forzado, devolver los existentes
+    const currentVendors = get().vendors
+    if (currentVendors.length > 0 && !forceRefresh) {
+      return currentVendors
+    }
+
+    set({ loading: true, error: null })
+    try {
+      const response = await apiClient.get<string[]>(`/products/${STORE_ID}/vendors`)
+      const vendors = Array.isArray(response.data) ? response.data : extractApiData<string[]>(response)
+      
+      set({ vendors, loading: false })
+      return vendors
+    } catch (error) {
+      set({ error: "Failed to fetch vendors", loading: false })
       throw error
     }
   },

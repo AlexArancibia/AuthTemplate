@@ -13,6 +13,7 @@ import type { SearchProductParams, ProductSortBy } from "@/types/pagination"
 interface ProductListProps {
   initialSearchTerm?: string
   initialCategories?: string[]
+  initialVendors?: string[] // Add vendors support
   initialCollectionIds?: string[] // Add collection IDs support
   initialPage?: number
   initialSortBy?: ProductSortBy | string // Allow string for backward compatibility
@@ -27,6 +28,7 @@ interface ProductListProps {
 export default function ProductList({
   initialSearchTerm = "",
   initialCategories = [],
+  initialVendors = [], // Add vendors support
   initialCollectionIds = [], // Add collection IDs support
   initialPage = 1,
   initialSortBy = "createdAt",
@@ -47,6 +49,7 @@ export default function ProductList({
   const prevFiltersRef = useRef({
     searchTerm: initialSearchTerm,
     categories: initialCategories,
+    vendors: initialVendors, // Add vendors tracking
     collectionIds: initialCollectionIds, // Add collection IDs tracking
     sortBy: initialSortBy,
     minPrice: initialMinPrice,
@@ -58,76 +61,75 @@ export default function ProductList({
     setCurrentPage(initialPage)
   }, [initialPage])
 
+  // Helper to compare arrays efficiently
+  const arraysEqual = (a: string[], b: string[]) => {
+    if (a.length !== b.length) return false
+    return a.every((val, idx) => val === b[idx])
+  }
+
   // Reset to page 1 ONLY when filters actually change (not just when page changes)
   useEffect(() => {
     const filtersChanged = 
       prevFiltersRef.current.searchTerm !== initialSearchTerm ||
-      JSON.stringify(prevFiltersRef.current.categories) !== JSON.stringify(initialCategories) ||
-      JSON.stringify(prevFiltersRef.current.collectionIds) !== JSON.stringify(initialCollectionIds) ||
+      !arraysEqual(prevFiltersRef.current.categories, initialCategories) ||
+      !arraysEqual(prevFiltersRef.current.vendors, initialVendors) ||
+      !arraysEqual(prevFiltersRef.current.collectionIds, initialCollectionIds) ||
       prevFiltersRef.current.sortBy !== initialSortBy ||
       prevFiltersRef.current.minPrice !== initialMinPrice ||
       prevFiltersRef.current.maxPrice !== initialMaxPrice
     
-    if (filtersChanged) {
-      // Update the ref with new values
-      prevFiltersRef.current = {
-        searchTerm: initialSearchTerm,
-        categories: initialCategories,
-        collectionIds: initialCollectionIds, // Add collection IDs tracking
-        sortBy: initialSortBy,
-        minPrice: initialMinPrice,
-        maxPrice: initialMaxPrice
-      }
-      
-      // Reset to page 1 and scroll to products
-      if (currentPage !== 1) {
-        setCurrentPage(1)
-        // Also update URL to reflect page 1
-        const searchParams = new URLSearchParams(window.location.search)
-        searchParams.set("page", "1")
-        router.push(`${pathname}?${searchParams.toString()}`, { scroll: false })
-      }
-      
-      // Scroll to the top of the product list, accounting for sticky header
-      if (productListRef.current) {
-        const headerHeight = 90 // h-18 from navbar (4.5rem = 72px) + extra spacing
-        const elementPosition = productListRef.current.getBoundingClientRect().top
-        const offsetPosition = elementPosition + window.scrollY - headerHeight
+    if (!filtersChanged) return
 
-        window.scrollTo({
-          top: offsetPosition,
-          behavior: "smooth"
-        })
-      }
+    // Update the ref with new values
+    prevFiltersRef.current = {
+      searchTerm: initialSearchTerm,
+      categories: initialCategories,
+      vendors: initialVendors,
+      collectionIds: initialCollectionIds,
+      sortBy: initialSortBy,
+      minPrice: initialMinPrice,
+      maxPrice: initialMaxPrice
     }
-  }, [initialSearchTerm, initialCategories, initialCollectionIds, initialSortBy, initialMinPrice, initialMaxPrice, currentPage, pathname, router])
+    
+    // Reset to page 1 and scroll to products
+    if (currentPage !== 1) {
+      setCurrentPage(1)
+      const searchParams = new URLSearchParams(window.location.search)
+      searchParams.set("page", "1")
+      router.push(`${pathname}?${searchParams.toString()}`, { scroll: false })
+    }
+    
+    // Scroll to the top of the product list, accounting for sticky header
+    if (productListRef.current) {
+      const headerHeight = 90
+      const elementPosition = productListRef.current.getBoundingClientRect().top
+      const offsetPosition = elementPosition + window.scrollY - headerHeight
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth"
+      })
+    }
+  }, [initialSearchTerm, initialCategories, initialVendors, initialCollectionIds, initialSortBy, initialMinPrice, initialMaxPrice, currentPage, pathname, router])
 
   // Fetch products when parameters change
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const validSortBy: ProductSortBy = (initialSortBy && initialSortBy !== 'featured' ? initialSortBy : 'createdAt') as ProductSortBy
-        
-        // Determinar el precio mínimo: usar 1 como default solo si no hay filtro de precio del usuario
-        const effectiveMinPrice = initialMinPrice !== undefined ? initialMinPrice : 1
+        const validSortBy: ProductSortBy = (initialSortBy !== 'featured' ? initialSortBy : 'createdAt') as ProductSortBy
         
         const params: SearchProductParams = {
           page: currentPage,
           limit: 9,
           query: initialSearchTerm || undefined,
-          minPrice: effectiveMinPrice,
+          minPrice: initialMinPrice ?? 1,
           maxPrice: initialMaxPrice,
           currencyId: selectedCurrencyId,
           sortBy: validSortBy,
-          status: ['ACTIVE'], // Solo productos activos
-        }
-
-        if (initialCategories && initialCategories.length > 0) {
-          params.categorySlugs = initialCategories
-        }
-
-        if (initialCollectionIds && initialCollectionIds.length > 0) {
-          params.collectionIds = initialCollectionIds
+          status: ['ACTIVE'],
+          ...(initialCategories.length > 0 && { categorySlugs: initialCategories }),
+          ...(initialVendors.length > 0 && { vendor: initialVendors }),
+          ...(initialCollectionIds.length > 0 && { collectionIds: initialCollectionIds }),
         }
 
         await fetchProducts(params)
@@ -141,6 +143,7 @@ export default function ProductList({
     currentPage,
     initialSearchTerm,
     initialCategories,
+    initialVendors,
     initialCollectionIds,
     initialSortBy,
     initialMinPrice,

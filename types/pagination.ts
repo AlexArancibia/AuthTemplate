@@ -35,7 +35,7 @@ export interface SearchProductParams extends Omit<PaginationParams, 'sortBy'> {
   query?: string
   categorySlugs?: string[]  // Slugs de categorías separados por comas en el backend
   collectionIds?: string[]  // IDs de colecciones separados por comas en el backend
-  vendor?: string  // Filtrar por proveedor/marca
+  vendor?: string[]  // Filtrar por proveedor/marca (array separado por comas en el backend)
   minPrice?: number
   maxPrice?: number
   currencyId?: string  // ID de la moneda para filtrar por precio

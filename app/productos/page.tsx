@@ -41,6 +41,8 @@ function ProductsContent() {
   const searchTerm = searchParams.get("search") || ""
   const categoryParam = searchParams.get("category")
   const categories = categoryParam ? categoryParam.split(",") : []
+  const vendorParam = searchParams.get("vendor")
+  const vendors = vendorParam ? vendorParam.split(",") : []
   const collectionParam = searchParams.get("collections")
   const collectionIds = collectionParam ? collectionParam.split(",") : []
   const page = Number.parseInt(searchParams.get("page") || "1", 10)
@@ -125,6 +127,7 @@ function ProductsContent() {
               <ProductList
                 initialSearchTerm={searchTerm}
                 initialCategories={categories}
+                initialVendors={vendors}
                 initialCollectionIds={collectionIds}
                 initialPage={page}
                 initialSortBy={sortBy}
