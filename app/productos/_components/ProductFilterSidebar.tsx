@@ -335,9 +335,9 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     <div className={containerClasses}>
       {/* Header - Solo mostrar en desktop */}
       {!isMobile && (
-        <div className="flex items-center justify-between pb-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <Filter className="w-5 h-5" />
+        <div className="flex items-center justify-between pb-2.5 mb-4.5 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2 py-1.5">
+          <Filter className="w-5 h-5" />
             Filtros
           </h3>
           {hasActiveFilters && (
@@ -371,13 +371,10 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
 
       {/* Search */}
       <div className="space-y-2">
-        <Label htmlFor="search" className="text-sm font-medium text-gray-700">
-          Buscar productos
-        </Label>
         <Input
           id="search"
           type="text"
-          placeholder="Buscar..."
+          placeholder="Buscar productos..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="w-full bg-white"
@@ -590,7 +587,7 @@ function FilterSection({
       </button>
       
       {isOpen && (
-        <div className="max-h-64 overflow-y-auto pr-2 space-y-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 transition-colors">
+        <div className="max-h-48 overflow-y-auto pr-2 space-y-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 transition-colors">
           {children}
         </div>
       )}
