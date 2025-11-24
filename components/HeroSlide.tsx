@@ -127,6 +127,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
                   className={backgroundImageClasses}
                   priority
                   sizes="100vw"
+                  quality={100}
                 />
               </div>
 
@@ -138,6 +139,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
                   className={backgroundImageClasses}
                   priority
                   sizes="100vw"
+                  quality={100}
                 />
               </div>
             </>
@@ -213,7 +215,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: animationDelay }}
             >
-              <div className="w-full flex justify-start mt-16">
+              <div className="w-full flex justify-start mt-4">
                 <div className="inline-block px-3 py-1 sm:px-5 sm:py-1 mb-3 sm:mb-4 lg:mb-6 rounded-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white text-sm sm:text-base md:text-lg font-druk font-extrabold uppercase tracking-wide shadow-lg">
                   DESDE 2010
                 </div>

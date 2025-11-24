@@ -21,11 +21,14 @@ import { CollectionCarousel } from "@/components/CollectionCarousel"
 import { FeatureCollection } from "@/components/FeatureCollection"
 import { Testimonials } from "@/components/Testimonials"
 import { DeportistasCarousel } from "@/components/DeportistasCarousel"
+import { DeportistasCarouselMobile } from "@/components/DeportistasCarouselMobile"
+import { useIsMobile } from "@/hooks/useIsMobile"
 
 export default function HomePage() {
   const pathname = usePathname()
   const selectedCurrencyId = useCurrencyStore((state) => state.selectedCurrencyId);
   const acceptedCurrencies = useCurrencyStore((state) => state.acceptedCurrencies);
+  const isMobile = useIsMobile()
 
   useEffect(() => {
     const tryScrollToHash = (hash: string, retries = 10) => {
@@ -96,7 +99,11 @@ export default function HomePage() {
         className="pt-4 sm:pt-6 lg:pt-8 "
       />
       {/* <DeliveryHeroSection /> */}
-      <DeportistasCarousel />
+      {isMobile ? (
+        <DeportistasCarouselMobile />
+      ) : (
+        <DeportistasCarousel />
+      )}
       <BrandsCarousel />
       
       

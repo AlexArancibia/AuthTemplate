@@ -91,6 +91,7 @@ function AthleteCardInCarousel({
           priority={isPriority}
           loading={isPriority ? "eager" : "lazy"}
           className="object-cover transition-transform duration-300"
+          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 33vw, 20vw"
         />
         <div className={`absolute inset-0 bg-gradient-to-t from-black/40 via-black/20 to-transparent transition-opacity duration-300 ${isVisible}`} />
         <div className={`absolute bottom-0 left-0 right-0 p-4 transition-transform duration-300 ${translateY}`}>
