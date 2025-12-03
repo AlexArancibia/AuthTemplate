@@ -64,6 +64,7 @@ function AthleteCardInCarousel({
   imageRef 
 }: AthleteCardInCarouselProps) {
   const [isActive, setIsActive] = useState(false)
+  const [imageLoaded, setImageLoaded] = useState(false)
 
   const handleInactive = () => {
     setTimeout(() => setIsActive(false), TOUCH_DELAY)
@@ -92,7 +93,15 @@ function AthleteCardInCarousel({
           loading={isPriority ? "eager" : "lazy"}
           className="object-cover transition-transform duration-300"
           sizes="(max-width: 768px) 100vw, (max-width: 1024px) 33vw, 20vw"
+          onLoad={() => setImageLoaded(true)}
+          onError={() => {
+            // Forzar reintento si hay error
+            console.error(`Error loading image: ${image}`)
+          }}
         />
+        {!imageLoaded && !isPriority && (
+          <div className="absolute inset-0 bg-gray-800 animate-pulse" />
+        )}
         <div className={`absolute inset-0 bg-gradient-to-t from-black/40 via-black/20 to-transparent transition-opacity duration-300 ${isVisible}`} />
         <div className={`absolute bottom-0 left-0 right-0 p-4 transition-transform duration-300 ${translateY}`}>
           <h3 className="text-white text-lg font-bold line-clamp-2 break-words">{athleteName}</h3>
@@ -110,6 +119,7 @@ export function DeportistasCarousel({
   const [api, setApi] = useState<CarouselApi>()
   const [scales, setScales] = useState<number[]>(() => Array(deportistasImages.length).fill(1))
   const [isHovered, setIsHovered] = useState(false)
+  const [isMounted, setIsMounted] = useState(false)
   
   const imageRefs = useRef<(HTMLDivElement | null)[]>([])
   const rotationText = useMotionValue(0)
@@ -117,6 +127,11 @@ export function DeportistasCarousel({
   const lastTimeRef = useRef(0)
   const accumulatedRotationRef = useRef(0)
   const speedRef = useRef(ROTATION_SPEEDS.normal)
+
+  // Asegurar que el componente esté montado antes de hacer scroll
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   // Animación de rotación continua
   useEffect(() => {
@@ -163,13 +178,20 @@ export function DeportistasCarousel({
   }, [])
 
   useEffect(() => {
-    if (!api) return
+    if (!api || !isMounted) return
 
+    // Aumentar el delay para asegurar que las imágenes estén listas
     const timeoutId = setTimeout(() => {
       api.scrollTo(getInitialIndex(window.innerWidth, deportistasImages.length), false)
-    }, 50)
+    }, 300) // Aumentado de 50ms a 300ms
 
-    requestAnimationFrame(() => requestAnimationFrame(updateScales))
+    // Usar requestAnimationFrame múltiple para asegurar que el layout esté listo
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        updateScales()
+      })
+    })
+    
     api.on('select', updateScales)
     api.on('scroll', updateScales)
     window.addEventListener('resize', updateScales)
@@ -180,7 +202,31 @@ export function DeportistasCarousel({
       api.off('scroll', updateScales)
       window.removeEventListener('resize', updateScales)
     }
-  }, [api, updateScales])
+  }, [api, updateScales, isMounted])
+
+  // Forzar carga de imágenes visibles después de que el carrusel esté listo
+  useEffect(() => {
+    if (!isMounted || !api) return
+
+    const forceLoadImages = () => {
+      const visibleImages = imageRefs.current.filter(ref => {
+        if (!ref) return false
+        const rect = ref.getBoundingClientRect()
+        return rect.top < window.innerHeight && rect.bottom > 0
+      })
+
+      // Forzar carga de imágenes visibles
+      visibleImages.forEach(ref => {
+        const img = ref?.querySelector('img')
+        if (img && !img.complete) {
+          img.loading = 'eager'
+        }
+      })
+    }
+
+    const timeoutId = setTimeout(forceLoadImages, 500)
+    return () => clearTimeout(timeoutId)
+  }, [api, isMounted])
 
   return (
     <section className={cn("pt-6 pb-6 sm:pt-8 sm:pb-4 lg:pt-24 lg:pb-12 container-section bg-black text-white relative", className)}>
@@ -248,7 +294,9 @@ export function DeportistasCarousel({
         >
           <CarouselContent className="-ml-4 md:-ml-6">
             {deportistasImages.map((image, index) => {
-              const isPriority = index < 5
+              // Aumentar el número de imágenes con priority en desktop
+              // En desktop, mostrar 5-7 imágenes visibles inicialmente
+              const isPriority = index < 7 // Aumentado de 5 a 7
               const athleteName = getDeportistaName(image)
               return (
                 <CarouselItem

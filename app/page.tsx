@@ -7,7 +7,7 @@ import Link from "next/link"
 import { useMainStore } from "@/stores/mainStore"
 import { HeroSection } from "@/components/HeroSection"
 import { ProductCarousel } from "@/components/ProductCarousel"
-import { useEffect, Suspense } from "react"
+import { useEffect, Suspense, useState } from "react"
 import { usePathname } from "next/navigation"
 import CardSectionsContainer from "@/components/card-sections-container"
 import { BlogSection } from "@/components/BlogSection"
@@ -29,6 +29,11 @@ export default function HomePage() {
   const selectedCurrencyId = useCurrencyStore((state) => state.selectedCurrencyId);
   const acceptedCurrencies = useCurrencyStore((state) => state.acceptedCurrencies);
   const isMobile = useIsMobile()
+  const [isClient, setIsClient] = useState(false)
+
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   useEffect(() => {
     const tryScrollToHash = (hash: string, retries = 10) => {
@@ -99,10 +104,14 @@ export default function HomePage() {
         className="pt-4 sm:pt-6 lg:pt-8 "
       />
       {/* <DeliveryHeroSection /> */}
-      {isMobile ? (
-        <DeportistasCarouselMobile />
-      ) : (
-        <DeportistasCarousel />
+      {isClient && (
+        <>
+          {isMobile ? (
+            <DeportistasCarouselMobile />
+          ) : (
+            <DeportistasCarousel />
+          )}
+        </>
       )}
       <BrandsCarousel />
       
