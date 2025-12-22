@@ -11,11 +11,24 @@ import { cn } from "@/lib/utils"
 interface HeroSlideProps {
   heroSection: HeroSectionType
   animationDelay?: number
+  slideIndex?: number
 }
 
-export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
+export function HeroSlide({ heroSection, animationDelay = 0, slideIndex = 0 }: HeroSlideProps) {
   const [isVideoReady, setIsVideoReady] = useState(false)
   const [hasVideoError, setHasVideoError] = useState(false)
+
+  // Determinar qué logo mostrar según el índice del slide
+  const getLogoPath = () => {
+    if (slideIndex === 0) {
+      return "/logosHeroSection/xiom-1-768x179.png 13.png"
+    } else if (slideIndex === 1) {
+      return "/logosHeroSection/Butterfly_brand_logo.svg 4.png"
+    }
+    return null
+  }
+
+  const logoPath = getLogoPath()
 
   // Extraer propiedades principales
   const {
@@ -215,6 +228,26 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: animationDelay }}
             >
+              {/* Logo - Solo en desktop, más grande y destacado */}
+              {logoPath && (
+                <motion.div
+                  className="hidden lg:block mb-6 md:mb-8"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.5, delay: animationDelay - 0.1 }}
+                >
+                  <div className="relative w-[180px] h-[60px] md:w-[220px] md:h-[70px]">
+                    <Image
+                      src={logoPath}
+                      alt={slideIndex === 0 ? "Xiom" : "Butterfly"}
+                      fill
+                      className="object-contain object-left drop-shadow-lg"
+                      quality={100}
+                    />
+                  </div>
+                </motion.div>
+              )}
+
               <div className="w-full flex justify-start mt-4">
                 <div className="inline-block px-3 py-1 sm:px-5 sm:py-1 mb-3 sm:mb-4 lg:mb-6 rounded-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white text-sm sm:text-base md:text-lg font-druk font-extrabold uppercase tracking-wide shadow-lg">
                   DESDE 2010

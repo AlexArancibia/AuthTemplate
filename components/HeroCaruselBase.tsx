@@ -265,7 +265,7 @@ export function HeroCarouselBase({
               willChange: "opacity, transform", // Optimización de rendimiento
             }}
           >
-            <HeroSlide heroSection={sortedHeroSections[currentIndex]} />
+            <HeroSlide heroSection={sortedHeroSections[currentIndex]} slideIndex={currentIndex} />
           </motion.div>
         </AnimatePresence>
       </div>
