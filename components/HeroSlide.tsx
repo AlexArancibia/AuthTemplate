@@ -236,7 +236,11 @@ export function HeroSlide({ heroSection, animationDelay = 0, slideIndex = 0 }: H
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.5, delay: animationDelay - 0.1 }}
                 >
-                  <div className="relative w-[180px] h-[60px] md:w-[220px] md:h-[70px]">
+                  <div className={`relative ${
+                    slideIndex === 1 
+                      ? 'w-[200px] h-[65px] md:w-[250px] md:h-[80px]' 
+                      : 'w-[180px] h-[60px] md:w-[220px] md:h-[70px]'
+                  }`}>
                     <Image
                       src={logoPath}
                       alt={slideIndex === 0 ? "Xiom" : "Butterfly"}
