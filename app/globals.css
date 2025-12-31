@@ -117,6 +117,16 @@ html { scroll-behavior: smooth; }
     background: transparent;
   }
 
+  /* Scrollbar hide */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Scrollbar estilo móvil - overlay semitransparente elegante */
   .scrollbar-elegant {
     scrollbar-width: thin;
@@ -381,6 +391,38 @@ html { scroll-behavior: smooth; }
   100% {
     transform: translateX(100%);
   }
+}
+
+/* Expanding glow animation for video play button */
+@keyframes expandFade {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+.glow-ring {
+  animation: expandFade 2s ease-out infinite;
+}
+
+.glow-ring-1 {
+  animation-delay: 0s;
+}
+
+.glow-ring-2 {
+  animation-delay: 0.4s;
+}
+
+.glow-ring-3 {
+  animation-delay: 0.8s;
+}
+
+.glow-ring-4 {
+  animation-delay: 1.2s;
 }
 
 

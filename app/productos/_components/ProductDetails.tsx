@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useEffect, useMemo } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { ChevronLeft, ChevronRight, Minus, Plus, ShoppingCart, ChevronRightIcon, X } from "lucide-react"
+import { Minus, Plus, ShoppingCart, ChevronRightIcon, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useMainStore } from "@/stores/mainStore"
@@ -14,7 +14,6 @@ import type { Product } from "@/types/product"
 import type { ProductVariant } from "@/types/productVariant"
 import { ProductSidebar } from "./ProductSidebar"
 import { motion, AnimatePresence } from "framer-motion"
-import useEmblaCarousel from "embla-carousel-react"
 
 import { useCurrencyStore, CurrencyOption } from "@/stores/currency"
 import { ProductCard } from "@/components/ProductCard"
@@ -28,7 +27,7 @@ interface ProductDetailsProps {
 }
 
 export default function ProductDetails({ slug }: ProductDetailsProps) {
-  const { products, shopSettings, getProductBySlug } = useMainStore()
+  const { products, shopSettings, getProductBySlug, fetchProducts } = useMainStore()
   const { selectedCurrencyId, acceptedCurrencies } = useCurrencyStore() // Obtener valores del store
   const { addItem } = useCartStore()
   const [product, setProduct] = useState<Product | null>(null)
@@ -42,14 +41,9 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
   const [preloadedImages, setPreloadedImages] = useState<Set<string>>(new Set())
   const [showContinueShopping, setShowContinueShopping] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([])
+  const [isLoadingRelatedProducts, setIsLoadingRelatedProducts] = useState(false)
 
-  // Carrusel para productos relacionados
-  const [emblaRef, emblaApi] = useEmblaCarousel({
-    align: "start",
-    loop: false,
-    dragFree: true,
-    slidesToScroll: 1,
-  })
 
   // Función para precargar imágenes
   const preloadImage = (src: string): Promise<void> => {
@@ -98,6 +92,19 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
     Promise.allSettled(preloadPromises)
   }, [product])
 
+  // Función para encontrar la primera variante disponible
+  const findAvailableVariant = (product: Product): ProductVariant | null => {
+    if (!product.variants || product.variants.length === 0) return null
+    
+    // Buscar una variante con stock disponible
+    const availableVariant = product.variants.find(
+      (variant) => variant.inventoryQuantity > 0 || product.allowBackorder
+    )
+    
+    // Si no se encuentra una disponible, retornar la primera variante
+    return availableVariant || product.variants[0]
+  }
+
   // Fetch del producto individual por slug
   useEffect(() => {
     const loadProduct = async () => {
@@ -109,9 +116,10 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
         
         setProduct(fetchedProduct)
         
-        // Establecer la primera variante como seleccionada si existen variantes
+        // Establecer la primera variante disponible como seleccionada si existen variantes
         if (fetchedProduct.variants && fetchedProduct.variants.length > 0) {
-          setSelectedVariant(fetchedProduct.variants[0])
+          const availableVariant = findAvailableVariant(fetchedProduct)
+          setSelectedVariant(availableVariant)
         }
       } catch (error) {
         console.error("[ProductDetails] Error fetching product:", error)
@@ -124,6 +132,46 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
     
     loadProduct()
   }, [slug, getProductBySlug])
+
+  // Fetch productos relacionados de la misma categoría
+  useEffect(() => {
+    const loadRelatedProducts = async () => {
+      if (!product || !product.categories || product.categories.length === 0) {
+        setRelatedProducts([])
+        return
+      }
+
+      setIsLoadingRelatedProducts(true)
+      
+      try {
+        // Obtener los slugs de las categorías del producto actual
+        const categorySlugs = product.categories.map((cat) => cat.slug)
+        
+        // Buscar productos de las mismas categorías
+        const response = await fetchProducts({
+          categorySlugs,
+          status: ['ACTIVE'],
+          limit: 6, // Traer 6 para asegurar tener 4 después de excluir el actual
+          sortBy: 'createdAt',
+          sortOrder: 'desc'
+        })
+
+        // Excluir el producto actual y limitar a 4 productos
+        const filtered = response.data
+          .filter((p) => p.id !== product.id)
+          .slice(0, 4)
+
+        setRelatedProducts(filtered)
+      } catch (error) {
+        console.error("[ProductDetails] Error fetching related products:", error)
+        setRelatedProducts([])
+      } finally {
+        setIsLoadingRelatedProducts(false)
+      }
+    }
+
+    loadRelatedProducts()
+  }, [product, fetchProducts])
 
   const variantOptions = useMemo(() => {
     if (!product || !product.variants) return {}
@@ -158,22 +206,6 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
     return product.variants.find((variant) => variant.imageUrls && variant.imageUrls.includes(imageUrl)) || null
   }
 
-  // Productos relacionados: productos que comparten categorías con el producto actual
-  const relatedProducts = useMemo(() => {
-    if (!product || !product.categories) return []
-
-    const productCategoryIds = product.categories.map((cat) => cat.id)
-
-    return products
-      .filter(
-        (p) =>
-          p.id !== product.id &&
-          p.status === "ACTIVE" && // Solo productos activos
-          p.categories &&
-          p.categories.some((cat) => productCategoryIds.includes(cat.id)),
-      )
-      .slice(0, 8)
-  }, [product, products])
 
   const optionKeys = Object.keys(variantOptions)
 
@@ -362,8 +394,13 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
       className="min-h-screen"
     >
       {/* Header Section */}
-      <div className="bg-black bg-cover py-8">
-        <div className="container mx-auto px-4">
+      <div 
+        className="relative bg-cover bg-center bg-no-repeat py-8"
+        style={{ backgroundImage: 'url(/gradient-4k.webp)' }}
+      >
+        {/* Overlay negro */}
+        <div className="absolute inset-0 bg-black/50"></div>
+        <div className="container mx-auto px-4 relative z-10">
           <div className="py-6">
             <motion.div
               initial={{ y: -20, opacity: 0 }}
@@ -371,11 +408,11 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
               transition={{ delay: 0.2, duration: 0.5 }}
               className="flex items-center gap-2 text-sm text-muted-foreground mb-2"
             >
-              <Link href="/" className="text-white/90 hover:text-primary">
+              <Link href="/" className="text-white/90 hover:text-black">
                 Inicio
               </Link>
               <ChevronRightIcon className="w-4 h-4 text-white/70" />
-              <Link href="/productos" className="text-white/90 hover:text-primary">
+              <Link href="/productos" className="text-white/90 hover:text-black">
                 Productos
               </Link>
               <ChevronRightIcon className="w-4 h-4 text-white/70" />
@@ -394,7 +431,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
       </div>
 
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-16">
         <div className="grid grid-cols-1 lg:grid-cols-[auto_300px] gap-8 lg:gap-12">
           {/* Product Content */}
           <div className="space-y-8">
@@ -448,7 +485,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                   {imageLoading && (
                     <div className="absolute inset-0 bg-white/80 flex items-center justify-center rounded-xl z-10">
                       <div className="flex flex-col items-center gap-2">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
                         <span className="text-sm text-gray-600">Cargando imagen...</span>
                       </div>
                     </div>
@@ -463,7 +500,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                       onClick={() => handleThumbnailClick(index)}
                       className={`relative w-16 h-16 rounded-md overflow-hidden flex-shrink-0 transition-all duration-200 ${
                         index === currentImageIndex
-                          ? "ring-2 ring-primary scale-105 z-10"
+                          ? "ring-2 ring-black scale-105 z-10"
                           : "opacity-70 hover:opacity-100"
                       }`}
                       whileHover={{ scale: 1.05 }}
@@ -493,14 +530,11 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
               >
                 <label className="text-lg font-medium mb-1.5 block">Descripción</label>
                 <ProductSimpleDescription description={product.description ?? ""} />
-                <Link href="#detalles">
-                  <p className="text-xs text-pink-500 font-semibold mt-2">Ver todas las características</p>
-                </Link>
 
                 {optionKeys.map((optionKey, index) => (
-                  <div key={optionKey} className="space-y-2">
+                  <div key={optionKey} className="space-y-1.5">
                     <label className="text-sm font-medium">{optionKey}</label>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-1.5">
                       {variantOptions[optionKey].map((optionValue) => {
                         const isDisabled = isOptionDisabled(optionKey, optionValue)
                         const isSelected =
@@ -509,10 +543,15 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                         return (
                           <Button
                             key={optionValue}
-                            variant={isSelected ? "default" : "outline"}
+                            variant="outline"
+                            size="sm"
                             onClick={() => handleVariantChange(optionKey, optionValue)}
                             disabled={isDisabled || imageLoading}
-                            className={`${isDisabled ? "opacity-50" : ""} ${imageLoading ? "cursor-wait" : ""}`}
+                            className={`text-xs ${
+                              isSelected 
+                                ? "bg-black text-white border-black hover:bg-black/90 hover:text-white" 
+                                : ""
+                            } ${isDisabled ? "opacity-50" : ""} ${imageLoading ? "cursor-wait" : ""}`}
                           >
                             {optionValue}
                             {isDisabled && <X className="w-3 h-3 ml-1" />}
@@ -544,7 +583,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                           {symbol}{Number(originalPrice).toFixed(2)}
                         </span>
                       )}
-                      <span className="text-2xl font-bold text-primary">
+                      <span className="text-2xl font-bold text-black">
                         {symbol}{(price * quantity).toFixed(2)}
                       </span>
                       {quantity > 1 && (
@@ -558,7 +597,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                   <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
                     {hasValidPrice(selectedVariant) ? (
                       <Button
-                        className="w-full sm:w-[200px]"
+                        className="w-full sm:w-[200px] bg-gradient-to-br from-white to-gray-200 shadow-md shadow-slate-100 border border-gray-200 hover:from-gray-100 hover:to-gray-300 text-black"
                         onClick={handleAddToCart}
                         disabled={!isVariantAvailable(selectedVariant)}
                       >
@@ -591,7 +630,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="w-full sm:w-auto whitespace-nowrap border-primary/20 text-primary hover:bg-primary/5 font-extralight"
+                              className="w-full sm:w-auto whitespace-nowrap border-black/20 text-black hover:bg-black/5 font-extralight"
                             >
                               Continuar comprando
                             </Button>
@@ -632,62 +671,35 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
             </motion.div>
 
             {/* Product Description Tabs - New Section */}
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.55, duration: 0.5 }}
-              className="border-t pt-8"
-              id="detalles"
-            >
-              <h2 className="text-xl font-semibold mb-4">Detalles del Producto</h2>
-              <ProductTabsDescription description={product.description ?? ""} />
-            </motion.div>
+            <ProductTabsDescription description={product.description ?? ""} />
 
-            {/* Carrusel de productos relacionados */}
-            {relatedProducts.length > 0 && (
+            {/* Sección de productos relacionados */}
+            {(relatedProducts.length > 0 || isLoadingRelatedProducts) && (
               <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.7, duration: 0.5 }}
-                className="mt-12"
+                className="mt-12 border-t pt-8"
               >
                 <h2 className="text-xl font-semibold mb-6">Productos relacionados</h2>
-                <div className="relative">
-                  <div className="overflow-hidden py-4" ref={emblaRef}>
-                    <div className="flex">
-                      {relatedProducts.map((relatedProduct) => (
-                        <div
-                          key={relatedProduct.id}
-                          className="flex-[0_0_100%] min-w-0 sm:flex-[0_0_50%] md:flex-[0_0_33.33%] px-2"
-                        >
-                          <ProductCard 
-                            product={relatedProduct}
-                            selectedCurrencyId={selectedCurrencyId}
-                            acceptedCurrencies={acceptedCurrencies}  
-                          />
-                        </div>
-                      ))}
-                    </div>
+                {isLoadingRelatedProducts ? (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {[1, 2, 3, 4].map((i) => (
+                      <Skeleton key={i} className="aspect-square w-full" />
+                    ))}
                   </div>
-
-                  {/* Botones de navegación */}
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => emblaApi?.scrollPrev()}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-2 hover:bg-white shadow-md z-10"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => emblaApi?.scrollNext()}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/80 rounded-full p-2 hover:bg-white shadow-md z-10"
-                  >
-                    <ChevronRight className="w-5 h-5" />
-                  </motion.button>
-                </div>
+                ) : relatedProducts.length > 0 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {relatedProducts.map((relatedProduct) => (
+                      <ProductCard 
+                        key={relatedProduct.id}
+                        product={relatedProduct}
+                        selectedCurrencyId={selectedCurrencyId}
+                        acceptedCurrencies={acceptedCurrencies}  
+                      />
+                    ))}
+                  </div>
+                ) : null}
               </motion.div>
             )}
           </div>
@@ -811,13 +823,21 @@ function ProductTabsDescription({ description }: { description: string }) {
   }
 
   return (
-    <Tabs defaultValue={defaultTab} className="w-full">
+    <motion.div
+      initial={{ y: 20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ delay: 0.55, duration: 0.5 }}
+      className="border-t pt-8"
+      id="detalles"
+    >
+      <h2 className="text-xl font-semibold mb-4">Detalles del Producto</h2>
+      <Tabs defaultValue={defaultTab} className="w-full">
       <TabsList className="mb-4 w-full flex flex-wrap h-auto">
         {sections.map((section) => (
           <TabsTrigger
             key={section.title}
             value={section.title}
-            className="flex-grow data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+            className="flex-grow data-[state=active]:bg-black data-[state=active]:text-white"
           >
             {section.title}
           </TabsTrigger>
@@ -842,7 +862,8 @@ function ProductTabsDescription({ description }: { description: string }) {
           />
         </TabsContent>
       ))}
-    </Tabs>
+      </Tabs>
+    </motion.div>
   )
 }
 

@@ -1,55 +1,77 @@
-import apiClient from "@/lib/axiosConfig";
+import { useMainStore } from "@/stores/mainStore";
+import type { PaymentProvider } from "@/types/payments";
 
-const STORE_ID = process.env.NEXT_PUBLIC_STORE_ID;
-
-export async function getPublicKey() {
-    try {
-        const response = await apiClient.get(`/payment-providers/store/${STORE_ID}`);
-
-        // Buscar el método "Culqui" en la lista
-        const culquiProvider = response.data.find(
-            (provider: any) => provider.name === "Culqui"
-        );
-
-        if (!culquiProvider) {
-            throw new Error("Proveedor de pago 'Culqui' no encontrado.");
-        }
-
-        const publicKey = culquiProvider.credentials.public_key;
-
-        if (!publicKey) {
-            throw new Error("La Public Key de Culqi no está disponible.");
-        }
-
-        return publicKey;
-    } catch (error) {
-        console.error("❌ Error al obtener la Public Key de Culqi:", error);
-        throw new Error("No se pudo obtener la Public Key de Culqi");
-    }
+interface CulquiCredentials {
+  public_key?: string;
+  secret_key?: string;
 }
 
-export async function getSecretKey() {
-    try {
-        const response = await apiClient.get(`/payment-providers/store/${STORE_ID}`);
+async function fetchCulquiProvider(): Promise<PaymentProvider | null> {
+  try {
+    // Usar el mainStore para obtener los payment providers
+    const { fetchPaymentProviders } = useMainStore.getState();
+    const providers: PaymentProvider[] = await fetchPaymentProviders();
 
-        // Buscar el método "Culqui" en la lista
-        const culquiProvider = response.data.find(
-            (provider: any) => provider.name === "Culqui"
-        );
+    // Buscar el proveedor de Culqui
+    const culquiProvider = providers.find(
+      (provider: PaymentProvider) => provider.name === "Culqui"
+    );
 
-        if (!culquiProvider) {
-            throw new Error("Proveedor de pago 'Culqui' no encontrado.");
-        }
+    return culquiProvider || null;
+  } catch (error) {
+    console.error("❌ Error al obtener el proveedor de Culqui:", error);
+    return null;
+  }
+}
 
-        const secretKey = culquiProvider.credentials.secret_key;
+export async function getPublicKey(): Promise<string> {
+  try {
+    const culquiProvider = await fetchCulquiProvider();
 
-        if (!secretKey) {
-            throw new Error("La Public Key de Culqi no está disponible.");
-        }
-
-        return secretKey;
-    } catch (error) {
-        console.error("❌ Error al obtener la secretKey de Culqi:", error);
-        throw new Error("No se pudo obtener la secretKey de Culqi");
+    if (!culquiProvider) {
+      throw new Error("Proveedor de pago 'Culqui' no encontrado.");
     }
+
+    if (!culquiProvider.credentials) {
+      throw new Error("Las credenciales de Culqui no están disponibles.");
+    }
+
+    const credentials = culquiProvider.credentials as CulquiCredentials;
+    const publicKey = credentials.public_key;
+
+    if (!publicKey) {
+      throw new Error("La Public Key de Culqi no está disponible.");
+    }
+
+    return publicKey;
+  } catch (error) {
+    console.error("❌ Error al obtener la Public Key de Culqi:", error);
+    throw new Error("No se pudo obtener la Public Key de Culqi");
+  }
+}
+
+export async function getSecretKey(): Promise<string> {
+  try {
+    const culquiProvider = await fetchCulquiProvider();
+
+    if (!culquiProvider) {
+      throw new Error("Proveedor de pago 'Culqui' no encontrado.");
+    }
+
+    if (!culquiProvider.credentials) {
+      throw new Error("Las credenciales de Culqui no están disponibles.");
+    }
+
+    const credentials = culquiProvider.credentials as CulquiCredentials;
+    const secretKey = credentials.secret_key;
+
+    if (!secretKey) {
+      throw new Error("La Secret Key de Culqi no está disponible.");
+    }
+
+    return secretKey;
+  } catch (error) {
+    console.error("❌ Error al obtener la secretKey de Culqi:", error);
+    throw new Error("No se pudo obtener la secretKey de Culqi");
+  }
 }

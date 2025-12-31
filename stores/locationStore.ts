@@ -19,22 +19,28 @@ export const useGeographicDataStore = create<Location>((set, get) => ({
   async fetchCountries() {
     if (get().countries.length) return
     const res = await apiClient.get("/shipping-methods/geographic-data")
-    set({ countries: res.data.data })
+    // La respuesta tiene estructura: { success, statusCode, message, data: { type, data: [...] } }
+    const countries = res.data?.data?.data || res.data?.data || []
+    set({ countries: Array.isArray(countries) ? countries : [] })
   },
 
   async fetchStates(countryId: string) {
     if (get().states[countryId]) return
     const res = await apiClient.get(`/shipping-methods/geographic-data/${countryId}`)
+    // La respuesta tiene estructura: { success, statusCode, message, data: { type, data: [...] } }
+    const states = res.data?.data?.data || res.data?.data || []
     set(state => ({
-      states: { ...state.states, [countryId]: res.data.data }
+      states: { ...state.states, [countryId]: Array.isArray(states) ? states : [] }
     }))
   },
 
   async fetchCities(countryId: string, stateId: string) {
     if (get().cities[stateId]) return
     const res = await apiClient.get(`/shipping-methods/geographic-data/${countryId}/${stateId}`)
+    // La respuesta tiene estructura: { success, statusCode, message, data: { type, data: [...] } }
+    const cities = res.data?.data?.data || res.data?.data || []
     set(state => ({
-      cities: { ...state.cities, [stateId]: res.data.data }
+      cities: { ...state.cities, [stateId]: Array.isArray(cities) ? cities : [] }
     }))
   }
 }))

@@ -15,12 +15,9 @@ import { OrderFinancialStatus, OrderFulfillmentStatus, ShippingStatus } from "@/
 import { type AddressCreateData, useUserStore } from "@/stores/userStore"
 import { formatUserName } from "@/lib/user-utils"
 import type { Order } from "@/types/order"
-import { CartReviewStep } from "@/components/checkout/cart-review-step"
-import { CustomerInfoStep } from "@/components/checkout/customer-info-step"
-import { ShippingPaymentStep } from "@/components/checkout/shipping-payment-step"
+import { UnifiedCheckoutForm } from "@/components/checkout/unified-checkout-form"
 import { ConfirmationStep } from "@/components/checkout/confirmation-step"
 import { OrderSummary } from "@/components/checkout/order-summary"
-import { CheckoutSteps } from "@/components/checkout/checkout-steps"
 import { CreditCard } from "lucide-react"
 import Image from "next/image"
 import { useMainStore } from "@/stores/mainStore"
@@ -65,13 +62,6 @@ const getSafePrice = (variant: { prices?: Array<{ price: number; currencyId?: st
   }
 }
 
-const STEPS = {
-  CART_REVIEW: 0,
-  CUSTOMER_INFO: 1,
-  SHIPPING_PAYMENT: 2,
-  CONFIRMATION: 3,
-}
-
 export default function CheckoutPage() {
   const { items, clearCart, getTotal } = useCartStore()
   const { setFormDataPersist } = usePersistedCheckoutFormDataStore()
@@ -93,21 +83,13 @@ export default function CheckoutPage() {
   const [selectedShippingAddressId, setSelectedShippingAddressId] = useState<string | null>(null)
   const [selectedBillingAddressId, setSelectedBillingAddressId] = useState<string | null>(null)
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null)
-  
-  // Determinar el paso inicial basado en si viene del login
-  const getInitialStep = () => {
-    const fromLogin = searchParams.get('fromLogin')
-    return fromLogin === 'true' ? STEPS.CUSTOMER_INFO : STEPS.CART_REVIEW
-  }
-  
-  const [currentStep, setCurrentStep] = useState(getInitialStep())
+  const [showConfirmation, setShowConfirmation] = useState(false)
   
   // Listener para MercadoPago: avanzar a confirmación tras pago exitoso
   useEffect(() => {
     function handleMPMessage(event: MessageEvent) {
-      // Puedes restringir el origin si lo deseas
       if (event?.data?.type === 'MP_PAYMENT_SUCCESS') {
-        setCurrentStep(STEPS.CONFIRMATION)
+        setShowConfirmation(true)
       }
     }
     window.addEventListener('message', handleMPMessage)
@@ -501,22 +483,6 @@ export default function CheckoutPage() {
   // Handle select changes
   const handleSelectChange = (name: string, value: string) => {
     setFormData((prev) => ({ ...prev, [name]: value }))
-  }
-
-  // Navigate to next step
-  const nextStep = async () => {
-    if (currentStep < STEPS.CONFIRMATION) {
-      setCurrentStep((prev) => prev + 1)
-      window.scrollTo(0, 0)
-    }
-  }
-
-  // Navigate to previous step
-  const prevStep = () => {
-    if (currentStep > STEPS.CART_REVIEW) {
-      setCurrentStep((prev) => prev - 1)
-      window.scrollTo(0, 0)
-    }
   }
 
   // Add a handler for the billing address toggle
@@ -1131,7 +1097,7 @@ const applyCouponIfExists = () => {
       })
 
       clearCart()
-      setCurrentStep(STEPS.CONFIRMATION)
+      setShowConfirmation(true)
     } catch (error) {
       toast.error("Error al procesar el pedido. Por favor, intenta nuevamente.")
     } finally {
@@ -1551,8 +1517,8 @@ if (taxesIncluded) {
     )
   }
 
-  // If cart is empty and not in confirmation step, redirect to cart
-  if (items.length === 0 && currentStep !== STEPS.CONFIRMATION) {
+  // If cart is empty and not showing confirmation, redirect to cart
+  if (items.length === 0 && !showConfirmation) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
         <div className="max-w-md mx-auto">
@@ -1566,138 +1532,102 @@ if (taxesIncluded) {
     )
   }
 
-  // Define steps for the checkout process
-  const checkoutSteps = [
-    { step: STEPS.CART_REVIEW, label: "Carrito" },
-    { step: STEPS.CUSTOMER_INFO, label: "Información" },
-    { step: STEPS.SHIPPING_PAYMENT, label: "Envío y Pago" },
-    { step: STEPS.CONFIRMATION, label: "Confirmación" },
-  ]
-
   return (
-    <div className="bg-gradient-to-b from-slate-50 to-white n py-12">
-      <div className="container max-w-6xl mx-auto px-4 sm:px-6">
+    <div className="bg-gradient-to-b from-slate-50 to-white min-h-screen py-8">
+      <div className="container max-w-7xl mx-auto px-4 sm:px-6">
         {/* Checkout Header */}
-        <div className="max-w-4xl mx-auto mb-12">
-          <h1 className="text-2xl md:text-4xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700">
+        <div className="mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold text-center mb-2">
             Checkout
           </h1>
-
-          {/* Progress Steps */}
-          <CheckoutSteps steps={checkoutSteps} currentStep={currentStep} />
+          <p className="text-center text-muted-foreground">
+            Completa tu información para finalizar la compra
+          </p>
         </div>
 
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main Content */}
-            <div className={currentStep === STEPS.CONFIRMATION ? "lg:col-span-3" : "lg:col-span-2"}>
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-                className="bg-white rounded-xl shadow-md border border-slate-100 p-6 sm:p-8"
-              >
-                {/* Step 1: Cart Review */}
-                {currentStep === STEPS.CART_REVIEW && (
-                  <CartReviewStep items={items} currency={currency} nextStep={nextStep} selectedCurrencyId={selectedCurrencyId} />
-                )}
-
-                {/* Step 2: Customer Information */}
-                {currentStep === STEPS.CUSTOMER_INFO && (
-                  <CustomerInfoStep
-                    formData={formData}
-                    handleInputChange={handleInputChange}
-                    nextStep={nextStep}
-                    prevStep={prevStep}
-                    isAuthenticated={isAuthenticated}
-                    authCheckComplete={authCheckComplete}
-                    currentUser={currentUser as (User & { addresses?: Address[] }) | null}
-                    showNewShippingAddress={showNewShippingAddress}
-                    setShowNewShippingAddress={setShowNewShippingAddress}
-                    showNewBillingAddress={showNewBillingAddress}
-                    setShowNewBillingAddress={setShowNewBillingAddress}
-                    selectedShippingAddressId={selectedShippingAddressId}
-                    selectedBillingAddressId={selectedBillingAddressId}
-                    handleSelectShippingAddress={handleSelectShippingAddress}
-                    handleSelectBillingAddress={handleSelectBillingAddress}
-                    handleDeselectShippingAddress={handleDeselectShippingAddress}
-                    handleDeselectBillingAddress={handleDeselectBillingAddress}
-                    handleBillingAddressToggle={handleBillingAddressToggle}
-                    copyShippingToBilling={copyShippingToBilling}
-                    onEditAddress={handleEditAddress}
-                    onDeleteAddress={handleDeleteAddress}
-                  />
-                )}
-
-                {/* Step 3: Combined Shipping and Payment Methods */}
-                {currentStep === STEPS.SHIPPING_PAYMENT && (
-                  <ShippingPaymentStep
-                    formData={formData}
-                    handleInputChange={handleInputChange}
-                    handleSelectChange={handleSelectChange}
-                    prevStep={prevStep}
-                    submitOrder={submitOrder}
-                    submitOrderMP={submitOrderMP}
-                    isSubmitting={isSubmitting}
-                    isLoading={isLoading}
-                    shippingMethods={shippingMethods}
-                    paymentProviders={paymentProviders}
-                    getPaymentIcon={getPaymentIcon}
-                    total={subtotalAfterDiscount}
-                    resumeItems={resumeItems}
-                    orderId={orderId}
-                    temporalOrderId={temporalOrderId}
-                  />
-                )}
-
-                {/* Step 4: Confirmation */}
-                {currentStep === STEPS.CONFIRMATION && (
-                <ConfirmationStep
-                  orderId={orderId}
-                  isAuthenticated={isAuthenticated}
-                  currentUser={currentUser as (User & { addresses?: Address[] }) | null}
-                  formData={formData}
-                  items={items}
-                  subtotal={subtotal}
-                  tax={tax}
-                  shipping={shipping}
-                  total={total}
-                  currency={currency}
-                  shopSettings={shopSettings}
-                  shippingMethods={shippingMethods}
-                  selectedShippingAddressId={selectedShippingAddressId}
-                  selectedBillingAddressId={selectedBillingAddressId}
-                  selectedCurrencyId={selectedCurrencyId}
-                />
-                )}
-              </motion.div>
+        {showConfirmation ? (
+          // Confirmation View
+          <div className="max-w-4xl mx-auto">
+            <ConfirmationStep
+              orderId={orderId}
+              isAuthenticated={isAuthenticated}
+              currentUser={currentUser as (User & { addresses?: Address[] }) | null}
+              formData={formData}
+              items={items}
+              subtotal={subtotal}
+              tax={tax}
+              shipping={shipping}
+              total={total}
+              currency={currency}
+              shopSettings={shopSettings}
+              shippingMethods={shippingMethods}
+              selectedShippingAddressId={selectedShippingAddressId}
+              selectedBillingAddressId={selectedBillingAddressId}
+              selectedCurrencyId={selectedCurrencyId}
+            />
+          </div>
+        ) : (
+          // Checkout Form View
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+            {/* Main Content - Unified Form */}
+            <div className="lg:col-span-2 order-2 lg:order-1">
+              <UnifiedCheckoutForm
+                formData={formData}
+                handleInputChange={handleInputChange}
+                handleSelectChange={handleSelectChange}
+                isAuthenticated={isAuthenticated}
+                authCheckComplete={authCheckComplete}
+                currentUser={currentUser as (User & { addresses?: Address[] }) | null}
+                showNewShippingAddress={showNewShippingAddress}
+                setShowNewShippingAddress={setShowNewShippingAddress}
+                showNewBillingAddress={showNewBillingAddress}
+                setShowNewBillingAddress={setShowNewBillingAddress}
+                selectedShippingAddressId={selectedShippingAddressId}
+                selectedBillingAddressId={selectedBillingAddressId}
+                handleSelectShippingAddress={handleSelectShippingAddress}
+                handleSelectBillingAddress={handleSelectBillingAddress}
+                handleDeselectShippingAddress={handleDeselectShippingAddress}
+                handleDeselectBillingAddress={handleDeselectBillingAddress}
+                handleBillingAddressToggle={handleBillingAddressToggle}
+                copyShippingToBilling={copyShippingToBilling}
+                onEditAddress={handleEditAddress}
+                onDeleteAddress={handleDeleteAddress}
+                shippingMethods={shippingMethods}
+                paymentProviders={paymentProviders}
+                submitOrder={submitOrder}
+                submitOrderMP={submitOrderMP}
+                isSubmitting={isSubmitting}
+                isLoading={isLoading}
+                total={subtotalAfterDiscount}
+                resumeItems={resumeItems}
+                orderId={orderId}
+                temporalOrderId={temporalOrderId}
+              />
             </div>
 
-            {/* Order Summary */}
-            {currentStep !== STEPS.CONFIRMATION && (
-              <div className="lg:col-span-1">
-                <OrderSummary
-                  items={items}
-                  subtotal={subtotal}
-                  tax={tax}
-                  shipping={shipping}
-                  total={total}
-                  currency={currency}
-                  currentStep={currentStep}
-                  formData={formData}
-                  totalDiscounts={totalDiscounts}
-                  shippingMethods={shippingMethods}
-                  paymentProviders={paymentProviders}
-                  isAuthenticated={isAuthenticated}
-                  currentUser={currentUser as (User & { addresses?: Address[] }) | null}
-                  selectedShippingAddressId={selectedShippingAddressId}
-                  selectedBillingAddressId={selectedBillingAddressId}
-                  selectedCurrencyId={selectedCurrencyId}
-                />
-              </div>
-            )}
+            {/* Order Summary Sidebar */}
+            <div className="lg:col-span-1 order-1 lg:order-2">
+              <OrderSummary
+                items={items}
+                subtotal={subtotal}
+                tax={tax}
+                shipping={shipping}
+                total={total}
+                currency={currency}
+                currentStep={0}
+                formData={formData}
+                totalDiscounts={totalDiscounts}
+                shippingMethods={shippingMethods}
+                paymentProviders={paymentProviders}
+                isAuthenticated={isAuthenticated}
+                currentUser={currentUser as (User & { addresses?: Address[] }) | null}
+                selectedShippingAddressId={selectedShippingAddressId}
+                selectedBillingAddressId={selectedBillingAddressId}
+                selectedCurrencyId={selectedCurrencyId}
+              />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )

@@ -260,261 +260,399 @@ export function OrderSummary({
     ? "text-green-600" 
     : "text-red-500"
 
+  const [isMobileExpanded, setIsMobileExpanded] = useState(false)
+
   return (
-    <div className="bg-white rounded-xl shadow-md border border-slate-100 p-6 sticky top-24">
-      <h2 className="text-xl font-semibold mb-4">Resumen del pedido</h2>
-
-      <div className="space-y-4 mb-6">
-        {validItems.length > 0 ? (
-          validItems.map((item: CartItem) => {
-            const itemTotal = getSafeItemTotal(item, selectedCurrencyId)
-
-            return (
-              <div key={item.variant?.id || Math.random()} className="flex justify-between text-sm">
-                <span>
-                  {item.product?.title || "Producto"} ({item.quantity || 1})
-                </span>
-                <span className="font-medium pl-1">
-                  {currency}
-                  {itemTotal.toFixed(2)}
-                </span>
-              </div>
-            )
-          })
-        ) : (
-          <div className="text-sm text-gray-500 italic">No hay productos en el carrito</div>
-        )}
-      </div>
-
-      <Separator className="my-4" />
-
-      {/* Coupon Code Section */}
-      <div className="mb-4">
-        <label htmlFor="coupon" className="block text-sm font-medium text-gray-700 mb-1">
-          Código de descuento
-        </label>
-        <div className="flex">
-          <input
-            type="text"
-            id="coupon"
-            value={inputValue}
-            onChange={handleCouponChange}
-            className="flex-1 border border-gray-300 rounded-l-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-pink-500"
-            placeholder="Ingresa tu código"
-          />
-          <button
-            type="button"
-            onClick={handleApplyCoupon}
-            className="bg-primary cursor-pointer text-white px-4 py-2 rounded-r-md text-sm focus:outline-none focus:ring-1 focus:ring-pink-500"
-          >
-            Aplicar
-          </button>
-        </div>
-        {showCouponMessage && (
-          <p className={`mt-1 text-sm ${couponMessageStyle}`}>
-            {totalDiscounts > 0 
-              ? `Cupón aplicado: ${couponCode}` 
-              : "Cupón no válido o no aplicable"}
-          </p>
-        )}
-      </div>
-
-      <Separator className="my-4" />
-
-      <div className="space-y-2">
-        <div className="flex justify-between">
-          <span>Subtotal</span>
-          <span>
-            {currency}
-            {(typeof subtotal === "number" && !isNaN(subtotal) ? subtotal : 0).toFixed(2)}
-          </span>
-        </div>
-        {couponCode && totalDiscounts > 0 && (
-          <div className="flex justify-between text-sm text-green-600">
-            <span>Descuento ({couponCode})</span>
-            <span>-{currency}{totalDiscounts.toFixed(2)}</span>
-          </div>
-        )}
-        {tax > 0 && (
-          <div className="flex justify-between">
-            <span>IGV (18%)</span>
-            <span>
-              {currency}
-              {(typeof tax === "number" && !isNaN(tax) ? tax : 0).toFixed(2)}
+    <>
+      {/* Mobile Collapsible Summary */}
+      <div className="lg:hidden bg-white rounded-xl shadow-md border border-slate-100 mb-6">
+        <button
+          onClick={() => setIsMobileExpanded(!isMobileExpanded)}
+          className="w-full p-4 flex items-center justify-between text-left"
+        >
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold">Resumen del pedido</h2>
+            <span className="text-sm text-muted-foreground">
+              ({validItems.length} {validItems.length === 1 ? 'producto' : 'productos'})
             </span>
           </div>
-        )}
-        <div className="flex justify-between">
-          <span>
-            {(() => {
-              const selectedMethod = shippingMethods.find(m => m.id === formData.shippingMethod)
-              if (!selectedMethod) return "Envío"
-              
-              const methodName = selectedMethod.name.toLowerCase()
-              if (methodName.includes("recojo") || methodName.includes("pickup") || methodName.includes("tienda")) {
-                return "Recojo en tienda"
-              }
-              if (methodName.includes("envio solo hasta agencia") || methodName.includes("envío solo hasta agencia")) {
-                return "Envío solo hasta agencia"
-              }
-              return "Envío"
-            })()}
-          </span>
-          {(() => {
-            if (!formData.shippingMethod) {
-              return <span className="text-gray-400 italic">--</span>
-            }
-            
-            const selectedMethod = shippingMethods.find(m => m.id === formData.shippingMethod)
-            if (!selectedMethod) {
-              return <span className="text-gray-400 italic">--</span>
-            }
-            
-            const methodName = selectedMethod.name.toLowerCase()
-            const isPickup = methodName.includes("recojo") || methodName.includes("pickup") || methodName.includes("tienda")
-            
-            // Si es recojo, mostrar "Gratis" en azul
-            if (isPickup) {
-              return <span className="text-pink-600 font-semibold">Gratis</span>
-            }
-            
-            // Si el shipping es 0, mostrar "Gratis" en verde
-            if (shipping === 0) {
-              return <span className="text-green-600 font-semibold">Gratis</span>
-            }
-            
-            return <span>{currency}{(typeof shipping === "number" && !isNaN(shipping) ? shipping : 0).toFixed(2)}</span>
-          })()}
-        </div>
-        {/* Mensaje de envío gratis (solo si NO es recojo) */}
-        {formData.shippingMethod && (() => {
-          const selectedMethod = shippingMethods.find(m => m.id === formData.shippingMethod)
-          if (!selectedMethod) return null
-          
-          const methodName = selectedMethod.name.toLowerCase()
-          const isPickup = methodName.includes("recojo") || methodName.includes("pickup") || methodName.includes("tienda")
-          if (isPickup) return null // No mostrar mensajes de envío gratis en recojo
-          
-          const priceData = selectedMethod.prices[0]
-          // Convertir a número para asegurar comparaciones y .toFixed()
-          const freeThreshold = Number(priceData?.freeShippingThreshold || 100)
-          const subtotalAfterDiscount = subtotal - totalDiscounts
-          
-          if (shipping === 0 && subtotalAfterDiscount >= freeThreshold) {
-            return (
-              <div className="text-xs text-green-600 mt-1 font-medium">
-                ✓ ¡Calificaste para envío gratis!
-              </div>
-            )
-          } else if (freeThreshold && subtotalAfterDiscount < freeThreshold) {
-            const remaining = freeThreshold - subtotalAfterDiscount
-            return (
-              <div className="text-xs text-pink-600 mt-1">
-                Envío gratis desde {currency}{freeThreshold.toFixed(2)} (Te faltan {currency}{remaining.toFixed(2)})
-              </div>
-            )
-          }
-          return null
-        })()}
+          <div className="flex items-center gap-2">
+            <span className="font-semibold">{currency}{(typeof total === "number" && !isNaN(total) ? total : 0).toFixed(2)}</span>
+            <svg
+              className={`w-5 h-5 transition-transform ${isMobileExpanded ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </button>
         
-        {/* Fecha de entrega estimada */}
-        {formData.shippingMethod && (() => {
-          const selectedMethod = shippingMethods.find(m => m.id === formData.shippingMethod)
-          if (!selectedMethod) return null
-          
-          const methodName = selectedMethod.name.toLowerCase()
-          const isPickup = methodName.includes("recojo") || methodName.includes("pickup") || methodName.includes("tienda")
-          
-          // Si es recojo, mostrar mensaje diferente
-          if (isPickup) {
-            return (
-              <div className="text-xs text-gray-600 mt-1">
-                Disponible para recoger inmediatamente
-              </div>
-            )
-          }
-          
-          // Si tiene información de días de entrega, mostrarla
-          if (selectedMethod.minDeliveryDays && selectedMethod.maxDeliveryDays && selectedMethod.availableDays) {
-            const dayTypeText = getDayType(selectedMethod.availableDays)
-            const dateRange = getDeliveryDateRange(
-              selectedMethod.minDeliveryDays, 
-              selectedMethod.maxDeliveryDays, 
-              selectedMethod.availableDays
-            )
-            
-            return (
-              <div className="text-xs text-gray-600 mt-1">
-                <span className="font-medium">Llegada estimada:</span> {dateRange}
-                {selectedMethod.minDeliveryDays === selectedMethod.maxDeliveryDays 
-                  ? ` (${selectedMethod.minDeliveryDays} ${dayTypeText})`
-                  : ` (${selectedMethod.minDeliveryDays}-${selectedMethod.maxDeliveryDays} ${dayTypeText})`
-                }
-              </div>
-            )
-          }
-          
-          return null
-        })()}
+        {isMobileExpanded && (
+          <div className="p-4 pt-0 border-t">
+            <OrderSummaryContent
+              validItems={validItems}
+              currency={currency}
+              selectedCurrencyId={selectedCurrencyId}
+              couponCode={couponCode}
+              inputValue={inputValue}
+              setInputValue={setInputValue}
+              handleCouponChange={handleCouponChange}
+              handleApplyCoupon={handleApplyCoupon}
+              showCouponMessage={showCouponMessage}
+              couponMessageStyle={couponMessageStyle}
+              totalDiscounts={totalDiscounts}
+              subtotal={subtotal}
+              tax={tax}
+              shipping={shipping}
+              total={total}
+              formData={formData}
+              shippingMethods={shippingMethods}
+              currentStep={currentStep}
+              isAuthenticated={isAuthenticated}
+              currentUser={currentUser}
+              selectedShippingAddressId={selectedShippingAddressId}
+              selectedBillingAddressId={selectedBillingAddressId}
+              getShippingAddressData={getShippingAddressData}
+              getBillingAddressData={getBillingAddressData}
+            />
+          </div>
+        )}
       </div>
 
-      <Separator className="my-4" />
+      {/* Desktop Sticky Summary */}
+      <div className="hidden lg:block bg-white rounded-xl shadow-md border border-slate-100 p-6 sticky top-24 max-h-[calc(100vh-6rem)] overflow-y-auto">
+        <h2 className="text-xl font-semibold mb-4">Resumen del pedido</h2>
+        <OrderSummaryContent
+          validItems={validItems}
+          currency={currency}
+          selectedCurrencyId={selectedCurrencyId}
+          couponCode={couponCode}
+          inputValue={inputValue}
+          setInputValue={setInputValue}
+          handleCouponChange={handleCouponChange}
+          handleApplyCoupon={handleApplyCoupon}
+          showCouponMessage={showCouponMessage}
+          couponMessageStyle={couponMessageStyle}
+          totalDiscounts={totalDiscounts}
+          subtotal={subtotal}
+          tax={tax}
+          shipping={shipping}
+          total={total}
+          formData={formData}
+          shippingMethods={shippingMethods}
+          currentStep={currentStep}
+          isAuthenticated={isAuthenticated}
+          currentUser={currentUser}
+          selectedShippingAddressId={selectedShippingAddressId}
+          selectedBillingAddressId={selectedBillingAddressId}
+          getShippingAddressData={getShippingAddressData}
+          getBillingAddressData={getBillingAddressData}
+        />
+      </div>
+    </>
+  )
+}
 
-      <div className="flex justify-between font-bold text-lg">
-        <span>Total</span>
+// Extracted content component to reuse in both mobile and desktop
+function OrderSummaryContent({
+  validItems,
+  currency,
+  selectedCurrencyId,
+  couponCode,
+  inputValue,
+  setInputValue,
+  handleCouponChange,
+  handleApplyCoupon,
+  showCouponMessage,
+  couponMessageStyle,
+  totalDiscounts,
+  subtotal,
+  tax,
+  shipping,
+  total,
+  formData,
+  shippingMethods,
+  currentStep,
+  isAuthenticated,
+  currentUser,
+  selectedShippingAddressId,
+  selectedBillingAddressId,
+  getShippingAddressData,
+  getBillingAddressData,
+}: {
+  validItems: CartItem[]
+  currency: string
+  selectedCurrencyId?: string
+  couponCode: string
+  inputValue: string
+  setInputValue: (value: string) => void
+  handleCouponChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  handleApplyCoupon: () => void
+  showCouponMessage: boolean
+  couponMessageStyle: string
+  totalDiscounts: number
+  subtotal: number
+  tax: number
+  shipping: number
+  total: number
+  formData: Record<string, any>
+  shippingMethods: ShippingMethod[]
+  currentStep: number
+  isAuthenticated: boolean
+  currentUser: (User & { addresses?: Address[] }) | null
+  selectedShippingAddressId: string | null
+  selectedBillingAddressId: string | null
+  getShippingAddressData: () => AddressData
+  getBillingAddressData: () => AddressData
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="space-y-4 mb-6">
+
+      {validItems.length > 0 ? (
+        validItems.map((item: CartItem) => {
+          const itemTotal = getSafeItemTotal(item, selectedCurrencyId)
+
+          return (
+            <div key={item.variant?.id || Math.random()} className="flex justify-between text-sm">
+              <span>
+                {item.product?.title || "Producto"} ({item.quantity || 1})
+              </span>
+              <span className="font-medium pl-1">
+                {currency}
+                {itemTotal.toFixed(2)}
+              </span>
+            </div>
+          )
+        })
+      ) : (
+        <div className="text-sm text-gray-500 italic">No hay productos en el carrito</div>
+      )}
+    </div>
+
+    <Separator className="my-4" />
+
+    {/* Coupon Code Section */}
+    <div className="mb-4">
+      <label htmlFor="coupon" className="block text-sm font-medium text-gray-700 mb-1">
+        Código de descuento
+      </label>
+      <div className="flex">
+        <input
+          type="text"
+          id="coupon"
+          value={inputValue}
+          onChange={handleCouponChange}
+          className="flex-1 border border-gray-300 rounded-l-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-pink-500"
+          placeholder="Ingresa tu código"
+        />
+        <button
+          type="button"
+          onClick={handleApplyCoupon}
+          className="bg-primary cursor-pointer text-white px-4 py-2 rounded-r-md text-sm focus:outline-none focus:ring-1 focus:ring-pink-500"
+        >
+          Aplicar
+        </button>
+      </div>
+      {showCouponMessage && (
+        <p className={`mt-1 text-sm ${couponMessageStyle}`}>
+          {totalDiscounts > 0 
+            ? `Cupón aplicado: ${couponCode}` 
+            : "Cupón no válido o no aplicable"}
+        </p>
+      )}
+    </div>
+
+    <Separator className="my-4" />
+
+    <div className="space-y-2">
+      <div className="flex justify-between">
+        <span>Subtotal</span>
         <span>
           {currency}
-          {(typeof total === "number" && !isNaN(total) ? total : 0).toFixed(2)}
+          {(typeof subtotal === "number" && !isNaN(subtotal) ? subtotal : 0).toFixed(2)}
         </span>
       </div>
+      {couponCode && totalDiscounts > 0 && (
+        <div className="flex justify-between text-sm text-green-600">
+          <span>Descuento ({couponCode})</span>
+          <span>-{currency}{totalDiscounts.toFixed(2)}</span>
+        </div>
+      )}
+      {tax > 0 && (
+        <div className="flex justify-between">
+          <span>IGV (18%)</span>
+          <span>
+            {currency}
+            {(typeof tax === "number" && !isNaN(tax) ? tax : 0).toFixed(2)}
+          </span>
+        </div>
+      )}
+      <div className="flex justify-between">
+        <span>
+          {(() => {
+            const selectedMethod = shippingMethods.find(m => m.id === formData.shippingMethod)
+            if (!selectedMethod) return "Envío"
+            
+            const methodName = selectedMethod.name.toLowerCase()
+            if (methodName.includes("recojo") || methodName.includes("pickup") || methodName.includes("tienda")) {
+              return "Recojo en tienda"
+            }
+            if (methodName.includes("envio solo hasta agencia") || methodName.includes("envío solo hasta agencia")) {
+              return "Envío solo hasta agencia"
+            }
+            return "Envío"
+          })()}
+        </span>
+        {(() => {
+          if (!formData.shippingMethod) {
+            return <span className="text-gray-400 italic">--</span>
+          }
+          
+          const selectedMethod = shippingMethods.find(m => m.id === formData.shippingMethod)
+          if (!selectedMethod) {
+            return <span className="text-gray-400 italic">--</span>
+          }
+          
+          const methodName = selectedMethod.name.toLowerCase()
+          const isPickup = methodName.includes("recojo") || methodName.includes("pickup") || methodName.includes("tienda")
+          
+          if (isPickup) {
+            return <span className="text-pink-600 font-semibold">Gratis</span>
+          }
+          
+          if (shipping === 0) {
+            return <span className="text-green-600 font-semibold">Gratis</span>
+          }
+          
+          return <span>{currency}{(typeof shipping === "number" && !isNaN(shipping) ? shipping : 0).toFixed(2)}</span>
+        })()}
+      </div>
+      {formData.shippingMethod && (() => {
+        const selectedMethod = shippingMethods.find(m => m.id === formData.shippingMethod)
+        if (!selectedMethod) return null
+        
+        const methodName = selectedMethod.name.toLowerCase()
+        const isPickup = methodName.includes("recojo") || methodName.includes("pickup") || methodName.includes("tienda")
+        if (isPickup) return null
+        
+        const priceData = selectedMethod.prices[0]
+        const freeThreshold = Number(priceData?.freeShippingThreshold || 100)
+        const subtotalAfterDiscount = subtotal - totalDiscounts
+        
+        if (shipping === 0 && subtotalAfterDiscount >= freeThreshold) {
+          return (
+            <div className="text-xs text-green-600 mt-1 font-medium">
+              ✓ ¡Calificaste para envío gratis!
+            </div>
+          )
+        } else if (freeThreshold && subtotalAfterDiscount < freeThreshold) {
+          const remaining = freeThreshold - subtotalAfterDiscount
+          return (
+            <div className="text-xs text-pink-600 mt-1">
+              Envío gratis desde {currency}{freeThreshold.toFixed(2)} (Te faltan {currency}{remaining.toFixed(2)})
+            </div>
+          )
+        }
+        return null
+      })()}
+      
+      {formData.shippingMethod && (() => {
+        const selectedMethod = shippingMethods.find(m => m.id === formData.shippingMethod)
+        if (!selectedMethod) return null
+        
+        const methodName = selectedMethod.name.toLowerCase()
+        const isPickup = methodName.includes("recojo") || methodName.includes("pickup") || methodName.includes("tienda")
+        
+        if (isPickup) {
+          return (
+            <div className="text-xs text-gray-600 mt-1">
+              Disponible para recoger inmediatamente
+            </div>
+          )
+        }
+        
+        if (selectedMethod.minDeliveryDays && selectedMethod.maxDeliveryDays && selectedMethod.availableDays) {
+          const dayTypeText = getDayType(selectedMethod.availableDays)
+          const dateRange = getDeliveryDateRange(
+            selectedMethod.minDeliveryDays, 
+            selectedMethod.maxDeliveryDays, 
+            selectedMethod.availableDays
+          )
+          
+          return (
+            <div className="text-xs text-gray-600 mt-1">
+              <span className="font-medium">Llegada estimada:</span> {dateRange}
+              {selectedMethod.minDeliveryDays === selectedMethod.maxDeliveryDays 
+                ? ` (${selectedMethod.minDeliveryDays} ${dayTypeText})`
+                : ` (${selectedMethod.minDeliveryDays}-${selectedMethod.maxDeliveryDays} ${dayTypeText})`
+              }
+            </div>
+          )
+        }
+        
+        return null
+      })()}
+    </div>
 
-      {/* Shipping Address Summary (only show in payment step) */}
-      {currentStep === 2 && formData && (
-        <div className="mt-6 pt-6 border-t">
-          <div className="mb-4">
-            <h3 className="font-medium text-base mb-2">Dirección de envío</h3>
-            {(() => {
-              const shippingData = getShippingAddressData()
+    <Separator className="my-4" />
+
+    <div className="flex justify-between font-bold text-lg">
+      <span>Total</span>
+      <span>
+        {currency}
+        {(typeof total === "number" && !isNaN(total) ? total : 0).toFixed(2)}
+      </span>
+    </div>
+
+    {/* Address Summary - Always show if addresses are filled */}
+    {formData.address && (
+      <div className="mt-6 pt-6 border-t">
+        <div className="mb-4">
+          <h3 className="font-medium text-base mb-2">Dirección de envío</h3>
+          {(() => {
+            const shippingData = getShippingAddressData()
+            return (
+              <>
+                <p className="text-sm text-gray-600">
+                  {shippingData.address || "No especificada"}
+                  {shippingData.apartment && `, ${shippingData.apartment}`}
+                  {shippingData.city && `, ${shippingData.city}`}
+                  {shippingData.state && `, ${shippingData.state}`}
+                  {shippingData.zipCode && ` ${shippingData.zipCode}`}
+                </p>
+                {shippingData.shippingPhone && <p className="text-sm text-gray-600">Tel: {shippingData.shippingPhone}</p>}
+              </>
+            )
+          })()}
+        </div>
+
+        <div>
+          <h3 className="font-medium mb-2 text-base">Dirección de facturación</h3>
+          {formData.sameBillingAddress ? (
+            <p className="text-sm text-gray-600 italic">Misma que la dirección de envío</p>
+          ) : (
+            (() => {
+              const billingData = getBillingAddressData()
               return (
                 <>
                   <p className="text-sm text-gray-600">
-                    {shippingData.address || "No especificada"}
-                    {shippingData.apartment && `, ${shippingData.apartment}`}
-                    {shippingData.city && `, ${shippingData.city}`}
-                    {shippingData.state && `, ${shippingData.state}`}
-                    {shippingData.zipCode && ` ${shippingData.zipCode}`}
+                    {billingData.address || "No especificada"}
+                    {billingData.apartment && `, ${billingData.apartment}`}
+                    {billingData.city && `, ${billingData.city}`}
+                    {billingData.state && `, ${billingData.state}`}
+                    {billingData.zipCode && ` ${billingData.zipCode}`}
                   </p>
-                  {shippingData.shippingPhone && <p className="text-sm text-gray-600">Tel: {shippingData.shippingPhone}</p>}
+                  {billingData.billingPhone && <p className="text-sm text-gray-600">Tel: {billingData.billingPhone}</p>}
                 </>
               )
-            })()}
-          </div>
-
-          {/* Billing Address */}
-          <div>
-            <h3 className="font-medium mb-2 text-base">Dirección de facturación</h3>
-            {formData.sameBillingAddress ? (
-              <p className="text-sm text-gray-600 italic">Misma que la dirección de envío</p>
-            ) : (
-              (() => {
-                const billingData = getBillingAddressData()
-                return (
-                  <>
-                    <p className="text-sm text-gray-600">
-                      {billingData.address || "No especificada"}
-                      {billingData.apartment && `, ${billingData.apartment}`}
-                      {billingData.city && `, ${billingData.city}`}
-                      {billingData.state && `, ${billingData.state}`}
-                      {billingData.zipCode && ` ${billingData.zipCode}`}
-                    </p>
-                    {billingData.billingPhone && <p className="text-sm text-gray-600">Tel: {billingData.billingPhone}</p>}
-                  </>
-                )
-              })()
-            )}
-          </div>
+            })()
+          )}
         </div>
-      )}
-    </div>
+      </div>
+    )}
+  </div>
   )
 }

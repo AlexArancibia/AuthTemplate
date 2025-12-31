@@ -6,10 +6,12 @@ import Link from "next/link"
 import { motion } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Clock, Eye } from "lucide-react"
+import { Clock, Eye, ShoppingCart } from "lucide-react"
 import type { Product } from "@/types/product"
 import type { CurrencyOption } from "@/stores/currency";
 import { useMainStore } from "@/stores/mainStore"
+import { useCartStore } from "@/stores/cartStore"
+import { toast } from "sonner"
 
 interface ProductCardProps {
   product: Product
@@ -79,6 +81,7 @@ export function ProductCard({
   salePercentage = 10 
 }: ProductCardProps) {
   const { shopSettings } = useMainStore()
+  const { addItem } = useCartStore()
   const [isPulsing, setIsPulsing] = useState(false)
 
   // Efecto para la animación de pulso
@@ -150,6 +153,49 @@ export function ProductCard({
   }
   const stockCount = getStockCount(product)
 
+  // Obtener la primera variante disponible (o la primera si no hay disponible)
+  const getFirstAvailableVariant = () => {
+    if (!product.variants || product.variants.length === 0) return null
+    
+    // Buscar una variante con stock o que permita backorder
+    const availableVariant = product.variants.find(
+      (variant) => variant.inventoryQuantity > 0 || product.allowBackorder
+    )
+    
+    // Si no hay disponible, usar la primera variante
+    return availableVariant || product.variants[0]
+  }
+
+  // Manejar añadir al carrito
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    const variant = getFirstAvailableVariant()
+    
+    if (!variant) {
+      toast.error("No hay variantes disponibles para este producto")
+      return
+    }
+
+    // Verificar si la variante está disponible
+    const isAvailable = variant.inventoryQuantity > 0 || product.allowBackorder
+    
+    if (!isAvailable) {
+      toast.error("Este producto no está disponible en este momento")
+      return
+    }
+
+    addItem(product, variant, 1)
+    
+    toast.success("Producto añadido al carrito", {
+      description: `${product.title}`,
+    })
+  }
+
+  const firstVariant = getFirstAvailableVariant()
+  const canAddToCart = firstVariant && (firstVariant.inventoryQuantity > 0 || product.allowBackorder)
+
   return (
     <div className="group relative bg-white rounded-none p-4 flex flex-col h-full">
       <Link href={`/productos/${product.slug}`} className="flex flex-col h-full">
@@ -187,10 +233,24 @@ export function ProductCard({
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
 
+          {/* Botón de añadir al carrito - aparece en hover */}
+          {canAddToCart && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
+              <Button
+                size="sm"
+                className="bg-gradient-to-br from-white to-gray-100 hover:bg-white text-pink-600 hover:text-pink-700 shadow-lg border-0"
+                onClick={handleAddToCart}
+              >
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                Añadir al carrito
+              </Button>
+            </div>
+          )}
+
           {/* Contador de lanzamiento - Diseño refinado */}
           {hasUpcomingRelease && (
             <motion.div
-              className="absolute top-3 right-3 bg-pink-950 backdrop-blur-sm text-white px-3 py-1.5 rounded-full border border-white/20 shadow-lg"
+              className="absolute top-3 right-3 bg-pink-950 backdrop-blur-sm text-white px-3 py-1.5 rounded-full border border-white/20 shadow-lg z-10"
               animate={{
                 boxShadow: isPulsing ? "0 0 0 0 rgba(255, 255, 255, 0.7)" : "0 0 0 10px rgba(255, 255, 255, 0)",
               }}

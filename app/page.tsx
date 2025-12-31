@@ -22,6 +22,7 @@ import { Sponsors } from "@/components/Sponsors"
 import { FeaturedProductsWithSidebar } from "@/components/FeaturedProductsWithSidebar"
 import PromotionalGrid from "@/components/PromotionalGrid"
 import { FeaturedProductsSection } from "@/components/FeaturedProductsSection"
+import { VideoPromotionSection } from "@/components/VideoPromotionSection"
 
 export default function HomePage() {
   const pathname = usePathname()
@@ -84,6 +85,7 @@ export default function HomePage() {
       showExploreButton={true}
       emptyMessage="No hay productos disponibles"
     />
+    <VideoPromotionSection />
     <PromotionalGrid />
     <FeaturedProductsSection
       selectedCurrencyId={selectedCurrencyId}
