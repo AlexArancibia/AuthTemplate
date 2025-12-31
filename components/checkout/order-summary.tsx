@@ -255,7 +255,7 @@ export function OrderSummary({
   }
 
   // Determinar si mostrar mensaje de cupón y su estilo
-  const showCouponMessage = couponCode && couponCode.trim() !== ""
+  const showCouponMessage = !!(couponCode && couponCode.trim() !== "")
   const couponMessageStyle = totalDiscounts > 0 
     ? "text-green-600" 
     : "text-red-500"

@@ -4,39 +4,20 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from 'next/navigation'
 import { motion } from "framer-motion"
-import { CheckoutSteps } from "@/components/checkout/checkout-steps"
 import apiClient from "@/lib/axiosConfig";
 import Link from "next/link"
 import { XCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ShopSettings } from "@/types/store"
-import { User } from "@/types/user"
 import { Address } from "@/stores/userStore"
 import { useCartStore } from "@/stores/cartStore"
-import { useEmailStore } from "@/stores/emailStore"
-import { CartItem } from "@/stores/cartStore"
 import { ShippingMethod } from "@/types/shippingMethod"
 import { usePersistedCheckoutFormDataStore } from '@/stores/persistedCheckoutFormDataStore'
 import { usePersistedMainStore } from '@/stores/persistedMainStore'
 import { useEmailOrderDataStore } from '@/stores/emailOrderDataStore'
-import { Order } from "@/types/order";
-import { extractApiData } from "@/lib/apiHelpers"
-
+import { useCurrencyStore } from "@/stores/currency"
 import { useMainStore } from "@/stores/mainStore"
-import { type AddressCreateData, useUserStore } from "@/stores/userStore"
-
-const STEPS = {
-  CART_REVIEW: 0,
-  CUSTOMER_INFO: 1,
-  SHIPPING_PAYMENT: 2,
-  CONFIRMATION: 3,
-}
-const checkoutSteps = [
-  { step: STEPS.CART_REVIEW, label: "Carrito" },
-  { step: STEPS.CUSTOMER_INFO, label: "Información" },
-  { step: STEPS.SHIPPING_PAYMENT, label: "Envío y Pago" },
-  { step: STEPS.CONFIRMATION, label: "Confirmación" },
-]
+import { useUserStore } from "@/stores/userStore"
 
 export default function FailurePage() {
   const searchParams = useSearchParams()
@@ -51,12 +32,12 @@ export default function FailurePage() {
   const { currentUser, loading: userLoading, fetchUserByEmail  } = useUserStore()
   const { formDataPersist } = usePersistedCheckoutFormDataStore();
   const { updateOrder } = useMainStore();
-
   const { emailOrderDataPersist } = useEmailOrderDataStore();
+  const { selectedCurrencyId, acceptedCurrencies } = useCurrencyStore()
+  const activeCurrency = acceptedCurrencies.find(c => c.id === selectedCurrencyId)
 
   const storeId = process.env.NEXT_PUBLIC_STORE_ID;
   const temporalOrderId = searchParams.get("external_reference");
-  const currentStep = 4
   // Obtener todos los parámetros
   const paramsObj: Record<string, string | null> = {}
   const keys = [
@@ -126,19 +107,33 @@ export default function FailurePage() {
   }
 
   const getShippingAddressData = () => {
-    if (isAuthenticated && currentUser && orderData?.shippingAddress?.id) {
-      // If user has selected an existing address, get data from that address
-      const selectedAddress = currentUser.addresses?.find(
-        (addr: Address) => addr.id === orderData.shippingAddress.id
-      )
-      if (selectedAddress) {
+    // Try to get from orderData first
+    if (orderData?.shippingAddress) {
+      if (orderData.shippingAddress.id && isAuthenticated && currentUser) {
+        // If order has address ID, get data from user's saved addresses
+        const selectedAddress = currentUser.addresses?.find(
+          (addr: Address) => addr.id === orderData.shippingAddress.id
+        )
+        if (selectedAddress) {
+          return {
+            address: selectedAddress.address1,
+            apartment: selectedAddress.address2 || "",
+            city: selectedAddress.city,
+            state: selectedAddress.province || "",
+            zipCode: selectedAddress.zip || "",
+            shippingPhone: selectedAddress.phone || "",
+          }
+        }
+      }
+      // If orderData has address fields directly, use them
+      if (orderData.shippingAddress.address1) {
         return {
-          address: selectedAddress.address1,
-          apartment: selectedAddress.address2 || "",
-          city: selectedAddress.city,
-          state: selectedAddress.province || "",
-          zipCode: selectedAddress.zip || "",
-          shippingPhone: selectedAddress.phone || "",
+          address: orderData.shippingAddress.address1 || "",
+          apartment: orderData.shippingAddress.address2 || "",
+          city: orderData.shippingAddress.city || "",
+          state: orderData.shippingAddress.province || "",
+          zipCode: orderData.shippingAddress.zip || "",
+          shippingPhone: orderData.shippingAddress.phone || "",
         }
       }
     }
@@ -154,23 +149,37 @@ export default function FailurePage() {
   }
 
   const getBillingAddressData = () => {
-    if (formDataPersist.sameBillingAddress) {
+    if (formDataPersist.sameBillingAddress || !orderData?.billingAddress) {
       return getShippingAddressData()
     }
 
-    if (isAuthenticated && currentUser && orderData?.shippingAddress?.id) {
-      // If user has selected an existing billing address, get data from that address
-      const selectedAddress = currentUser.addresses?.find(
-        (addr: Address) => addr.id === orderData.shippingAddress.id
-      )
-      if (selectedAddress) {
+    // Try to get from orderData first
+    if (orderData.billingAddress) {
+      if (orderData.billingAddress.id && isAuthenticated && currentUser) {
+        // If order has billing address ID, get data from user's saved addresses
+        const selectedAddress = currentUser.addresses?.find(
+          (addr: Address) => addr.id === orderData.billingAddress.id
+        )
+        if (selectedAddress) {
+          return {
+            address: selectedAddress.address1,
+            apartment: selectedAddress.address2 || "",
+            city: selectedAddress.city,
+            state: selectedAddress.province || "",
+            zipCode: selectedAddress.zip || "",
+            billingPhone: selectedAddress.phone || "",
+          }
+        }
+      }
+      // If orderData has billing address fields directly, use them
+      if (orderData.billingAddress.address1) {
         return {
-          address: selectedAddress.address1,
-          apartment: selectedAddress.address2 || "",
-          city: selectedAddress.city,
-          state: selectedAddress.province || "",
-          zipCode: selectedAddress.zip || "",
-          billingPhone: selectedAddress.phone || "",
+          address: orderData.billingAddress.address1 || "",
+          apartment: orderData.billingAddress.address2 || "",
+          city: orderData.billingAddress.city || "",
+          state: orderData.billingAddress.province || "",
+          zipCode: orderData.billingAddress.zip || "",
+          billingPhone: orderData.billingAddress.phone || "",
         }
       }
     }
@@ -198,32 +207,25 @@ export default function FailurePage() {
     );
   }
 
+  // Get currency symbol (for potential future use)
+  const currency = activeCurrency?.symbol || shopSettings?.[0]?.defaultCurrency?.symbol || orderData?.currency?.symbol || "S/"
+
   return (
-    <div className="bg-gradient-to-b from-slate-50 to-white n py-12">
-      <div className="container max-w-6xl mx-auto px-4 sm:px-6">
-        {/* Checkout Header */}
-        <div className="max-w-4xl mx-auto mb-12">
-          <h1 className="text-2xl md:text-4xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700">
-            Checkout
-          </h1>
-
-          {/* Progress Steps */}
-          <CheckoutSteps steps={checkoutSteps} currentStep={currentStep} />
-        </div>
-
+    <div className="bg-gradient-to-b from-slate-50 to-white min-h-screen py-12">
+      <div className="container max-w-4xl mx-auto px-4 sm:px-6">
         <div className="max-w-4xl mx-auto">
           <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-                className="bg-white rounded-xl shadow-md border border-slate-100 p-6 sm:p-8"
-              >
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5 }}
-                  className="flex flex-col items-center justify-center py-16 px-4 text-center"
-                >
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+            className="bg-white rounded-xl shadow-md border border-slate-100 p-6 sm:p-8"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
+              className="flex flex-col items-center justify-center py-16 px-4 text-center"
+            >
                   <motion.div
                     initial={{ scale: 0, rotate: -180 }}
                     animate={{ scale: 1, rotate: 0 }}
@@ -295,8 +297,8 @@ export default function FailurePage() {
                       <Link href="/">Volver al inicio</Link>
                     </Button>
                   </div>
-                </motion.div>
-              </motion.div>
+            </motion.div>
+          </motion.div>
         </div>
       </div>
     </div>
