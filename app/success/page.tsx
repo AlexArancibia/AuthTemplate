@@ -4,7 +4,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from 'next/navigation'
 import { motion } from "framer-motion"
-import { CheckoutSteps } from "@/components/checkout/checkout-steps"
 import apiClient from "@/lib/axiosConfig";
 import Link from "next/link"
 import { CheckCircle } from "lucide-react"
@@ -14,29 +13,13 @@ import { User } from "@/types/user"
 import { Address } from "@/stores/userStore"
 import { useCartStore } from "@/stores/cartStore"
 import { useEmailStore } from "@/stores/emailStore"
-import { CartItem } from "@/stores/cartStore"
 import { ShippingMethod } from "@/types/shippingMethod"
 import { usePersistedCheckoutFormDataStore } from '@/stores/persistedCheckoutFormDataStore'
 import { usePersistedMainStore } from '@/stores/persistedMainStore'
 import { useEmailOrderDataStore } from '@/stores/emailOrderDataStore'
-import { Order } from "@/types/order";
-import { extractApiData } from "@/lib/apiHelpers"
-
+import { useCurrencyStore } from "@/stores/currency"
 import { useMainStore } from "@/stores/mainStore"
-import { type AddressCreateData, useUserStore } from "@/stores/userStore"
-
-const STEPS = {
-  CART_REVIEW: 0,
-  CUSTOMER_INFO: 1,
-  SHIPPING_PAYMENT: 2,
-  CONFIRMATION: 3,
-}
-const checkoutSteps = [
-  { step: STEPS.CART_REVIEW, label: "Carrito" },
-  { step: STEPS.CUSTOMER_INFO, label: "Información" },
-  { step: STEPS.SHIPPING_PAYMENT, label: "Envío y Pago" },
-  { step: STEPS.CONFIRMATION, label: "Confirmación" },
-]
+import { useUserStore } from "@/stores/userStore"
 
 export default function SuccessPage() {
   const searchParams = useSearchParams()
@@ -51,13 +34,13 @@ export default function SuccessPage() {
   const { shopSettings, shippingMethods } = usePersistedMainStore()
   const { currentUser, loading: userLoading, fetchUserByEmail  } = useUserStore()
   const { formDataPersist } = usePersistedCheckoutFormDataStore();
-  const { updateOrder } = useMainStore();
-
+  const { updateOrder, paymentProviders } = useMainStore();
   const { emailOrderDataPersist } = useEmailOrderDataStore();
+  const { selectedCurrencyId, acceptedCurrencies } = useCurrencyStore()
+  const activeCurrency = acceptedCurrencies.find(c => c.id === selectedCurrencyId)
 
   const storeId = process.env.NEXT_PUBLIC_STORE_ID;
   const temporalOrderId = searchParams.get("external_reference");
-  const currentStep = 4
   // Obtener todos los parámetros
   const paramsObj: Record<string, string | null> = {}
   const keys = [
@@ -156,19 +139,33 @@ export default function SuccessPage() {
   }
 
   const getShippingAddressData = () => {
-    if (isAuthenticated && currentUser && orderData.shippingAddress.id) {
-      // If user has selected an existing address, get data from that address
-      const selectedAddress = currentUser.addresses?.find(
-        (addr: Address) => addr.id === orderData.shippingAddress.id
-      )
-      if (selectedAddress) {
+    // Try to get from orderData first
+    if (orderData?.shippingAddress) {
+      if (orderData.shippingAddress.id && isAuthenticated && currentUser) {
+        // If order has address ID, get data from user's saved addresses
+        const selectedAddress = currentUser.addresses?.find(
+          (addr: Address) => addr.id === orderData.shippingAddress.id
+        )
+        if (selectedAddress) {
+          return {
+            address: selectedAddress.address1,
+            apartment: selectedAddress.address2 || "",
+            city: selectedAddress.city,
+            state: selectedAddress.province || "",
+            zipCode: selectedAddress.zip || "",
+            shippingPhone: selectedAddress.phone || "",
+          }
+        }
+      }
+      // If orderData has address fields directly, use them
+      if (orderData.shippingAddress.address1) {
         return {
-          address: selectedAddress.address1,
-          apartment: selectedAddress.address2 || "",
-          city: selectedAddress.city,
-          state: selectedAddress.province || "",
-          zipCode: selectedAddress.zip || "",
-          shippingPhone: selectedAddress.phone || "",
+          address: orderData.shippingAddress.address1 || "",
+          apartment: orderData.shippingAddress.address2 || "",
+          city: orderData.shippingAddress.city || "",
+          state: orderData.shippingAddress.province || "",
+          zipCode: orderData.shippingAddress.zip || "",
+          shippingPhone: orderData.shippingAddress.phone || "",
         }
       }
     }
@@ -184,23 +181,37 @@ export default function SuccessPage() {
   }
 
   const getBillingAddressData = () => {
-    if (formDataPersist.sameBillingAddress) {
+    if (formDataPersist.sameBillingAddress || !orderData?.billingAddress) {
       return getShippingAddressData()
     }
 
-    if (isAuthenticated && currentUser && orderData.shippingAddress.id) {
-      // If user has selected an existing billing address, get data from that address
-      const selectedAddress = currentUser.addresses?.find(
-        (addr: Address) => addr.id === orderData.shippingAddress.id
-      )
-      if (selectedAddress) {
+    // Try to get from orderData first
+    if (orderData.billingAddress) {
+      if (orderData.billingAddress.id && isAuthenticated && currentUser) {
+        // If order has billing address ID, get data from user's saved addresses
+        const selectedAddress = currentUser.addresses?.find(
+          (addr: Address) => addr.id === orderData.billingAddress.id
+        )
+        if (selectedAddress) {
+          return {
+            address: selectedAddress.address1,
+            apartment: selectedAddress.address2 || "",
+            city: selectedAddress.city,
+            state: selectedAddress.province || "",
+            zipCode: selectedAddress.zip || "",
+            billingPhone: selectedAddress.phone || "",
+          }
+        }
+      }
+      // If orderData has billing address fields directly, use them
+      if (orderData.billingAddress.address1) {
         return {
-          address: selectedAddress.address1,
-          apartment: selectedAddress.address2 || "",
-          city: selectedAddress.city,
-          state: selectedAddress.province || "",
-          zipCode: selectedAddress.zip || "",
-          billingPhone: selectedAddress.phone || "",
+          address: orderData.billingAddress.address1 || "",
+          apartment: orderData.billingAddress.address2 || "",
+          city: orderData.billingAddress.city || "",
+          state: orderData.billingAddress.province || "",
+          zipCode: orderData.billingAddress.zip || "",
+          billingPhone: orderData.billingAddress.phone || "",
         }
       }
     }
@@ -228,32 +239,32 @@ export default function SuccessPage() {
     );
   }
 
+  // Get currency symbol
+  const currency = activeCurrency?.symbol || shopSettings?.[0]?.defaultCurrency?.symbol || orderData?.currency?.symbol || "S/"
+  
+  // Check if payment method is MercadoPago (using the same ID as in confirmation-step)
+  const isMercadoPagoPayment = formDataPersist.paymentMethod === "pp_9c77d30e-6d2b"
+  
+  // Get order customer name
+  const orderFirstName = orderData?.customerInfo?.firstName || orderData?.firstName || formDataPersist.firstName || ""
+  const orderLastName = orderData?.customerInfo?.lastName || orderData?.lastName || formDataPersist.lastName || ""
+
   return (
-    <div className="bg-gradient-to-b from-slate-50 to-white n py-12">
-      <div className="container max-w-6xl mx-auto px-4 sm:px-6">
-        {/* Checkout Header */}
-        <div className="max-w-4xl mx-auto mb-12">
-          <h1 className="text-2xl md:text-4xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700">
-            Checkout
-          </h1>
-
-          {/* Progress Steps */}
-          <CheckoutSteps steps={checkoutSteps} currentStep={currentStep} />
-        </div>
-
+    <div className="bg-gradient-to-b from-slate-50 to-white min-h-screen py-12">
+      <div className="container max-w-4xl mx-auto px-4 sm:px-6">
         <div className="max-w-4xl mx-auto">
           <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-                className="bg-white rounded-xl shadow-md border border-slate-100 p-6 sm:p-8"
-              >
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5 }}
-                  className="flex flex-col items-center justify-center py-16 px-4 text-center"
-                >
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+            className="bg-white rounded-xl shadow-md border border-slate-100 p-6 sm:p-8"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
+              className="flex flex-col items-center justify-center py-16 px-4 text-center"
+            >
                   <motion.div
                     initial={{ scale: 0, rotate: -180 }}
                     animate={{ scale: 1, rotate: 0 }}
@@ -280,7 +291,7 @@ export default function SuccessPage() {
                   </div>
 
                   <div className="w-full max-w-md mb-8">
-                    {formDataPersist.paymentMethod === "pp_2c3f4080-1a54" ? (
+                    {isMercadoPagoPayment ? (
                       <div className="flex flex-col items-center justify-center gap-4 bg-emerald-50 border border-emerald-100 rounded-xl p-6 shadow-lg shadow-emerald-500/10">
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -317,43 +328,44 @@ export default function SuccessPage() {
                     ) : (
                       <a
                         href={`https://wa.me/${shopSettings?.[0]?.phone?.replace(/\s+/g, "") || ""}?text=${encodeURIComponent(
-                          `Hola, acabo de realizar el pedido #${orderData?.id || `CL-${Math.floor(Math.random() * 10000)}`} y quisiera coordinar el pago.
-                          *Detalles del pedido:*
-                          ${orderData?.lineItems?.map(
-                            (lineItems: any) => {
-                              const priceObj = lineItems?.variant?.prices?.find((p: any) => p.currencyId === orderData?.currency?.id)
-                              const price = priceObj?.price ?? lineItems?.variant?.prices?.[0]?.price ?? 0
-                              return `- ${lineItems?.product?.title} - ${Object.entries(lineItems?.variant?.attributes || {})
-                                .map(([key, value]) => `${key}: ${value}`)
-                                .join(", ")} (${lineItems?.quantity} x ${orderData?.currency}${Number(price).toFixed(2)})`
-                            }
-                          ).join("\n")}
+                          `Hola, acabo de realizar el pedido #${orderData?.id || orderData?.orderNumber || `CL-${Math.floor(Math.random() * 10000)}`} y quisiera coordinar el pago.
+*Detalles del pedido:*
+${orderData?.lineItems?.map(
+  (lineItem: any) => {
+    const priceObj = lineItem?.variant?.prices?.find((p: any) => p.currencyId === (selectedCurrencyId || orderData?.currencyId || orderData?.currency?.id))
+    const price = priceObj?.price ?? lineItem?.variant?.prices?.[0]?.price ?? lineItem?.price ?? 0
+    const variantTitle = lineItem?.variant?.title || Object.entries(lineItem?.variant?.attributes || {})
+      .map(([key, value]) => `${key}: ${value}`)
+      .join(", ")
+    return `- ${lineItem?.product?.title || lineItem?.title || 'Producto'}${variantTitle ? ` - ${variantTitle}` : ''} (${lineItem?.quantity || 1} x ${currency}${Number(price).toFixed(2)})`
+  }
+).join("\n") || 'No hay productos en el pedido'}
 
-                          *Subtotal:* ${orderData?.currency}${Number(orderData?.subtotalPrice ?? 0).toFixed(2)}
-                          *IGV (18%):* ${orderData?.currency}${Number(orderData?.totalTax ?? 0).toFixed(2)}
-                          *${getShippingMethodLabel()}:* ${orderData?.currency}${Number(orderData?.shippingStatus ?? 0).toFixed(2)}
-                          *Total:* ${orderData?.currency}${Number(orderData?.totalPrice ?? 0).toFixed(2)}
+*Subtotal:* ${currency}${Number(orderData?.subtotalPrice ?? 0).toFixed(2)}
+*IGV (18%):* ${currency}${Number(orderData?.totalTax ?? 0).toFixed(2)}
+*${getShippingMethodLabel()}:* ${currency}${Number(orderData?.shippingCost ?? orderData?.shippingPrice ?? 0).toFixed(2)}
+*Total:* ${currency}${Number(orderData?.totalPrice ?? 0).toFixed(2)}
 
-                          *Dirección de envío:*
-                          ${orderData?.firstName || ''} ${orderData?.lastName || ''}
-                          ${(() => {
-                            const shippingData = getShippingAddressData()
-                            return `${shippingData.address}${shippingData.apartment ? `, ${shippingData.apartment}` : ""}
-                          ${shippingData.city}, ${shippingData.state} ${shippingData.zipCode}`
-                          })()}
+*Dirección de envío:*
+${orderFirstName} ${orderLastName}
+${(() => {
+  const shippingData = getShippingAddressData()
+  return `${shippingData.address}${shippingData.apartment ? `, ${shippingData.apartment}` : ""}
+${shippingData.city}, ${shippingData.state} ${shippingData.zipCode}`
+})()}
 
-                          ${
-                            !orderData?.billingAddress
-                              ? `*Dirección de facturación:*
-                          ${(() => {
-                            const billingData = getBillingAddressData()
-                            return `${billingData.address}${billingData.apartment ? `, ${billingData.apartment}` : ""}
-                          ${billingData.city}, ${billingData.state} ${billingData.zipCode}`
-                          })()} `
-                              : "*Dirección de facturación:* Misma que la dirección de envío"
-                          }
+${
+  formDataPersist.sameBillingAddress || !orderData?.billingAddress
+    ? "*Dirección de facturación:* Misma que la dirección de envío"
+    : `*Dirección de facturación:*
+${(() => {
+  const billingData = getBillingAddressData()
+  return `${billingData.address}${billingData.apartment ? `, ${billingData.apartment}` : ""}
+${billingData.city}, ${billingData.state} ${billingData.zipCode}`
+})()}`
+}
 
-                          Gracias.`,
+Gracias.`,
                         )}`}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -375,7 +387,7 @@ export default function SuccessPage() {
                         Contactar por WhatsApp para gestionar el pago
                       </a>
                     )}
-                    {formDataPersist.paymentMethod !== "pp_2c3f4080-1a54" && (
+                    {!isMercadoPagoPayment && (
                       <p className="text-sm text-gray-500 mt-2 text-center">
                         Nuestro equipo te ayudará a completar el proceso de pago y responderá todas tus dudas.
                       </p>
@@ -390,8 +402,8 @@ export default function SuccessPage() {
                       <Link href="/">Volver al inicio</Link>
                     </Button>
                   </div>
-                </motion.div>
-              </motion.div>
+            </motion.div>
+          </motion.div>
         </div>
       </div>
     </div>
