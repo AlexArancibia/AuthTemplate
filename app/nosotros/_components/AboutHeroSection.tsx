@@ -3,6 +3,7 @@
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import Image from "next/image"
 import { useState, useEffect, useRef } from "react"
 import { useMainStore } from "@/stores/mainStore"
 import { Loader2, BookOpen } from "lucide-react"
@@ -25,13 +26,10 @@ export function QuienesSomosHero() {
 
     const loadHeroSections = async () => {
       try {
-        console.log("[HeroSection] Cargando hero sections...")
         fetchAttempted.current = true
         await fetchHeroSections()
-        console.log("[HeroSection] Hero sections cargadas correctamente:", heroSections?.length || 0)
         setError(null)
       } catch (err) {
-        console.error("[HeroSection] Error al cargar las secciones de héroe:", err)
         setError("No se pudieron cargar las secciones de héroe. Por favor, intenta de nuevo más tarde.")
       }
     }
@@ -41,13 +39,14 @@ export function QuienesSomosHero() {
   }, [])
 
   // Buscar la sección específica
-  const heroSection = heroSections?.find((section) => section.isActive && section.metadata?.section?.toLowerCase() === "quienes-somos")
-
-  // Debug: Log para verificar qué está pasando
-  useEffect(() => {
-    console.log("Hero Sections:", heroSections)
-    console.log("Found Hero Section:", heroSection)
-  }, [heroSections, heroSection])
+  const heroSection = heroSections?.find(
+    (section) =>
+      section.isActive &&
+      section.metadata &&
+      typeof section.metadata === "object" &&
+      "section" in section.metadata &&
+      section.metadata.section?.toLowerCase() === "quienes-somos"
+  )
 
   if (loading) {
     return (
@@ -109,10 +108,6 @@ export function QuienesSomosHero() {
   const mobileYoutubeId = mobileBackgroundVideo ? getYouTubeId(mobileBackgroundVideo) : null
   const hasVideo = Boolean(youtubeId)
 
-  console.log("Background Video:", backgroundVideo)
-  console.log("YouTube ID:", youtubeId)
-  console.log("Has Video:", hasVideo)
-
   // Determinar imagen de fondo a usar
   const bgImage = mobileBackgroundImage || backgroundImage
 
@@ -127,17 +122,23 @@ export function QuienesSomosHero() {
               {bgImage ? (
                 <>
                   <div className="absolute inset-0 block lg:hidden">
-                    <img
+                    <Image
                       src={mobileBackgroundImage || "/placeholder.svg"}
                       alt={title || "Background"}
-                      className="w-full h-full object-cover"
+                      fill
+                      className="object-cover"
+                      priority
+                      sizes="100vw"
                     />
                   </div>
                   <div className="absolute inset-0 hidden lg:block">
-                    <img
+                    <Image
                       src={backgroundImage || "/placeholder.svg"}
                       alt={title || "Background"}
-                      className="w-full h-full object-cover"
+                      fill
+                      className="object-cover"
+                      priority
+                      sizes="100vw"
                     />
                   </div>
                 </>
@@ -164,11 +165,9 @@ export function QuienesSomosHero() {
                 height: "56.25vw", // 16:9 aspect ratio
               }}
               onLoad={() => {
-                console.log("Video loaded successfully")
                 setIsVideoReady(true)
               }}
               onError={() => {
-                console.log("Video failed to load")
                 setHasVideoError(true)
               }}
               frameBorder="0"
@@ -205,17 +204,23 @@ export function QuienesSomosHero() {
       ) : bgImage ? (
         <div className="absolute inset-0">
           <div className="absolute inset-0 block lg:hidden">
-            <img
+            <Image
               src={mobileBackgroundImage || "/placeholder.svg"}
               alt={title || "Background"}
-              className="w-full h-full object-cover"
+              fill
+              className="object-cover"
+              priority
+              sizes="100vw"
             />
           </div>
           <div className="absolute inset-0 hidden lg:block">
-            <img
+            <Image
               src={backgroundImage || "/placeholder.svg"}
               alt={title || "Background"}
-              className="w-full h-full object-cover"
+              fill
+              className="object-cover"
+              priority
+              sizes="100vw"
             />
           </div>
           <div className="absolute inset-0 bg-gradient-to-r from-blue-950 to-black/20 z-10" />

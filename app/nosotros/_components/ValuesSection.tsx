@@ -4,7 +4,7 @@ import { motion } from "framer-motion"
 import Image from "next/image"
 import { Loader2 } from "lucide-react"
 import type { CardSection, Card, CardSectionMetadata } from "@/types/card"
-import { useMainStore } from "@/stores/mainStore"
+import { useCardSections } from "@/hooks/useCardSections"
 
 interface ValuesSectionProps {
   id?: string
@@ -17,14 +17,6 @@ const gradientColors = ["from-sky-950", "from-zinc-900", "from-red-900/50", "fro
 // Componente para cada card de valor
 function ValueCard({ card, index }: { card: Card; index: number }) {
   if (!card.isActive) return null
-
-  console.log(`[ValueCard ${index}] Card data:`, {
-    id: card.id,
-    title: card.title,
-    description: card.description?.substring(0, 100) + "...",
-    imageUrl: card.imageUrl,
-    isActive: card.isActive,
-  })
 
   // Usar imagen de la card
   const cardImage = card.imageUrl
@@ -59,7 +51,7 @@ function ValueCard({ card, index }: { card: Card; index: number }) {
       <div className="absolute bottom-0 left-0 right-0 h-[65%] w-full rounded-t-2xl bg-white flex flex-col items-center justify-center p-6 opacity-0 group-hover:opacity-100 transition-all duration-300 z-20 transform translate-y-full group-hover:translate-y-0">
         <h3 className="text-2xl font-bold mb-3 text-center text-primary">{card.title}</h3>
         {card.description && (
-          <p className="text-gray-700 text-center overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300">
+          <p className="text-gray-700 text-center overflow-y-auto max-h-[200px] pr-2 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded">
             {card.description}
           </p>
         )}
@@ -72,20 +64,9 @@ function ValueCard({ card, index }: { card: Card; index: number }) {
 function CardSectionRenderer({ cardSection }: { cardSection: CardSection }) {
   if (!cardSection.isActive) return null
 
-  console.log("[CardSectionRenderer] CardSection data:", {
-    id: cardSection.id,
-    title: cardSection.title,
-    description: cardSection.description,
-    isActive: cardSection.isActive,
-    cardsCount: cardSection.cards?.length || 0,
-  })
-
   const activeCards = (cardSection.cards || []).filter((card) => card.isActive).sort((a, b) => a.position - b.position)
 
-  console.log("[CardSectionRenderer] Active cards:", activeCards.length)
-
   if (activeCards.length === 0) {
-    console.log("[CardSectionRenderer] No active cards found")
     return null
   }
 
@@ -143,29 +124,12 @@ function matchesMetadata(
   return true
 }
 
-export default function ValuesSection({ id = "cs_4ce0ea48-52d5", metadata }: ValuesSectionProps = {}) {
-  const { cardSections, loading, error } = useMainStore()
-
-  console.log("[ValuesSection] Store state:", {
-    cardSectionsCount: cardSections?.length || 0,
-    loading,
-    error,
-    targetId: id,
-  })
-
-  console.log(
-    "[ValuesSection] All cardSections:",
-    cardSections?.map((section) => ({
-      id: section.id,
-      title: section.title,
-      isActive: section.isActive,
-    })),
-  )
+export default function ValuesSection({ id = "cs_4ce0ea48-52d5", metadata }: ValuesSectionProps) {
+  const { cardSections, loading, error } = useCardSections()
 
   // Filtrar secciones
   const getFilteredSections = (): CardSection[] => {
     if (!id && !metadata) {
-      console.log("[ValuesSection] No id or metadata provided")
       return []
     }
 
@@ -173,18 +137,6 @@ export default function ValuesSection({ id = "cs_4ce0ea48-52d5", metadata }: Val
 
     if (id) {
       const sectionById = cardSections.find((section) => section.id === id)
-      console.log("[ValuesSection] Looking for section with id:", id)
-      console.log(
-        "[ValuesSection] Found section:",
-        sectionById
-          ? {
-              id: sectionById.id,
-              title: sectionById.title,
-              isActive: sectionById.isActive,
-            }
-          : "NOT FOUND",
-      )
-
       if (sectionById && sectionById.isActive) {
         filteredSections = [sectionById]
       }
@@ -194,19 +146,16 @@ export default function ValuesSection({ id = "cs_4ce0ea48-52d5", metadata }: Val
       )
     }
 
-    console.log("[ValuesSection] Filtered sections:", filteredSections.length)
     return filteredSections.sort((a, b) => a.position - b.position)
   }
 
   const activeSections = getFilteredSections()
 
   if (!id && !metadata) {
-    console.log("[ValuesSection] Returning null - no id or metadata")
     return null
   }
 
   if (loading) {
-    console.log("[ValuesSection] Showing loading state")
     return (
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4 flex justify-center items-center min-h-[400px]">
@@ -217,7 +166,6 @@ export default function ValuesSection({ id = "cs_4ce0ea48-52d5", metadata }: Val
   }
 
   if (error) {
-    console.log("[ValuesSection] Showing error state:", error)
     return (
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4 flex justify-center items-center min-h-[400px]">
@@ -228,17 +176,10 @@ export default function ValuesSection({ id = "cs_4ce0ea48-52d5", metadata }: Val
   }
 
   if (activeSections.length === 0) {
-    console.log("[ValuesSection] No active sections found")
-    return (
-      <section className="py-16 bg-gray-50">
-        <div className="container mx-auto px-4 flex justify-center items-center min-h-[400px]">
-          <div className="text-gray-500">No se encontraron secciones de tarjetas con ID: {id}</div>
-        </div>
-      </section>
-    )
+    // Retornar null silenciosamente si no hay secciones activas
+    // Esto evita mostrar mensajes de error al usuario
+    return null
   }
-
-  console.log("[ValuesSection] Rendering sections:", activeSections.length)
 
   return (
     <>

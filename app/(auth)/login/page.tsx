@@ -1,4 +1,14 @@
 import FormLogin from "@/components/form-login";
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Iniciar sesión | CLEFAST",
+  description: "Accede a tu cuenta CLEFAST para gestionar pedidos y servicios de forma segura.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+}
 
 interface LoginPageProps {
   searchParams: Promise<{

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Poppins } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { Toaster } from "sonner";
 import Navbar from "@/components/navbar";
@@ -88,6 +89,19 @@ export const metadata: Metadata = {
   },
 };
 
+// Structured Data para SEO (datos estáticos, no cambian)
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "Clefast",
+  url: "https://clefast.com.pe",
+  logo: "https://clefast.com.pe/logo.png",
+  sameAs: [
+    "https://www.facebook.com/clefast",
+    "https://www.instagram.com/clefast",
+  ],
+};
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -97,9 +111,20 @@ export default async function RootLayout({
 
   return (
     <html lang="es">
-      <head>
+      <body className={poppins.className}>
+        {/* Datos estructurados para SEO (JSON-LD) */}
+        <Script
+          id="structured-data"
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(structuredData),
+          }}
+        />
+        
         {/* Google Tag Manager */}
-        <script
+        <Script
+          id="google-tag-manager"
+          strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
 new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -108,27 +133,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 })(window,document,'script','dataLayer','GTM-W9VCKT6J');`,
           }}
         />
-        {/* End Google Tag Manager */}
-        
-        {/* Structured Data */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "Organization",
-              name: "Clefast",
-              url: "https://clefast.com.pe",
-              logo: "https://clefast.com.pe/logo.png",
-              sameAs: [
-                "https://www.facebook.com/clefast",
-                "https://www.instagram.com/clefast",
-              ],
-            }),
-          }}
-        />
-      </head>
-      <body className={poppins.className}>
         {/* Google Tag Manager (noscript) */}
         <noscript>
           <iframe 

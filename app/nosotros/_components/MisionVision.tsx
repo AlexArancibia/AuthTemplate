@@ -3,7 +3,7 @@
 import { motion } from "framer-motion"
 import { Goal, Eye } from "lucide-react"
 import type { CardSection, CardSectionMetadata } from "@/types/card"
-import { useMainStore } from "@/stores/mainStore"
+import { useCardSections } from "@/hooks/useCardSections"
 
 interface MissionVisionSectionProps {
   id?: string
@@ -39,29 +39,27 @@ function matchesMetadata(
 function CardSectionRenderer({ cardSection }: { cardSection: CardSection }) {
   if (!cardSection.isActive) return null
 
-  console.log("[MissionVisionSection] CardSection data:", {
-    id: cardSection.id,
-    title: cardSection.title,
-    description: cardSection.description,
-    isActive: cardSection.isActive,
-    cardsCount: cardSection.cards?.length || 0,
-  })
-
   const activeCards = (cardSection.cards || []).filter((card) => card.isActive).sort((a, b) => a.position - b.position)
 
-  console.log("[MissionVisionSection] Active cards:", activeCards.length)
-
   if (activeCards.length === 0) {
-    console.log("[MissionVisionSection] No active cards found")
     return null
   }
 
-  // Buscar las cards de misión y visión
-  const missionCard = activeCards.find((card) => card.title.toLowerCase().includes("misión"))
-  const visionCard = activeCards.find((card) => card.title.toLowerCase().includes("visión"))
-
-  console.log("[MissionVisionSection] Mission card:", missionCard?.title)
-  console.log("[MissionVisionSection] Vision card:", visionCard?.title)
+  // Buscar las cards de misión y visión - mejorado para ser más robusto
+  const missionCard = activeCards.find(
+    (card) =>
+      card.title &&
+      (card.title.toLowerCase().includes("misión") ||
+        card.title.toLowerCase().includes("mision") ||
+        card.metadata?.tags?.some((tag) => tag.toLowerCase() === "mision"))
+  )
+  const visionCard = activeCards.find(
+    (card) =>
+      card.title &&
+      (card.title.toLowerCase().includes("visión") ||
+        card.title.toLowerCase().includes("vision") ||
+        card.metadata?.tags?.some((tag) => tag.toLowerCase() === "vision"))
+  )
 
   return (
     <section className="py-16 bg-white pb-0 md:pb-8">
@@ -121,29 +119,12 @@ function CardSectionRenderer({ cardSection }: { cardSection: CardSection }) {
   )
 }
 
-export default function MissionVisionSection({ id = "cs_30a28f27-58ee", metadata }: MissionVisionSectionProps = {}) {
-  const { cardSections, loading, error } = useMainStore()
-
-  console.log("[MissionVisionSection] Store state:", {
-    cardSectionsCount: cardSections?.length || 0,
-    loading,
-    error,
-    targetId: id,
-  })
-
-  console.log(
-    "[MissionVisionSection] All cardSections:",
-    cardSections?.map((section) => ({
-      id: section.id,
-      title: section.title,
-      isActive: section.isActive,
-    })),
-  )
+export default function MissionVisionSection({ id = "cs_30a28f27-58ee", metadata }: MissionVisionSectionProps) {
+  const { cardSections, loading, error } = useCardSections()
 
   // Filtrar secciones
   const getFilteredSections = (): CardSection[] => {
     if (!id && !metadata) {
-      console.log("[MissionVisionSection] No id or metadata provided")
       return []
     }
 
@@ -151,18 +132,6 @@ export default function MissionVisionSection({ id = "cs_30a28f27-58ee", metadata
 
     if (id) {
       const sectionById = cardSections.find((section) => section.id === id)
-      console.log("[MissionVisionSection] Looking for section with id:", id)
-      console.log(
-        "[MissionVisionSection] Found section:",
-        sectionById
-          ? {
-              id: sectionById.id,
-              title: sectionById.title,
-              isActive: sectionById.isActive,
-            }
-          : "NOT FOUND",
-      )
-
       if (sectionById && sectionById.isActive) {
         filteredSections = [sectionById]
       }
@@ -172,7 +141,6 @@ export default function MissionVisionSection({ id = "cs_30a28f27-58ee", metadata
       )
     }
 
-    console.log("[MissionVisionSection] Filtered sections:", filteredSections.length)
     return filteredSections.sort((a, b) => a.position - b.position)
   }
 
@@ -180,26 +148,20 @@ export default function MissionVisionSection({ id = "cs_30a28f27-58ee", metadata
 
   // Retornar null si no hay datos
   if (!id && !metadata) {
-    console.log("[MissionVisionSection] Returning null - no id or metadata")
     return null
   }
 
   if (loading) {
-    console.log("[MissionVisionSection] Returning null - loading")
     return null
   }
 
   if (error) {
-    console.log("[MissionVisionSection] Returning null - error:", error)
     return null
   }
 
   if (activeSections.length === 0) {
-    console.log("[MissionVisionSection] Returning null - no active sections")
     return null
   }
-
-  console.log("[MissionVisionSection] Rendering sections:", activeSections.length)
 
   return (
     <>

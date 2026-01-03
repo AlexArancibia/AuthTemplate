@@ -1,4 +1,14 @@
 import FormResetPassword from "@/components/form-reset-password";
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Restablecer contraseña | CLEFAST",
+  description: "Restablece tu contraseña de CLEFAST de forma segura.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+}
 
 interface ResetPasswordPageProps {
   searchParams: Promise<{
