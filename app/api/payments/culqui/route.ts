@@ -131,48 +131,24 @@ export async function POST(req: NextRequest) {
       console.warn("[Culqi Payment] Monto inválido", { requestId, orderId, reqAmount });
       return createErrorResponse("El monto debe ser un número positivo", 400, requestId);
     }
-    // Culqi: amount en céntimos, entero, rango 100–999900 (1–9999 PEN)
-    const amountCents = Math.round(numericAmount);
-    const clampedAmount = Math.min(999900, Math.max(100, amountCents));
-    if (clampedAmount !== amountCents) {
-      console.warn("[Culqi Payment] Monto fuera de rango", { requestId, orderId, amountCents, clampedAmount });
-      return createErrorResponse("El monto está fuera del rango permitido (1–9999 soles)", 400, requestId);
-    }
 
-    // description: Culqi exige 5–80 caracteres
-    const rawDescription = description || `Orden ${orderId}`;
-    const chargeDescription =
-      rawDescription.length > 80 ? rawDescription.slice(0, 77) + "..." : rawDescription;
-    const finalDescription = chargeDescription.length >= 5 ? chargeDescription : `Orden ${orderId}`.slice(0, 80);
-
-    // antifraud_details: solo enviar campos con valor (evitar parameter_error por strings vacíos)
-    const antifraudDetails: Record<string, string> = {};
-    if (firstName?.trim()) antifraudDetails.first_name = firstName.trim();
-    if (lastName?.trim()) antifraudDetails.last_name = lastName.trim();
-    if (sanitizedPhone && sanitizedPhone.length >= 5 && sanitizedPhone.length <= 15) antifraudDetails.phone_number = sanitizedPhone;
-    if (address?.trim() && address.length >= 5) antifraudDetails.address = address.trim().slice(0, 100);
-    if (city?.trim() && city.length >= 2) antifraudDetails.address_city = city.trim().slice(0, 30);
-    const code = (countryCode || "PE").toUpperCase().slice(0, 2);
-    antifraudDetails.country_code = code === "PE" || code === "US" ? code : "PE";
-
-    const payloadForCulqi = {
-      amount: clampedAmount,
-      currency_code: currency,
-      email,
-      source_id: token,
-      description: finalDescription,
-      metadata: { firstName: firstName || "", lastName: lastName || "", phone: sanitizedPhone, orderId, requestId },
-      ...(Object.keys(antifraudDetails).length > 0 && { antifraud_details: antifraudDetails }),
+    const chargeDescription = description || `Orden ${orderId}`;
+    const antifraudPayload = {
+      first_name: firstName,
+      last_name: lastName,
+      phone_number: sanitizedPhone,
+      address,
+      address_city: city,
+      country_code: countryCode || "PE",
     };
 
     console.log("[Culqi Payment] Payload a Culqi (sin token completo)", {
       requestId,
       orderId,
-      amount: clampedAmount,
+      amount: numericAmount,
       currency_code: currency,
-      descriptionLength: finalDescription.length,
-      antifraudKeys: Object.keys(antifraudDetails),
-      metadataOrderId: payloadForCulqi.metadata.orderId,
+      descriptionLength: chargeDescription.length,
+      antifraudKeys: Object.keys(antifraudPayload),
       elapsedMs: Date.now() - requestStartedAt,
     });
 
@@ -188,7 +164,15 @@ export async function POST(req: NextRequest) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${secretKey}`,
         },
-        body: JSON.stringify(payloadForCulqi),
+        body: JSON.stringify({
+          amount: numericAmount,
+          currency_code: currency,
+          email,
+          source_id: token,
+          description: chargeDescription,
+          metadata: { firstName, lastName, phone: sanitizedPhone, orderId, requestId },
+          antifraud_details: antifraudPayload,
+        }),
       });
       responseText = await response.text();
       console.log("[Culqi Payment] Respuesta Culqi recibida", {
@@ -234,7 +218,6 @@ export async function POST(req: NextRequest) {
       let statusCode = 400;
       if (response.status >= 500) statusCode = 502;
       else if (response.status === 401 || response.status === 403) statusCode = 500;
-      else if (response.status === 422) statusCode = 422;
 
       return NextResponse.json(
         {

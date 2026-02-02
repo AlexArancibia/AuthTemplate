@@ -48,11 +48,9 @@ export async function POST(req: NextRequest) {
       bodyPreview: rawBody.substring(0, 200), // Primeros 200 caracteres del body
     });
 
-    // Culqi no documenta envío de firma en webhooks; muchos entornos no reciben x-culqi-signature.
-    // Permitir sin firma: en desarrollo, o si ALLOW_CULQI_WEBHOOK_WITHOUT_SIGNATURE=true (producción).
+    // Permitir continuar sin firma solo en desarrollo
     const isDevelopment = process.env.NODE_ENV === "development";
-    const allowWithoutSignature = process.env.ALLOW_CULQI_WEBHOOK_WITHOUT_SIGNATURE === "true";
-    const skipSignatureCheck = !signature && (isDevelopment || allowWithoutSignature);
+    const skipSignatureCheck = isDevelopment && !signature;
 
     if (!verifySignature(rawBody, signature, secretKey)) {
       if (!skipSignatureCheck) {
@@ -69,7 +67,7 @@ export async function POST(req: NextRequest) {
           { status: 400 }
         );
       }
-      console.warn("[Culqi webhook] Request sin firma aceptada (NODE_ENV=development o ALLOW_CULQI_WEBHOOK_WITHOUT_SIGNATURE=true)");
+      console.warn("[Culqi webhook] Saltando verificación de firma en desarrollo");
     } else {
       console.log("[Culqi webhook] Firma verificada correctamente");
     }
