@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import "./globals.css";
 import { Toaster } from "sonner";
 import Navbar from "@/components/navbar";
 import { auth } from "@/auth";
 import { Footer } from "@/components/footer";
+import { AuthSuccessToast } from "@/components/auth-success-toast";
 import { PreFooterContact } from "@/components/PreFooter";
 import { WhatsAppButton } from "@/components/WhatsappButton";
 
@@ -149,6 +151,9 @@ export default async function RootLayout({
       </head>
       <body className="font-adi-regular overflow-x-hidden">
         <Toaster position="top-center" richColors />
+        <Suspense fallback={null}>
+          <AuthSuccessToast />
+        </Suspense>
         <Navbar />
         <main className=" ">{children}</main>
         <PreFooterContact />

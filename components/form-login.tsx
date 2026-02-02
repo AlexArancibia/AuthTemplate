@@ -16,27 +16,26 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import ButtonSocial from "./button-social"
-import { Eye, EyeOff, Loader2, Github, Mail } from "lucide-react"
+import { Eye, EyeOff, Loader2, Mail } from "lucide-react"
 import { useUserStore } from "@/stores/userStore"
 
 interface FormLoginProps {
   isVerified?: boolean;
-  OAuthAccountNotLinked?: boolean;
   bottomMessage?: string | null;
   messageType?: "success" | "error";
 }
 
 const FormLogin = ({
   isVerified,
-  OAuthAccountNotLinked,
   bottomMessage,
   messageType = "success",
 }: FormLoginProps) => {
   const [isPending, startTransition] = useTransition();
   const [showPassword, setShowPassword] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirectTo = searchParams.get('redirect') || '/dashboard'
+  const redirectTo = searchParams.get('redirect') || '/'
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -49,37 +48,44 @@ const FormLogin = ({
   const fetchUserByEmail = useUserStore((state) => state.fetchUserByEmail)
 
   async function onSubmit(values: z.infer<typeof loginSchema>) {
+    setFormError(null);
     startTransition(async () => {
-      const response = await loginAction(values)
-      if (response.error) {
+      toast.loading("Verificando credenciales...", { id: "login" })
+      try {
+        const response = await loginAction(values)
+        if (response.error) {
+          setFormError(response.error);
+          toast.error("Error de inicio de sesión", {
+            id: "login",
+            description: response.error,
+          })
+        } else {
+          await fetchUserByEmail(values.email)
+          toast.success("¡Inicio de sesión exitoso!", {
+            id: "login",
+            description: "Redirigiendo al inicio...",
+          })
+          router.push("/?auth=success")
+        }
+      } catch {
+        const errMsg = "Ocurrió un error inesperado. Intenta de nuevo.";
+        setFormError(errMsg);
         toast.error("Error de inicio de sesión", {
-          description: response.error,
+          id: "login",
+          description: errMsg,
         })
-      } else {
-        // Actualizar el usuario en el store global
-        await fetchUserByEmail(values.email)
-        toast.success("Inicio de sesión exitoso", {
-          description: `Redirigiendo a ${redirectTo}...`,
-        })
-        router.push(redirectTo)
       }
     })
   }
 
-  // Show notifications for special states
+  // Toast para email verificado
   useEffect(() => {
     if (isVerified) {
       toast.success("Email verificado", {
         description: "Tu correo electrónico ha sido verificado correctamente. Ya puedes iniciar sesión.",
       })
     }
-
-    if (OAuthAccountNotLinked) {
-      toast.error("Cuenta no vinculada", {
-        description: "Para confirmar tu identidad, inicia sesión con la misma cuenta que usaste originalmente.",
-      })
-    }
-  }, [isVerified, OAuthAccountNotLinked])
+  }, [isVerified])
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-slate-50 to-slate-100">
@@ -136,7 +142,7 @@ const FormLogin = ({
                       <div className="flex items-center justify-between">
                         <FormLabel className="text-sm font-medium text-slate-700">Contraseña</FormLabel>
                         <Link
-                          href={`/forgot-password${redirectTo !== '/dashboard' ? `?redirect=${encodeURIComponent(redirectTo)}` : ''}`}
+                          href={`/forgot-password${redirectTo !== '/' ? `?redirect=${encodeURIComponent(redirectTo)}` : ''}`}
                           className="text-xs text-slate-500 hover:text-slate-700 transition-colors"
                         >
                           ¿Olvidaste tu contraseña?
@@ -169,14 +175,14 @@ const FormLogin = ({
                   )}
                 />
 
-                {/* Mostrar mensaje de error/éxito de reseteo de contraseña */}
-                {bottomMessage && (
+                {/* Mostrar mensaje de error/éxito (URL params o error de credenciales) */}
+                {(bottomMessage || formError) && (
                   <div className={`p-3 text-sm rounded-md ${
-                    messageType === "error"
+                    formError || messageType === "error"
                       ? "text-red-700 bg-red-100 border border-red-300"
                       : "text-green-700 bg-green-100 border border-green-300"
                   }`}>
-                    {bottomMessage}
+                    {formError || bottomMessage}
                   </div>
                 )}
 
@@ -206,16 +212,10 @@ const FormLogin = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <ButtonSocial
-                provider="github"
-              >
-                <Github className="mr-2 h-4 w-4" />
-                <span>GitHub</span>
-              </ButtonSocial>
-
+            <div>
               <ButtonSocial
                 provider="google"
+                callbackUrl={redirectTo}
               >
                 <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path
@@ -244,7 +244,7 @@ const FormLogin = ({
             <p className="text-sm text-slate-500">
               ¿No tienes una cuenta?{" "}
               <Link
-                href={`/register${redirectTo !== '/dashboard' ? `?redirect=${encodeURIComponent(redirectTo)}` : ''}`}
+                href={`/register${redirectTo !== '/' ? `?redirect=${encodeURIComponent(redirectTo)}` : ''}`}
                 className="font-medium text-slate-600 hover:text-slate-800 hover:underline transition-colors"
               >
                 Regístrate

@@ -18,9 +18,13 @@ export const loginAction = async (values: z.infer<typeof loginSchema>) => {
     return { success: true }
   } catch (error) {
     if (error instanceof AuthError) {
-      return { error: error.cause?.err?.message }
+      const msg =
+        error.message ||
+        (error.cause as { err?: { message?: string }; message?: string })?.err?.message ||
+        (error.cause as { message?: string })?.message;
+      return { error: msg || "Correo o contraseña incorrectos. Verifica tus datos." };
     }
-    return { error: "error 500" }
+    return { error: "Ha ocurrido un error. Intenta de nuevo." };
   }
 }
 
@@ -29,7 +33,7 @@ export const registerAction = async (values: z.infer<typeof registerSchema>) => 
     const { data, success } = registerSchema.safeParse(values)
     if (!success) {
       return {
-        error: "Invalid data",
+        error: "Datos inválidos. Verifica el formulario e intenta de nuevo.",
       }
     }
 
@@ -48,11 +52,11 @@ export const registerAction = async (values: z.infer<typeof registerSchema>) => 
       const oauthAccounts = user.accounts.filter((account: any) => account.type === "oauth")
       if (oauthAccounts.length > 0) {
         return {
-          error: "To confirm your identity, sign in with the same account you used originally.",
+          error: "Esta cuenta ya existe con Google. Inicia sesión con Google para continuar.",
         }
       }
       return {
-        error: "User already exists",
+        error: "Ya existe una cuenta con este correo. Inicia sesión o recupera tu contraseña.",
       }
     }
 
@@ -113,11 +117,15 @@ export const registerAction = async (values: z.infer<typeof registerSchema>) => 
     return { success: true, message: "Cuenta creada correctamente. Revisa tu correo para verificarla." }
   } catch (error) {
     if (error instanceof AuthError) {
-      return { error: error.cause?.err?.message }
+      const msg =
+        error.message ||
+        (error.cause as { err?: { message?: string }; message?: string })?.err?.message ||
+        (error.cause as { message?: string })?.message;
+      return { error: msg || "Error de autenticación." };
     }
     if (error instanceof Error) {
-      return { error: error.message }
+      return { error: error.message };
     }
-    return { error: "Error desconocido" }
+    return { error: "Ha ocurrido un error. Intenta de nuevo." };
   }
 }

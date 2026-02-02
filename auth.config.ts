@@ -5,14 +5,22 @@ import { nanoid } from "nanoid";
 import type { NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 export const runtime = 'nodejs'
-import GitHub from "next-auth/providers/github"
 import Google from "next-auth/providers/google"
+
+// En desarrollo local: si NEXTAUTH_URL apunta a producción, usar localhost
+if (process.env.NODE_ENV === "development" && process.env.NEXTAUTH_URL && !process.env.NEXTAUTH_URL.includes("localhost")) {
+  const port = process.env.PORT || 3000;
+  process.env.NEXTAUTH_URL = process.env.NEXTAUTH_URL_DEV || `http://localhost:${port}`;
+  process.env.AUTH_URL = process.env.NEXTAUTH_URL;
+}
 
 // Notice this is only an object, not a full Auth.js instance
 export default {
   providers: [
-    Google,
-    GitHub,
+    Google({
+      clientId: process.env.AUTH_GOOGLE_ID!,
+      clientSecret: process.env.AUTH_GOOGLE_SECRET!,
+    }),
     Credentials({
       authorize: async (credentials) => {
         const { data, success } = loginSchema.safeParse(credentials)
