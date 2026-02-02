@@ -2,12 +2,9 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## 📚 Documentación Importante
 
-### Migración API (v2.0.0)
-El backend ahora envuelve todas las respuestas en un formato estandarizado. **Lee esta documentación antes de trabajar con el store:**
-
-- **[Guía de Migración Completa](./API_RESPONSE_MIGRATION_GUIDE.md)** - Detalles completos de los cambios
-- **[Referencia Rápida de API Helpers](./API_HELPERS_QUICK_REFERENCE.md)** - Para desarrollo diario
-- **[Changelog](./CHANGELOG_FRONTEND.md)** - Historial de cambios
+### Referencias de API
+- **[Referencia Rápida de API Helpers](./API_HELPERS_QUICK_REFERENCE.md)** - Guía rápida para desarrollo diario
+- **[Referencia Completa de Endpoints](./API_ENDPOINTS_REFERENCE.md)** - Documentación completa de todos los endpoints
 
 ### 🎯 Quick Start: API Helpers
 

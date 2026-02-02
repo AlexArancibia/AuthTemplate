@@ -662,7 +662,7 @@ export default function Navbar() {
             ) : (
               <Button
                 variant="ghost"
-                className="hidden sm:flex bg-primary text-primary-foreground hover:bg-primary/90 text-xs px-2 h-8"
+                className="hidden sm:flex bg-primary text-white hover:bg-primary/70 hover:text-white hover:shadow-md text-xs px-2 h-8 transition-all duration-200"
                 asChild
               >
                 <Link href="/login">

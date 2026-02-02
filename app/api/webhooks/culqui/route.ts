@@ -48,16 +48,18 @@ export async function POST(req: NextRequest) {
       bodyPreview: rawBody.substring(0, 200), // Primeros 200 caracteres del body
     });
 
-    // Permitir continuar sin firma solo en desarrollo
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    const skipSignatureCheck = isDevelopment && !signature;
+    // Culqi no documenta envío de firma en webhooks; muchos entornos no reciben x-culqi-signature.
+    // Permitir sin firma: en desarrollo, o si ALLOW_CULQI_WEBHOOK_WITHOUT_SIGNATURE=true (producción).
+    const isDevelopment = process.env.NODE_ENV === "development";
+    const allowWithoutSignature = process.env.ALLOW_CULQI_WEBHOOK_WITHOUT_SIGNATURE === "true";
+    const skipSignatureCheck = !signature && (isDevelopment || allowWithoutSignature);
 
     if (!verifySignature(rawBody, signature, secretKey)) {
       if (!skipSignatureCheck) {
         console.error("[Culqi webhook] Firma inválida", {
           hasSignature: !!signature,
           signatureLength: signature?.length,
-          signatureValue: signature, // Agregar el valor para debug
+          signatureValue: signature,
           bodyLength: rawBody.length,
           bodyPreview: rawBody.substring(0, 200),
           secretKeyLength: secretKey?.length,
@@ -66,9 +68,8 @@ export async function POST(req: NextRequest) {
           { error: "Invalid Culqi signature" },
           { status: 400 }
         );
-      } else {
-        console.warn("[Culqi webhook] Saltando verificación de firma en desarrollo");
       }
+      console.warn("[Culqi webhook] Request sin firma aceptada (NODE_ENV=development o ALLOW_CULQI_WEBHOOK_WITHOUT_SIGNATURE=true)");
     } else {
       console.log("[Culqi webhook] Firma verificada correctamente");
     }
@@ -85,8 +86,21 @@ export async function POST(req: NextRequest) {
     switch (eventType) {
       case "charge.created":
       case "charge.captured":
-        // Estos eventos ya se manejan en el flujo de pago normal
         console.log("[Culqi webhook] Evento de charge ignorado (ya manejado en flujo normal)");
+        break;
+
+      case "charge.creation.failed":
+        try {
+          const failData = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+          const body = failData?.body || failData;
+          console.warn("[Culqi webhook] charge.creation.failed:", {
+            param: body?.param,
+            merchant_message: body?.merchant_message,
+            type: body?.type,
+          });
+        } catch {
+          console.warn("[Culqi webhook] charge.creation.failed (event.data sin parsear):", event.data);
+        }
         break;
 
       case "charge.refunded":
