@@ -225,7 +225,7 @@ import type { Category } from "@/types/category"
 - **Helpers**: `lib/apiHelpers.ts`
 - **Store**: `stores/mainStore.ts`
 - **Tipos**: `types/*.ts`
-- **Guía Completa**: `API_RESPONSE_MIGRATION_GUIDE.md`
+- **Referencia de endpoints del backend**: [API_ENDPOINTS_REFERENCE.md](./API_ENDPOINTS_REFERENCE.md)
 
 ---
 

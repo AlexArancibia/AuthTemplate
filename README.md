@@ -3,8 +3,9 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 ## 📚 Documentación Importante
 
 ### Referencias de API
-- **[Referencia Rápida de API Helpers](./API_HELPERS_QUICK_REFERENCE.md)** - Guía rápida para desarrollo diario
-- **[Referencia Completa de Endpoints](./API_ENDPOINTS_REFERENCE.md)** - Documentación completa de todos los endpoints
+- **[Referencia Rápida de API Helpers](./API_HELPERS_QUICK_REFERENCE.md)** – Uso de `extractApiData` / `extractPaginatedData` y ejemplos
+- **[Referencia Completa de Endpoints](./API_ENDPOINTS_REFERENCE.md)** – Endpoints del backend Sportt
+- **[Google Login (OAuth)](./GOOGLE_LOGIN_REDIRECT_URI.md)** – URIs y variables para ANJ Sports
 
 ### 🎯 Quick Start: API Helpers
 

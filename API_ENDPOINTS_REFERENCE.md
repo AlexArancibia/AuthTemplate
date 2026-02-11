@@ -1,6 +1,6 @@
 # API Endpoints Reference - Sportt Backend
 
-**Base URL:** `https://your-api-domain.com/api`
+**Base URL:** Configurar según entorno (variable de entorno o `.env` en el frontend). Ejemplo: `https://your-api-domain.com/api`
 
 ## Autenticación
 
