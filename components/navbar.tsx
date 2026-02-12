@@ -3,7 +3,7 @@
 import type React from "react"
 
 import Link from "next/link"
-import { useState, useEffect, useRef, useMemo } from "react"
+import { useState, useEffect, useRef } from "react"
 import { usePathname } from "next/navigation"
 import { Menu, ShoppingCart, User, X, Search, Store, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -74,16 +74,6 @@ export default function Navbar() {
   const [logoStatus, setLogoStatus] = useState<"idle" | "loading" | "loaded" | "error">("idle")
   const lastLogoRef = useRef<string | null>(null)
 
-  const sortedCategories = useMemo(() => {
-    if (!categories) return []
-    return [...categories].sort((a, b) => {
-      const priorityA = a.priority ?? Number.MAX_SAFE_INTEGER
-      const priorityB = b.priority ?? Number.MAX_SAFE_INTEGER
-      return priorityA - priorityB
-    })
-  }, [categories])
-
-  
   const {
     selectedCurrencyId,
     setSelectedCurrencyId,
@@ -207,7 +197,7 @@ export default function Navbar() {
         await Promise.all([
           fetchShopSettings(),
           fetchShippingMethods({ limit: 100 }),
-          fetchCategories({ limit: 100 }),
+          fetchCategories({ mode: "tree", sortBy: "priority", sortOrder: "desc", limit: 100 }),
           fetchContents({ limit: 100 }),
           fetchCollections({ limit: 100 }),
           fetchCardSections(),
@@ -397,7 +387,7 @@ export default function Navbar() {
                 return (
                   <div key="tienda" className="px-2 xl:px-3 py-1 text-sm">
                     <ShopMenu
-                      categories={sortedCategories}
+                      categories={categories ?? []}
                       collections={collections || []}
                       isActive={pathname.startsWith("/productos")}
                     />
@@ -674,7 +664,7 @@ export default function Navbar() {
 
             {/* Mobile Menu */}
             <MobileMenu
-              categories={sortedCategories}
+              categories={categories ?? []}
               collections={collections || []}
               currentUser={currentUser}
               pathname={pathname}

@@ -17,6 +17,7 @@ import {
 import { Slider } from "@/components/ui/slider"
 import { X, Filter, ChevronDown, ChevronUp, ChevronRight } from "lucide-react"
 import { useCurrencyStore } from "@/stores/currency"
+import { getCategoriesTree } from "@/lib/categoryUtils"
 
 interface ProductFilterSidebarProps {
   isMobile?: boolean
@@ -57,47 +58,12 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     max: getDefaultMaxPrice(currencyCode)
   }), [currencyCode])
 
-  // Load categories, collections and vendors on mount
+  // Load categories (tree, ordered by priority), collections and vendors on mount
   useEffect(() => {
-    if (categories.length === 0) fetchCategories({ limit: 100 })
+    if (categories.length === 0) fetchCategories({ mode: "tree", sortBy: "priority", sortOrder: "desc", limit: 100 })
     if (collections.length === 0) fetchCollections({ limit: 100 })
     if (vendors.length === 0) fetchVendors()
   }, [categories.length, collections.length, vendors.length, fetchCategories, fetchCollections, fetchVendors])
-
-  // Organizar categorías en jerarquía padre-hijo
-  const organizeCategories = (categories: any[]) => {
-    const categoryMap = new Map<string, any & { children: any[] }>()
-    const rootCategories: (any & { children: any[] })[] = []
-
-    // Crear mapa de categorías
-    categories.forEach(category => {
-      categoryMap.set(category.id, { ...category, children: [] })
-    })
-
-    // Organizar jerarquía
-    categories.forEach(category => {
-      const categoryWithChildren = categoryMap.get(category.id)!
-      if (category.parentId) {
-        const parent = categoryMap.get(category.parentId)
-        if (parent) {
-          parent.children.push(categoryWithChildren)
-        }
-      } else {
-        rootCategories.push(categoryWithChildren)
-      }
-    })
-
-    // Ordenar por prioridad
-    const sortByPriority = (cats: (any & { children: any[] })[]) => {
-      return cats.sort((a, b) => {
-        const priorityA = a.priority ?? Number.MAX_SAFE_INTEGER
-        const priorityB = b.priority ?? Number.MAX_SAFE_INTEGER
-        return priorityA - priorityB
-      })
-    }
-
-    return sortByPriority(rootCategories)
-  }
 
   // State for filters - initialized directly from URL
   // Convert old category IDs to slugs if needed
@@ -388,7 +354,7 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
         onToggle={() => setShowCategories(!showCategories)}
       >
         {categories.length > 0 ? (
-          organizeCategories(categories).map((category) => (
+          getCategoriesTree(categories).map((category) => (
             <CategoryFilterItem 
               key={category.id} 
               category={category}

@@ -28,6 +28,7 @@ export type ProductSortBy = 'createdAt' | 'updatedAt' | 'title' | 'price' | 'vie
 export interface SearchCategoryParams extends PaginationParams {
   query?: string
   parentId?: string | null
+  mode?: 'flat' | 'tree'
 }
 
 // Parámetros específicos para búsqueda de productos

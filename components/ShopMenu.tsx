@@ -9,6 +9,7 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card"
 import { cn } from "@/lib/utils"
+import { getCategoriesTree } from "@/lib/categoryUtils"
 import type { Category } from "@/types/category"
 import type { Collection } from "@/types/collection"
 
@@ -29,42 +30,7 @@ export default function ShopMenu({ categories, collections, isActive }: ShopMenu
     item: Category | Collection
   } | null>(null)
 
-  // Organizar categorías en jerarquía padre-hijo
-  const organizeCategories = (categories: Category[]) => {
-    const categoryMap = new Map<string, Category & { children: Category[] }>()
-    const rootCategories: (Category & { children: Category[] })[] = []
-
-    // Crear mapa de categorías
-    categories.forEach(category => {
-      categoryMap.set(category.id, { ...category, children: [] })
-    })
-
-    // Organizar jerarquía
-    categories.forEach(category => {
-      const categoryWithChildren = categoryMap.get(category.id)!
-      if (category.parentId) {
-        const parent = categoryMap.get(category.parentId)
-        if (parent) {
-          parent.children.push(categoryWithChildren)
-        }
-      } else {
-        rootCategories.push(categoryWithChildren)
-      }
-    })
-
-    // Ordenar por prioridad
-    const sortByPriority = (cats: (Category & { children: Category[] })[]) => {
-      return cats.sort((a, b) => {
-        const priorityA = a.priority ?? Number.MAX_SAFE_INTEGER
-        const priorityB = b.priority ?? Number.MAX_SAFE_INTEGER
-        return priorityA - priorityB
-      })
-    }
-
-    return sortByPriority(rootCategories)
-  }
-
-  const organizedCategories = organizeCategories(categories)
+  const organizedCategories = getCategoriesTree(categories)
   
   // Dividir categorías en columnas si son muchas
   const categoriesPerColumn = Math.ceil(organizedCategories.length / 2)

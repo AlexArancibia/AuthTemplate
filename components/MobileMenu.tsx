@@ -12,6 +12,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { getCategoriesTree } from "@/lib/categoryUtils"
 import type { Category } from "@/types/category"
 import type { Collection } from "@/types/collection"
 
@@ -36,35 +37,7 @@ export default function MobileMenu({
 }: MobileMenuProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['categories']))
 
-  // Organizar categorías en jerarquía padre-hijo
-  const organizeCategories = (categories: Category[]) => {
-    const categoryMap = new Map<string, Category & { children: Category[] }>()
-    const rootCategories: (Category & { children: Category[] })[] = []
-
-    categories.forEach(category => {
-      categoryMap.set(category.id, { ...category, children: [] })
-    })
-
-    categories.forEach(category => {
-      const categoryWithChildren = categoryMap.get(category.id)!
-      if (category.parentId) {
-        const parent = categoryMap.get(category.parentId)
-        if (parent) {
-          parent.children.push(categoryWithChildren)
-        }
-      } else {
-        rootCategories.push(categoryWithChildren)
-      }
-    })
-
-    return rootCategories.sort((a, b) => {
-      const priorityA = a.priority ?? Number.MAX_SAFE_INTEGER
-      const priorityB = b.priority ?? Number.MAX_SAFE_INTEGER
-      return priorityA - priorityB
-    })
-  }
-
-  const organizedCategories = organizeCategories(categories)
+  const organizedCategories = getCategoriesTree(categories)
 
   const toggleSection = (sectionId: string) => {
     setExpandedSections(prev => {
