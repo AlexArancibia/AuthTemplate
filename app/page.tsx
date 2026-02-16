@@ -23,6 +23,8 @@ import { Testimonials } from "@/components/Testimonials"
 import { DeportistasCarousel } from "@/components/DeportistasCarousel"
 import { DeportistasCarouselMobile } from "@/components/DeportistasCarouselMobile"
 import { useIsMobile } from "@/hooks/useIsMobile"
+import { usePageBuilderSection } from "@/hooks/usePageBuilderSection"
+import { PageBuilderRenderer } from "@/components/PageBuilderRenderer"
 
 export default function HomePage() {
   const pathname = usePathname()
@@ -69,9 +71,11 @@ export default function HomePage() {
     return () => window.removeEventListener("hashchange", onHashChange)
   }, [pathname])
   
+  const { data: pageBuilderData } = usePageBuilderSection("hero-section")
+
   return (
     <>
-    
+    {pageBuilderData && <PageBuilderRenderer data={pageBuilderData} />}
     <HeroSection />
 
     <Suspense fallback={<div className="h-96 bg-muted animate-pulse" />}>
