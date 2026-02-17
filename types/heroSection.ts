@@ -56,6 +56,8 @@ export interface HeroSectionMetadata {
   startDate?: string;
   endDate?: string;
   theme?: string;
+  logoUrl?: string;
+  badgeText?: string;
   deviceVisibility?: {
     mobile?: boolean;
     tablet?: boolean;

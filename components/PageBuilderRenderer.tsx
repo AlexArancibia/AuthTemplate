@@ -4,10 +4,11 @@ import React from "react"
 import type { PuckData, PuckComponentData } from "@/hooks/usePageBuilderSection"
 
 function resolveImageSrc(src: string | undefined): string {
-  if (!src) return ""
-  if (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("/")) return src
-  const base = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || ""
-  return `${base.replace(/\/$/, "")}/uploads/${src.replace(/^\//, "")}`
+  if (!src || typeof src !== "string" || !src.trim()) return ""
+  const s = src.trim()
+  if (s.startsWith("http://") || s.startsWith("https://") || s.startsWith("/")) return s
+  const base = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT || process.env.NEXT_PUBLIC_IMAGE_DOMAIN || ""
+  return `${base.replace(/\/$/, "")}/${s.replace(/^\//, "")}`
 }
 
 function BlockRenderer({ item }: { item: PuckComponentData }) {
@@ -70,20 +71,42 @@ function BlockRenderer({ item }: { item: PuckComponentData }) {
       return <hr style={{ borderWidth: `${Number(props.thickness) || 1}px`, margin: "8px 0" }} />
     case "Container": {
       const content = (props.content as PuckComponentData[]) || []
+      const containerStyle: React.CSSProperties = {
+        maxWidth: props.maxWidth ? `${props.maxWidth}px` : undefined,
+        paddingLeft: props.paddingX ? `${props.paddingX}px` : undefined,
+        paddingRight: props.paddingX ? `${props.paddingX}px` : undefined,
+        paddingTop: props.paddingY ? `${props.paddingY}px` : undefined,
+        paddingBottom: props.paddingY ? `${props.paddingY}px` : undefined,
+        margin: "0 auto",
+        position: "relative",
+      }
+      const bgImage = props.backgroundImage as string
+      const hasBgImage = bgImage && typeof bgImage === "string" && bgImage.trim() !== ""
+      const bgImgUrl = hasBgImage ? resolveImageSrc(bgImage) : ""
+      const objectFit = (props.backgroundSize as React.CSSProperties["objectFit"]) || "contain"
       return (
-        <div
-          style={{
-            maxWidth: props.maxWidth ? `${props.maxWidth}px` : undefined,
-            paddingLeft: props.paddingX ? `${props.paddingX}px` : undefined,
-            paddingRight: props.paddingX ? `${props.paddingX}px` : undefined,
-            paddingTop: props.paddingY ? `${props.paddingY}px` : undefined,
-            paddingBottom: props.paddingY ? `${props.paddingY}px` : undefined,
-            margin: "0 auto",
-          }}
-        >
-          {content.map((child, i) => (
-            <BlockRenderer key={(child.props?.id as string) || i} item={child} />
-          ))}
+        <div style={containerStyle}>
+          {hasBgImage && bgImgUrl && (
+            <img
+              src={bgImgUrl}
+              alt=""
+              aria-hidden
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                objectFit,
+                objectPosition: "center",
+                zIndex: 0,
+              }}
+            />
+          )}
+          <div style={{ position: "relative", zIndex: 1, minHeight: hasBgImage ? 200 : undefined }}>
+            {content.map((child, i) => (
+              <BlockRenderer key={(child.props?.id as string) || i} item={child} />
+            ))}
+          </div>
         </div>
       )
     }
@@ -130,20 +153,32 @@ function BlockRenderer({ item }: { item: PuckComponentData }) {
         </div>
       )
     }
-    case "Card":
+    case "Card": {
+      const w = Number(props.imageWidth) || 0
+      const h = Number(props.imageHeight) ?? 160
+      const fit = (props.imageObjectFit as React.CSSProperties["objectFit"]) || "cover"
+      const fullHeight = !h
+      const imgStyle: React.CSSProperties = {
+        width: w ? `${w}px` : "100%",
+        height: fullHeight ? "100%" : `${h}px`,
+        objectFit: fit,
+        borderRadius: 4,
+        display: "block",
+      }
+      const img = Boolean(props.imageUrl) && (
+        fullHeight ? (
+          <div style={{ flex: 1, minHeight: 120, overflow: "hidden", borderRadius: 4 }}>
+            <img src={resolveImageSrc(props.imageUrl as string)} alt={String(props.title ?? "")} style={imgStyle} />
+          </div>
+        ) : (
+          <img src={resolveImageSrc(props.imageUrl as string)} alt={String(props.title ?? "")} style={imgStyle} />
+        )
+      )
       return (
-        <div style={{ border: "1px solid #ddd", padding: 16, borderRadius: 8 }}>
-          {Boolean(props.imageUrl) && (
-            <img
-              src={resolveImageSrc(props.imageUrl as string)}
-              alt={String(props.title ?? "")}
-              style={{ width: "100%", height: 160, objectFit: "cover", borderRadius: 4 }}
-            />
-          )}
+        <div style={{ border: "1px solid #ddd", padding: 16, borderRadius: 8, ...(fullHeight && { display: "flex", flexDirection: "column", height: "100%" }) }}>
+          {img}
           {Boolean(props.title) && <h3 style={{ marginTop: 8 }}>{String(props.title)}</h3>}
-          {Boolean(props.description) && (
-            <p style={{ marginTop: 4, fontSize: 14 }}>{String(props.description)}</p>
-          )}
+          {Boolean(props.description) && <p style={{ marginTop: 4, fontSize: 14 }}>{String(props.description)}</p>}
           {Boolean(props.linkUrl) && (
             <a href={String(props.linkUrl)} style={{ display: "inline-block", marginTop: 8 }}>
               {String(props.linkText ?? "Ver más")}
@@ -151,6 +186,7 @@ function BlockRenderer({ item }: { item: PuckComponentData }) {
           )}
         </div>
       )
+    }
     case "Section": {
       const content = (props.content as PuckComponentData[]) || []
       return (
@@ -162,18 +198,53 @@ function BlockRenderer({ item }: { item: PuckComponentData }) {
         </section>
       )
     }
-    case "Columns": {
+    case "HeroSection": {
       const content = (props.content as PuckComponentData[]) || []
+      const src = props.src as string
+      const hasImage = typeof src === "string" && src.trim() !== ""
+      const fit = (props.objectFit as React.CSSProperties["objectFit"]) || "cover"
+      const bg = hasImage ? (
+        <img src={resolveImageSrc(src)} alt={String(props.alt ?? "")} style={{ width: "100%", height: "auto", objectFit: fit, display: "block" }} />
+      ) : (
+        <div style={{ background: "#eee", minHeight: 200 }} />
+      )
       return (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: `repeat(${Number(props.count) || 2}, 1fr)`,
-            gap: props.gap ? `${props.gap}px` : 24,
-          }}
-        >
-          {content.map((child, i) => (
-            <BlockRenderer key={(child.props?.id as string) || i} item={child} />
+        <div style={{ position: "relative", width: "100%", overflow: "hidden" }}>
+          {props.href ? <a href={String(props.href)}>{bg}</a> : bg}
+          <div style={{ position: "absolute", inset: 0, zIndex: 1, display: "flex", alignItems: "center" }}>
+            {content.map((child, i) => (
+              <BlockRenderer key={(child.props?.id as string) || i} item={child} />
+            ))}
+          </div>
+        </div>
+      )
+    }
+    case "Columns": {
+      const count = Number(props.count) || 2
+      const gridStyle = {
+        display: "grid" as const,
+        gridTemplateColumns: `repeat(${count}, 1fr)`,
+        gap: props.gap != null ? `${props.gap}px` : "24px",
+      }
+      if (!Array.isArray(props.column1)) {
+        const content = (props.content as PuckComponentData[]) || []
+        return (
+          <div style={gridStyle}>
+            {content.map((child, i) => (
+              <BlockRenderer key={(child.props?.id as string) || i} item={child} />
+            ))}
+          </div>
+        )
+      }
+      const columns = Array.from({ length: count }, (_, i) => (props[`column${i + 1}`] as PuckComponentData[]) || [])
+      return (
+        <div style={gridStyle}>
+          {columns.map((colContent, colIndex) => (
+            <div key={colIndex}>
+              {colContent.map((child, i) => (
+                <BlockRenderer key={(child.props?.id as string) || i} item={child} />
+              ))}
+            </div>
           ))}
         </div>
       )
@@ -245,7 +316,11 @@ export function PageBuilderRenderer({ data }: { data: PuckData }) {
   if (content.length === 0) return null
 
   return (
-    <div style={{ padding: 16 }} data-page-builder-skeleton>
+    <div
+      className="w-full px-4 pb-4"
+      style={{ paddingTop: "var(--header-offset)" }}
+      data-page-builder-skeleton
+    >
       {content.map((item, i) => (
         <BlockRenderer key={(item.props?.id as string) || i} item={item} />
       ))}

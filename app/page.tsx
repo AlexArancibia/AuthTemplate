@@ -25,6 +25,7 @@ import { DeportistasCarouselMobile } from "@/components/DeportistasCarouselMobil
 import { useIsMobile } from "@/hooks/useIsMobile"
 import { usePageBuilderSection } from "@/hooks/usePageBuilderSection"
 import { PageBuilderRenderer } from "@/components/PageBuilderRenderer"
+import { HeroSectionPageBuilder } from "@/components/HeroSectionPageBuilder"
 
 export default function HomePage() {
   const pathname = usePathname()
@@ -75,8 +76,9 @@ export default function HomePage() {
 
   return (
     <>
-    {pageBuilderData && <PageBuilderRenderer data={pageBuilderData} />}
     <HeroSection />
+    <HeroSectionPageBuilder />
+    {pageBuilderData && <PageBuilderRenderer data={pageBuilderData} />}
 
     <Suspense fallback={<div className="h-96 bg-muted animate-pulse" />}>
         <FeaturesSection id="cs_5c596d6f-a27c" />

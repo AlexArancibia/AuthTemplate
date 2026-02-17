@@ -18,17 +18,19 @@ export function HeroSlide({ heroSection, animationDelay = 0, slideIndex = 0 }: H
   const [isVideoReady, setIsVideoReady] = useState(false)
   const [hasVideoError, setHasVideoError] = useState(false)
 
-  // Determinar qué logo mostrar según el índice del slide
-  const getLogoPath = () => {
-    if (slideIndex === 0) {
-      return "/logosHeroSection/xiom-1-768x179.png 13.png"
-    } else if (slideIndex === 1) {
-      return "/logosHeroSection/Butterfly_brand_logo.svg 4.png"
+  const logoPath = (() => {
+    const meta = heroSection.metadata?.logoUrl
+    if (meta && typeof meta === "string" && meta.trim()) {
+      const url = meta.trim()
+      return url.startsWith("http") ? url.replace(/ /g, "%20") : url
     }
-    return null
-  }
-
-  const logoPath = getLogoPath()
+    return slideIndex === 0
+      ? "/logosHeroSection/xiom-1-768x179.png 13.png"
+      : slideIndex === 1
+        ? "/logosHeroSection/Butterfly_brand_logo.svg 4.png"
+        : null
+  })()
+  const badgeText = heroSection.metadata?.badgeText ?? "DESDE 2010"
 
   // Extraer propiedades principales
   const {
@@ -72,13 +74,8 @@ export function HeroSlide({ heroSection, animationDelay = 0, slideIndex = 0 }: H
   const mobileYoutubeId = mobileBackgroundVideo ? getYouTubeId(mobileBackgroundVideo) : null
   const hasVideo = Boolean(youtubeId)
 
-  // Clases para el contenedor principal
-  const containerClasses = `
-    relative w-full h-full
-    ${styles.height?.mobile || ""} 
-    md:${styles.height?.tablet || ""} 
-    lg:${styles.height?.desktop || ""}
-  `;
+  const h = (s: string) => s || "min-h-screen"
+  const containerClasses = `relative w-full h-full ${h(styles.height?.mobile)} md:${h(styles.height?.tablet)} lg:${h(styles.height?.desktop)}`
 
   // Clases para la imagen de fondo
   const backgroundImageClasses = `object-cover ${styles.backgroundSize || ""} object-center`
@@ -100,22 +97,9 @@ export function HeroSlide({ heroSection, animationDelay = 0, slideIndex = 0 }: H
         : "justify-start"
   } ${styles.verticalAlign || "items-center"}`
 
-  // Clases para el div de contenido
-  const contentDivClasses = ` space-y-4 md:space-y-6 ${styles.textAlign || ""} ${styles.contentWidth?.mobile || ""} md:${
-    styles.contentWidth?.tablet || ""
-  } lg:${styles.contentWidth?.desktop || ""} w-full  lg:w-1/2 `
+  const cw = styles.contentWidth
+  const contentDivClasses = `space-y-4 md:space-y-6 ${styles.textAlign || ""} ${cw?.mobile || ""} ${cw?.tablet ? `md:${cw.tablet}` : ""} ${cw?.desktop ? `lg:${cw.desktop}` : ""} w-full lg:w-1/2`
 
-  // Clases para el título
-  const titleClasses = `${styles.titleColor || ""} ${styles.titleSize?.mobile || ""} md:${
-    styles.titleSize?.tablet || ""
-  } lg:${styles.titleSize?.desktop || ""} font-bold leading-tight`
-
-  // Clases para el subtítulo
-  const subtitleClasses = `${styles.subtitleColor || ""} ${styles.subtitleSize?.mobile || ""} md:${
-    styles.subtitleSize?.tablet || ""
-  } lg:${styles.subtitleSize?.desktop || "text-xl"} max-w-prose`
-
-  // Clases para el contenedor del botón
   const buttonContainerClasses = `${
     styles.textAlign === "text-center"
       ? "flex justify-center"
@@ -243,7 +227,7 @@ export function HeroSlide({ heroSection, animationDelay = 0, slideIndex = 0 }: H
                   }`}>
                     <Image
                       src={logoPath}
-                      alt={slideIndex === 0 ? "Xiom" : "Butterfly"}
+                      alt={title || (slideIndex === 0 ? "Xiom" : "Butterfly")}
                       fill
                       className="object-contain object-left drop-shadow-lg"
                       quality={100}
@@ -252,14 +236,16 @@ export function HeroSlide({ heroSection, animationDelay = 0, slideIndex = 0 }: H
                 </motion.div>
               )}
 
-              <div className="w-full flex justify-start mt-4">
-                <div className="inline-block px-3 py-1 sm:px-5 sm:py-1 mb-3 sm:mb-4 lg:mb-6 rounded-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white text-sm sm:text-base md:text-lg font-druk font-extrabold uppercase tracking-wide shadow-lg">
-                  DESDE 2010
+              {badgeText && (
+                <div className="w-full flex justify-start mt-4">
+                  <div className="inline-block px-3 py-1 sm:px-5 sm:py-1 mb-3 sm:mb-4 lg:mb-6 rounded-full bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white text-sm sm:text-base md:text-lg font-druk font-extrabold uppercase tracking-wide shadow-lg">
+                    {badgeText}
+                  </div>
                 </div>
-              </div>
+              )}
               {title && (
                 <motion.h1
-                  className={`font-druk font-extrabold uppercase text-[2.5rem] md:text-[3.5rem] lg:text-[4.5rem] mt-4 sm:mt-6 lg:mt-0 md:pr-12 lg:pr-24 ${styles.titleColor || ""} `}
+                  className={`font-druk font-extrabold uppercase text-[2.5rem] md:text-[3.5rem] lg:text-[4.5rem] mt-4 sm:mt-6 lg:mt-0 md:pr-12 lg:pr-24 ${styles.titleColor ?? "text-white"}`}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: animationDelay }}
@@ -274,7 +260,7 @@ export function HeroSlide({ heroSection, animationDelay = 0, slideIndex = 0 }: H
                     "font-adi-regular text-sm md:text-lg",
                     styles?.subtitleChildrenSize ?? "[&_*]:text-sm md:[&_*]:text-lg",
                     "[&_*]:[font-family:inherit] [&_*]:text-[inherit]",
-                    styles?.subtitleColor ?? ""
+                    styles?.subtitleColor ?? "text-white"
                   )}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -291,9 +277,9 @@ export function HeroSlide({ heroSection, animationDelay = 0, slideIndex = 0 }: H
                   className={buttonContainerClasses}
                 >
                   <Button
-                    variant={(styles.buttonVariant || "outline") as any}
+                    variant="outline"
                     size={(styles.buttonSize || "default") as any}
-                    className="px-4 py-3 sm:px-7 sm:py-5 rounded-xl border-1 border-white text-white text-xs font-light uppercase tracking-[0.2em] shadow-[0_0_10px_rgba(0,0,0,0.05)] hover:bg-white hover:text-neutral-800 hover:shadow-[0_0_12px_rgba(0,0,0,0.08)] transition-all duration-200"
+                    className="px-4 py-3 sm:px-7 sm:py-5 rounded-xl border-1 border-white bg-transparent text-white text-xs font-light uppercase tracking-[0.2em] shadow-[0_0_10px_rgba(0,0,0,0.05)] hover:bg-white hover:text-neutral-800 hover:shadow-[0_0_12px_rgba(0,0,0,0.08)] transition-all duration-200"
                   >
                     <Link href={buttonLink}>{buttonText}</Link>
                   </Button>
