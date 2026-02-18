@@ -3247,7 +3247,7 @@ Auth: AuthGuard
 
 ### Create Exchange Rate
 ```
-POST /exchange-rates
+POST /exchange-rates/:storeId
 Auth: AuthGuard
 ```
 
@@ -3267,7 +3267,7 @@ Auth: AuthGuard
 
 ### Get All Exchange Rates
 ```
-GET /exchange-rates
+GET /exchange-rates/:storeId
 Auth: PublicKeyGuard
 Query Params: page, limit, sortBy, sortOrder
 Pagination: ✅ Supported
@@ -3279,7 +3279,7 @@ Pagination: ✅ Supported
 
 ### Get Exchange Rate by ID
 ```
-GET /exchange-rates/:id
+GET /exchange-rates/:storeId/:id
 Auth: PublicKeyGuard
 ```
 
@@ -3289,7 +3289,7 @@ Auth: PublicKeyGuard
 
 ### Update Exchange Rate
 ```
-PATCH /exchange-rates/:id
+PATCH /exchange-rates/:storeId/:id
 Auth: AuthGuard
 ```
 
@@ -3301,7 +3301,7 @@ Auth: AuthGuard
 
 ### Delete Exchange Rate
 ```
-DELETE /exchange-rates/:id
+DELETE /exchange-rates/:storeId/:id
 Auth: AuthGuard
 ```
 
