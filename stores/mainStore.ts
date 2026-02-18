@@ -753,13 +753,19 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchExchangeRates con paginación
+  // Método fetchExchangeRates con paginación (por tienda)
   fetchExchangeRates: async (params: SearchExchangeRateParams = {}, forceRefresh = false) => {
+    if (!STORE_ID) {
+      throw new Error("No store ID provided in environment variables")
+    }
+
     set({ loading: true, error: null })
     try {
       const queryParams = buildQueryParams(params)
-      const response = await apiClient.get<PaginatedResponse<ExchangeRate>>(`/exchange-rates${queryParams ? `?${queryParams}` : ''}`)
-      
+      const response = await apiClient.get<PaginatedResponse<ExchangeRate>>(
+        `/exchange-rates/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`,
+      )
+
       const { data, pagination } = extractPaginatedData<ExchangeRate[]>(response)
       set({
         exchangeRates: data,
@@ -793,6 +799,24 @@ export const useMainStore = create<MainStore>((set, get) => ({
       return { data, pagination }
     } catch (error) {
       set({ error: "Failed to fetch frequently bought together items", loading: false })
+      throw error
+    }
+  },
+
+  // Método para obtener un tipo de cambio específico por ID
+  fetchExchangeRateById: async (id: string) => {
+    if (!STORE_ID) {
+      throw new Error("No store ID provided in environment variables")
+    }
+
+    set({ loading: true, error: null })
+    try {
+      const response = await apiClient.get<ExchangeRate>(`/exchange-rates/${STORE_ID}/${id}`)
+      const rate = extractApiData<ExchangeRate>(response)
+      set({ loading: false })
+      return rate
+    } catch (error) {
+      set({ error: "Failed to fetch exchange rate", loading: false })
       throw error
     }
   },
