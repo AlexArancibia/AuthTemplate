@@ -1,5 +1,14 @@
 "use client"
 
+/**
+ * Navbar principal del template. Incluye:
+ * - Logo desde shopSettings.logo (CMS/BD) o fallback
+ * - Nav: Inicio, Tienda (con ShopMenu), DEPORTISTAS, Contacto
+ * - Búsqueda por Dialog
+ * - Carrito por Sheet (drawer)
+ * - MobileMenu (hamburguesa), selector de moneda, usuario/sesión
+ */
+
 import type React from "react"
 
 import Link from "next/link"

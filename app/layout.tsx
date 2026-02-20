@@ -2,12 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import "./globals.css";
 import { Toaster } from "sonner";
-import Navbar from "@/components/navbar";
-import { auth } from "@/auth";
-import { Footer } from "@/components/footer";
 import { AuthSuccessToast } from "@/components/auth-success-toast";
-import { PreFooterContact } from "@/components/PreFooter";
-import { WhatsAppButton } from "@/components/WhatsappButton";
+import { LayoutShell } from "@/components/LayoutShell";
 
 // Configuración de Viewport (Nuevo en Next.js 14)
 export const viewport: Viewport = {
@@ -86,32 +82,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await auth();
-  const preloadedFonts = [
-    { href: "/fonts/DrukWideBold.woff", type: "font/woff" },
-    { href: "/fonts/AdihausDIN-Bold.woff2", type: "font/woff2" },
-    { href: "/fonts/AdihausDIN-Regular.woff2", type: "font/woff2" },
-  ];
-
   return (
     <html lang="es" className="light">
       <head>
-        {/* Fuentes personalizadas - Auto-hospedadas para evitar CORS */}
-        {preloadedFonts.map((font) => (
-          <link
-            key={font.href}
-            rel="preload"
-            href={font.href}
-            as="font"
-            type={font.type}
-            crossOrigin="anonymous"
-          />
-        ))}
         {/* Force Light Theme */}
         <script
           dangerouslySetInnerHTML={{
@@ -149,16 +127,12 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body className="font-adi-regular overflow-x-hidden">
+      <body className="overflow-x-hidden antialiased">
         <Toaster position="top-center" richColors />
         <Suspense fallback={null}>
           <AuthSuccessToast />
         </Suspense>
-        <Navbar />
-        <main className=" ">{children}</main>
-        <PreFooterContact />
-        <Footer />
-        <WhatsAppButton />
+        <LayoutShell>{children}</LayoutShell>
       </body>
     </html>
   );
