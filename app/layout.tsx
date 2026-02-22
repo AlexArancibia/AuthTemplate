@@ -1,9 +1,18 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
+import { Spectral } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { AuthSuccessToast } from "@/components/auth-success-toast";
 import { LayoutShell } from "@/components/LayoutShell";
+
+/** Luján: Spectral para citas de testimonios (vitivinicolalujan-offline). Variable CSS --font-spectral. */
+const spectral = Spectral({
+  variable: "--font-spectral",
+  subsets: ["latin"],
+  display: "swap",
+  weight: ["400"],
+});
 
 // Configuración de Viewport (Nuevo en Next.js 14)
 export const viewport: Viewport = {
@@ -88,7 +97,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className="light">
+    <html lang="es" className={`light ${spectral.variable}`}>
       <head>
         {/* Force Light Theme */}
         <script

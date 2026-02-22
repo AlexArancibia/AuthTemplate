@@ -4,8 +4,8 @@
 *, *::before, *::after { box-sizing: border-box; }
 html {
   scroll-behavior: smooth;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.12) transparent;
+  scrollbar-width: none; /* Firefox: ocultar barra */
+  -ms-overflow-style: none; /* IE/Edge */
 }
 body {
   margin: 0;
@@ -13,23 +13,29 @@ body {
   scroll-behavior: smooth;
 }
 
-/* Barra de desplazamiento: solo indicador rectangular transparente, muy sutil */
+/* Ocultar barra de scroll por completo; el scroll sigue funcionando */
 *::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  display: none;
 }
-*::-webkit-scrollbar-track {
-  background: transparent;
+
+/* Utilidad: ocultar barra de scroll (scroll sigue funcionando) */
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
 }
-*::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 0;
+.scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
-*::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.18);
+
+.elementor-widget-container {
+  letter-spacing: 0.5px;
 }
-*::-webkit-scrollbar-corner {
-  background: transparent;
+
+@media (max-width: 767px) {
+  .elementor-widget-container {
+    padding-bottom: 21.6px;
+    margin-bottom: 0;
+  }
 }
 
 /* Luján – Fuente Margiona (hero) */
@@ -39,6 +45,20 @@ body {
   font-weight: normal;
   font-style: normal;
   font-display: swap;
+}
+
+/* Luján – Fuente Satoshi (textos, títulos secundarios) – archivo completo, no subset */
+@font-face {
+  font-family: "Satoshi";
+  src: url("/lujan/fonts/Satoshi-Medium.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Luján – Fuente Spectral (citas de testimonios). Cargada con next/font en layout.tsx; variable --font-spectral. */
+.lujan-font-spectral {
+  font-family: var(--font-spectral), "Spectral", Georgia, serif;
 }
 
 /* Luján – Hero (según Elementor en vitivinicolalujan-offline) */
@@ -290,11 +310,13 @@ body {
     flex-direction: column;
     align-items: center;
     text-align: center;
+    padding: 0;
   }
 
   .lujan-esfuerzo__heading-wrap.lujan-esfuerzo__heading-wrap--first {
     margin: 0;
     margin-block-end: 0;
+    padding: 0;
   }
 
   .lujan-esfuerzo__title {
@@ -339,7 +361,7 @@ body {
   width: 100%;
   max-width: 1500px;
   margin: 0 auto;
-  padding: 0 64px;
+  padding: 0 64px 64px;
 }
 
 .lujan-categorias__grid {
@@ -357,7 +379,7 @@ body {
   max-width: 25%;
   width: 100%;
   min-height: 265px;
-  align-items: center;
+  align-items: flex-start;
   margin: 0;
 }
 
@@ -366,7 +388,8 @@ body {
   flex-direction: row;
   justify-content: center;
   align-items: flex-start;
-  flex: 0 0 36%;
+  flex: 0 0 31%;
+  max-width: 31%;
   padding: 0;
 }
 
@@ -417,7 +440,7 @@ body {
 
 /* Desktop: estilos por categoría (del HTML original 02c8a39, 51dcf67, b627e13, 83cfa20) */
 .lujan-categorias__card--vinos .lujan-categorias__card-image-wrap {
-  margin: -14px -31px 3px -31px;
+  margin: -14px 0 3px 0;
 }
 .lujan-categorias__card--vinos .lujan-categorias__card-image {
   width: 100%;
@@ -427,17 +450,17 @@ body {
 }
 
 .lujan-categorias__card--piscos .lujan-categorias__card-image-wrap {
-  margin: -43px -23px -23px -23px;
+  margin: -43px 0 -23px 0;
 }
 .lujan-categorias__card--piscos .lujan-categorias__card-image {
-  width: 86%;
-  max-width: 59%;
-  height: 336px;
+  width: 100%;
+  max-width: 100%;
+  height: 400px;
   object-fit: contain;
 }
 
 .lujan-categorias__card--cremas-macerados .lujan-categorias__card-image-wrap {
-  margin: -12px -8px -8px -8px;
+  margin: -12px 0 -8px 0;
 }
 .lujan-categorias__card--cremas-macerados .lujan-categorias__card-image {
   width: 37%;
@@ -447,7 +470,7 @@ body {
 }
 
 .lujan-categorias__card--personaliza .lujan-categorias__card-image-wrap {
-  margin: -25px -16px -16px -16px;
+  margin: -25px 0 -16px 0;
 }
 .lujan-categorias__card--personaliza .lujan-categorias__card-image {
   width: 49%;
@@ -515,7 +538,7 @@ body {
     justify-content: center;
     align-items: center;
     gap: 2em;
-    padding: 3em 0 56px;
+    padding: 32px;
   }
 
   .lujan-categorias__card {
@@ -528,8 +551,8 @@ body {
   }
 
   .lujan-categorias__card-image-wrap {
-    flex: 0 0 30%;
-    max-width: 30%;
+    flex: 0 0 25%;
+    max-width: 25%;
   }
 
   .lujan-categorias__card-content {
@@ -626,8 +649,8 @@ body {
   }
 
   .lujan-categorias__card-image-wrap {
-    flex: 0 0 25%;
-    max-width: 25%;
+    flex: 0 0 20%;
+    max-width: 20%;
   }
 
   .lujan-categorias__card--vinos {
@@ -719,5 +742,1327 @@ body {
   .lujan-categorias__card:hover .lujan-categorias__card-image {
     transform: none;
     filter: none;
+  }
+}
+
+/* ========== Luján – Nuestros Productos (carrusel) ========== */
+/* Migrado desde vitivinicolalujan-offline index.html ~1482–1518 (Elementor + JKit product carousel) */
+
+.lujan-nuestros-productos {
+  width: 100%;
+  margin: 0;
+  padding: 80px 0 4em;
+  background-color: #fff9ef;
+}
+
+.lujan-nuestros-productos__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+/* Heading: desk 60.8px, tablet 48px, cel 32px – color #B2966D, margin-bottom 14.4px */
+.lujan-nuestros-productos__heading {
+  margin: 0;
+  font-family: "Margiona", sans-serif;
+  font-weight: 500;
+  line-height: 1.25;
+  color: #b2966d;
+  text-align: center;
+  font-size: 60.8px;
+}
+
+/* Subheading: desk 19.2px, tablet 16px, cel 15px – color #54595F, margin-bottom 14.4px */
+.lujan-nuestros-productos__subheading {
+  margin: 0;
+  font-family: "Satoshi", sans-serif;
+  font-weight: 400;
+  color: #54595f;
+  text-align: center;
+  font-size: 19.2px;
+}
+
+/* Divider: mismo estilo que original (elementor 0d6d63f) – color #9A3C62, 0.25em, sin cambios por breakpoint */
+.lujan-nuestros-productos__divider {
+  display: block;
+  width: 60px;
+  max-width: 10%;
+  margin: 0.5em auto 1em;
+  border-top: 0.25em solid #9a3c62;
+}
+
+.lujan-nuestros-productos__carousel {
+  width: 100%;
+  margin: 0 0 1.5em;
+}
+
+.lujan-nuestros-productos__carousel-viewport {
+  overflow: hidden;
+  width: 100%;
+}
+
+.lujan-nuestros-productos__track {
+  display: flex;
+  touch-action: pan-y pinch-zoom;
+}
+
+.lujan-nuestros-productos__slide {
+  min-width: 0;
+}
+
+.lujan-nuestros-productos__card {
+  display: block;
+  height: 100%;
+}
+
+.lujan-nuestros-productos__link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+  height: 100%;
+}
+
+.lujan-nuestros-productos__image-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 0.75em;
+  min-height: 200px;
+}
+
+.lujan-nuestros-productos__image {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.lujan-nuestros-productos__title {
+  margin: 0 0 0.35em;
+  font-family: "Satoshi", sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: 0.5px;
+  color: #912E60;
+  text-align: center;
+}
+
+.lujan-nuestros-productos__price {
+  display: block;
+  font-family: "Satoshi", sans-serif;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: #2b2824;
+}
+
+.lujan-nuestros-productos__price del {
+  opacity: 0.7;
+  margin-right: 0.35em;
+}
+
+.lujan-nuestros-productos__price ins {
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.lujan-nuestros-productos__amount {
+  font-variant-numeric: tabular-nums;
+  color: #B2966D;
+}
+
+.lujan-nuestros-productos__dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 48px;
+}
+
+.lujan-nuestros-productos__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  background-color: rgba(145, 46, 96, 0.25);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.lujan-nuestros-productos__dot:hover {
+  background-color: rgba(145, 46, 96, 0.5);
+}
+
+.lujan-nuestros-productos__dot--active {
+  background-color: #912E60;
+}
+
+.lujan-nuestros-productos__cta {
+  display: flex;
+  justify-content: center;
+}
+
+.lujan-nuestros-productos__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6em 1.5em;
+  font-family: "Satoshi", sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+  background-color: #912E60;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: background-color 0.2s ease, transform 0.15s ease;
+}
+
+.lujan-nuestros-productos__button:hover {
+  background-color: #a8386f;
+  transform: scale(1.02);
+}
+
+/* Animación de entrada */
+@keyframes lujan-nuestros-productos-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lujan-nuestros-productos .lujan-nuestros-productos__heading,
+.lujan-nuestros-productos .lujan-nuestros-productos__subheading,
+.lujan-nuestros-productos .lujan-nuestros-productos__divider {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.lujan-nuestros-productos--visible .lujan-nuestros-productos__heading,
+.lujan-nuestros-productos--visible .lujan-nuestros-productos__subheading,
+.lujan-nuestros-productos--visible .lujan-nuestros-productos__divider {
+  animation: lujan-nuestros-productos-fade-in 0.5s ease-out forwards;
+}
+
+.lujan-nuestros-productos--visible .lujan-nuestros-productos__subheading {
+  animation-delay: 0.08s;
+}
+.lujan-nuestros-productos--visible .lujan-nuestros-productos__divider {
+  animation-delay: 0.15s;
+}
+
+/* Tablet / móvil: padding, heading y imagen */
+@media (max-width: 1024px) {
+  .lujan-nuestros-productos__inner {
+    padding: 0 2em;
+  }
+  .lujan-nuestros-productos__heading {
+    font-size: 48px;
+  }
+  .lujan-nuestros-productos__subheading {
+    font-size: 16px;
+  }
+  .lujan-nuestros-productos__title {
+    font-size: 14.4px;
+  }
+}
+
+@media (max-width: 767px) {
+  .lujan-nuestros-productos {
+    padding: 2.5em 0;
+  }
+  .lujan-nuestros-productos__heading {
+    font-size: 32px;
+  }
+  .lujan-nuestros-productos__subheading {
+    font-size: 15px;
+  }
+
+  .lujan-nuestros-productos__inner {
+    padding: 0;
+  }
+
+  .lujan-nuestros-productos__image-wrap {
+    min-height: 180px;
+  }
+  .lujan-nuestros-productos__title {
+    font-size: 13.68px;
+  }
+}
+
+/* ========== Luján – Testimonios (carrusel) ========== */
+/* Migrado desde vitivinicolalujan-offline index.html ~1520–1586 (Elements Kit Testimonial style_6 + block-style-three) */
+
+.lujan-testimonios {
+  width: 100%;
+  min-height: 409px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 43px 0;
+  background-image: url("/lujan/h1-bckg-img-3-1.jpg");
+  background-size: auto 142.86%;
+  background-position: center top;
+  background-repeat: repeat;
+}
+
+.lujan-testimonios__inner {
+  width: 100%;
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.lujan-testimonios__slider {
+  overflow: hidden;
+  width: 100%;
+}
+
+.lujan-testimonios__track {
+  display: flex;
+  touch-action: pan-y pinch-zoom;
+  margin-left: -15px;
+}
+
+.lujan-testimonios__slide {
+  flex: 0 0 100%;
+  min-width: 0;
+  padding-left: 15px;
+}
+
+.lujan-testimonios__slide-inner {
+  width: 100%;
+}
+
+/* Card: transparente (original override), centrado, padding 30px (style_6) */
+.lujan-testimonios__card {
+  text-align: center;
+  padding: 30px;
+  display: block;
+  background-color: transparent;
+}
+
+/* Avatar: 70px circular, margin-bottom 20px (ekit_testimonial_style_6) */
+.lujan-testimonios__avatar-wrap {
+  margin-bottom: 20px;
+}
+
+.lujan-testimonios__avatar {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Nombre: Margiona 2rem, 500, #2B2824, margin-bottom 15px */
+.lujan-testimonios__profile {
+  margin-bottom: 15px;
+}
+
+.lujan-testimonios__author-name {
+  margin: 0;
+  font-family: "Margiona", sans-serif;
+  font-size: 2rem;
+  font-weight: 500;
+  line-height: 2.6rem;
+  color: #2b2824;
+}
+
+/* Cita: Spectral (#462E3F), ~1.1rem, margin-bottom 30px (block-style3) */
+.lujan-testimonios__content {
+  margin-bottom: 30px;
+}
+
+.lujan-testimonios__content p {
+  margin: 0;
+  font-family: var(--font-spectral), "Spectral", Georgia, serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: #462e3f;
+}
+
+/* Dots: igual que Nuestros Productos (gris oscuro, activo más marcado) */
+.lujan-testimonios__dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 1.5rem;
+}
+
+.lujan-testimonios__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  background-color: rgba(43, 40, 36, 0.25);
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.lujan-testimonios__dot:hover {
+  background-color: rgba(43, 40, 36, 0.5);
+}
+
+.lujan-testimonios__dot--active {
+  background-color: #2b2824;
+  transform: scale(1.15);
+}
+
+@media (max-width: 767px) {
+  .lujan-testimonios__author-name {
+    font-size: 28.8px;
+  }
+  .lujan-testimonios__content p {
+    font-size: 15px;
+  }
+}
+
+/* ========== Luján – Nuestras Fotos (grid + carrusel) ========== */
+/* Migrado desde vitivinicolalujan-offline index.html ~1597–1631 (Elementor + JKit gallery) */
+
+.lujan-nuestras-fotos {
+  width: 100%;
+  margin: 0;
+  padding: 3em 4em 4em;
+  background-color: #fff9ef;
+}
+
+.lujan-nuestras-fotos__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.lujan-nuestras-fotos__heading {
+  margin: 0;
+  font-family: "Margiona", sans-serif;
+  font-weight: 500;
+  line-height: 1.25;
+  color: #b2966d;
+  text-align: center;
+  font-size: 60.8px;
+  padding: 0 0 0.2em;
+}
+
+.lujan-nuestras-fotos__subheading {
+  margin: 0;
+  font-family: "Satoshi", sans-serif;
+  font-weight: 400;
+  color: #c65441;
+  text-align: center;
+  font-size: 19.2px;
+}
+
+.lujan-nuestras-fotos__divider {
+  display: block;
+  width: 6%;
+  min-width: 40px;
+  max-width: 60px;
+  margin: 0.5em auto 1.5em;
+  border-top: 0.25em solid #9a3c62;
+}
+
+/* Grid desktop: 2x3, altura 340px, overlay al hover. Oculto en móvil/tablet. */
+.lujan-nuestras-fotos__grid {
+  display: none;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  width: 100%;
+  margin: 0;
+}
+
+@media (min-width: 1025px) {
+  .lujan-nuestras-fotos__grid {
+    display: grid;
+  }
+  .lujan-nuestras-fotos__carousel {
+    display: none !important;
+  }
+}
+
+.lujan-nuestras-fotos__item {
+  width: 100%;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.lujan-nuestras-fotos__thumb-wrap {
+  position: relative;
+  width: 100%;
+  height: 340px;
+  overflow: hidden;
+}
+
+.lujan-nuestras-fotos__thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.5s ease;
+}
+
+.lujan-nuestras-fotos__thumb-wrap:hover .lujan-nuestras-fotos__thumb {
+  transform: scale(1.05);
+}
+
+.lujan-nuestras-fotos__overlay {
+  position: absolute;
+  inset: 0;
+  background-color: #000;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+}
+
+.lujan-nuestras-fotos__thumb-wrap:hover .lujan-nuestras-fotos__overlay {
+  opacity: 0.25;
+}
+
+/* Carrusel: solo móvil/tablet (< 1025px); en desktop se oculta vía media query arriba */
+.lujan-nuestras-fotos__carousel {
+  width: 100%;
+  margin: 0;
+}
+
+.lujan-nuestras-fotos__carousel-viewport {
+  overflow: hidden;
+  width: 100%;
+}
+
+.lujan-nuestras-fotos__track {
+  display: flex;
+  touch-action: pan-y pinch-zoom;
+  /* gap y flex de cada slide se setean por JS (tablet 3 slides/15px, móvil 1 slide/8px) */
+}
+
+.lujan-nuestras-fotos__slide {
+  min-width: 0;
+  /* flex-basis por breakpoint vía inline style en NuestrasFotos.tsx */
+}
+
+.lujan-nuestras-fotos__slide-inner {
+  width: 100%;
+  border-radius: 4px;
+  overflow: hidden;
+  aspect-ratio: 1516 / 1114;
+}
+
+.lujan-nuestras-fotos__slide-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.lujan-nuestras-fotos__dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 1.5rem;
+}
+
+.lujan-nuestras-fotos__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+  padding: 0;
+  background-color: rgba(97, 81, 81, 0.22);
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.lujan-nuestras-fotos__dot:hover {
+  background-color: rgba(92, 81, 81, 0.66);
+}
+
+.lujan-nuestras-fotos__dot--active {
+  background-color: rgba(92, 81, 81, 0.66);
+  transform: scale(1.2);
+}
+
+/* Animación de entrada (igual que Nuestros Productos) */
+@keyframes lujan-nuestras-fotos-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lujan-nuestras-fotos .lujan-nuestras-fotos__heading,
+.lujan-nuestras-fotos .lujan-nuestras-fotos__subheading,
+.lujan-nuestras-fotos .lujan-nuestras-fotos__divider {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.lujan-nuestras-fotos--visible .lujan-nuestras-fotos__heading,
+.lujan-nuestras-fotos--visible .lujan-nuestras-fotos__subheading,
+.lujan-nuestras-fotos--visible .lujan-nuestras-fotos__divider {
+  animation: lujan-nuestras-fotos-fade-in 0.5s ease-out forwards;
+}
+
+.lujan-nuestras-fotos--visible .lujan-nuestras-fotos__subheading {
+  animation-delay: 0.08s;
+}
+
+.lujan-nuestras-fotos--visible .lujan-nuestras-fotos__divider {
+  animation-delay: 0.16s;
+}
+
+@media (max-width: 1024px) {
+  .lujan-nuestras-fotos {
+    padding: 2em 1.5em 3em;
+  }
+  .lujan-nuestras-fotos__heading {
+    font-size: 48px;
+  }
+  .lujan-nuestras-fotos__subheading {
+    font-size: 16px;
+  }
+}
+
+/* Solo tablet: sin padding lateral */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .lujan-nuestras-fotos {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 767px) {
+  .lujan-nuestras-fotos {
+    padding: 2em 9.5px 2.5em;
+  }
+  .lujan-nuestras-fotos__heading {
+    font-size: 32px;
+  }
+  .lujan-nuestras-fotos__subheading {
+    font-size: 15px;
+  }
+}
+
+/* ========== Luján – Ven a Nuestra Vitivinícola ========== */
+/* Migrado desde vitivinicolalujan-offline index.html ~1639–1712 (contenedor 1d91427). */
+
+.lujan-ven-vitivinicola {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: #f4ebde;
+  display: flex;
+  flex-direction: column;
+}
+
+.lujan-ven-vitivinicola__inner {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  align-items: center;
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 5em 32px 5em 0;
+  gap: 0;
+}
+
+.lujan-ven-vitivinicola__grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  align-items: center;
+  gap: 1em 2em;
+  margin-top: -1em;
+  margin-left: 0;
+  margin-right: 0;
+  padding: 0 64px;
+  flex: 0 0 50%;
+  width: 50%;
+}
+
+.lujan-ven-vitivinicola__service {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 185px;
+  gap: 0;
+  padding: 0;
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.lujan-ven-vitivinicola__icon-wrap {
+  width: 100%;
+  max-width: 120px;
+  height: 134px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.lujan-ven-vitivinicola__icon {
+  width: 100%;
+  max-width: 100%;
+  height: 134px;
+  object-fit: contain;
+  object-position: center center;
+}
+
+/* Solo ICONOS-04 (Regalos): recorte solo de la imagen, contenedor igual altura que el resto */
+.lujan-ven-vitivinicola__service:nth-child(4) .lujan-ven-vitivinicola__icon-wrap {
+  overflow: hidden;
+  position: relative;
+}
+
+.lujan-ven-vitivinicola__service:nth-child(4) .lujan-ven-vitivinicola__icon {
+  height: 210px;
+  width: 100%;
+  max-width: 100%;
+  object-fit: cover;
+  object-position: center center;
+  margin: 0;
+}
+
+.lujan-ven-vitivinicola__service-title {
+  margin: 0;
+  padding: 0;
+  font-family: "Satoshi", sans-serif;
+  font-size: 0.92rem;
+  font-weight: 400;
+  line-height: 1.2rem;
+  letter-spacing: 0.5px;
+  color: #54595f;
+  text-align: center;
+}
+
+.lujan-ven-vitivinicola__content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1 1 50%;
+  width: 50%;
+  min-width: 0;
+  max-width: none;
+}
+
+.lujan-ven-vitivinicola__title {
+  margin: 0 0 10px 0;
+  padding: 0;
+  font-family: "Margiona", sans-serif;
+  font-size: 2.8rem;
+  font-weight: 500;
+  line-height: 2.7rem;
+  color: #b2966d;
+  text-align: start;
+}
+
+.lujan-ven-vitivinicola__divider {
+  display: block;
+  width: 6%;
+  min-width: 40px;
+  margin: 10px 0;
+  margin-left: 0;
+  border-top: 0.25em solid #9a3c62;
+}
+
+.lujan-ven-vitivinicola__text {
+  margin: 0;
+  padding: 1.5em 0 2em 0;
+  font-family: "Satoshi", sans-serif;
+  font-size: 15.2px;
+  font-weight: 400;
+  line-height: 1.2rem;
+  letter-spacing: 0.5px;
+  color: #817c7b;
+  text-align: justify;
+  max-width: 85%;
+}
+
+.lujan-ven-vitivinicola__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  min-height: 45px;
+  box-sizing: border-box;
+  border-radius: 5px;
+  background-color: #21bf45;
+  color: #ffffff;
+  padding: 12px 18px;
+  font-family: "Satoshi", sans-serif;
+  font-size: 1.1rem;
+  font-weight: 500;
+  line-height: 1.3rem;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.15s ease;
+}
+
+.lujan-ven-vitivinicola__cta:hover {
+  background-color: #1ea838;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.lujan-ven-vitivinicola__cta svg {
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+  margin-right: 15px;
+  fill: currentColor;
+}
+
+/* Tablet: mismo layout que desktop; solo tamaño de título */
+@media (max-width: 1024px) {
+  .lujan-ven-vitivinicola__title {
+    font-size: 35.2px;
+  }
+}
+
+/* Móvil: apilar en columna, grid arriba y content abajo, ancho completo */
+@media (max-width: 767px) {
+  .lujan-ven-vitivinicola__inner {
+    flex-direction: column;
+    padding: 60px 1em;
+    align-items: stretch;
+  }
+  .lujan-ven-vitivinicola__grid {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: 100%;
+    padding: 0 0 1.5em;
+    margin-top: 0;
+    justify-content: center;
+    justify-items: center;
+    gap: 1.5em 2em;
+    order: 2;
+  }
+  .lujan-ven-vitivinicola__service {
+    min-height: 160px;
+  }
+  .lujan-ven-vitivinicola__content {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: 100%;
+    align-items: center;
+    order: 1;
+  }
+  .lujan-ven-vitivinicola__title {
+    font-size: 35.2px;
+    text-align: center;
+    line-height: 2rem;
+  }
+  .lujan-ven-vitivinicola__text {
+    font-size: 0.9rem;
+    padding: 1em 0 1.5em 0;
+    text-align: center;
+  }
+}
+
+/* ----- Video Section (Spot) ----- */
+/* Altura proporcional al thumbnail 2048×834: se muestra completo en desktop, tablet y móvil */
+.lujan-video-section {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2048 / 834;
+  min-height: 240px;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  padding: 0 4em;
+  overflow: hidden;
+}
+
+.lujan-video-section__bg {
+  position: absolute;
+  inset: 0;
+  background-color: #2d1f24;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.lujan-video-section__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.41);
+  pointer-events: none;
+}
+
+.lujan-video-section__content {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1;
+}
+
+/* Fuente Elements Kit (icon-play \e978) desde vitivinicolalujan-offline */
+@font-face {
+  font-family: elementskit;
+  src: url("/lujan/fonts/elementskit.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Icono play del sitio original: <i class="icon icon-play"></i> */
+.lujan-video-section__play .icon.icon-play {
+  font-family: elementskit, sans-serif;
+  font-style: normal;
+  font-weight: 400;
+  font-size: 72px;
+  line-height: 1;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.lujan-video-section__play .icon.icon-play::before {
+  content: "\e978";
+}
+
+/* Botón play: siempre magenta #9A3C62 (anillos animados también) */
+.lujan-video-section__play {
+  --lujan-play-bg: #9A3C62;
+  --lujan-play-icon: #ffffff;
+  --lujan-play-glow: #9A3C62;
+  --lujan-glow-size: 15px;
+
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 133px;
+  height: 133px;
+  padding: 0;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  background-color: var(--lujan-play-bg);
+  color: var(--lujan-play-icon);
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background-color 0.2s;
+}
+
+/* Ripple/glow animado (glow-ripple del sitio, --glow-size: 15px) */
+.lujan-video-section__play::before,
+.lujan-video-section__play::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: calc(100% + var(--lujan-glow-size) * 2);
+  height: calc(100% + var(--lujan-glow-size) * 2);
+  margin-left: calc(-50% - var(--lujan-glow-size));
+  margin-top: calc(-50% - var(--lujan-glow-size));
+  border: 2px solid rgba(154, 60, 98, 0.75);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: lujan-video-ripple 2.6s cubic-bezier(0.25, 0.9, 0.2, 1) infinite;
+}
+
+.lujan-video-section__play::after {
+  animation-delay: 0.4s;
+}
+
+@keyframes lujan-video-ripple {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+.lujan-video-section__play:hover {
+  color: var(--lujan-play-icon);
+  background-color: var(--lujan-play-bg);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.lujan-video-section__play:active {
+  transform: scale(0.98);
+}
+
+.lujan-video-section__play:focus-visible {
+  outline: 2px solid rgba(154, 60, 98, 0.25);
+  outline-offset: 6px;
+}
+
+.lujan-video-section__play-icon {
+  position: relative;
+  z-index: 1;
+  width: 81px;
+  height: 81px;
+  margin-left: 4px;
+}
+
+/* Modal */
+.lujan-video-section__modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.85);
+  padding: 2rem;
+  animation: lujan-video-fadeIn 0.2s ease-out;
+}
+
+@keyframes lujan-video-fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.lujan-video-section__modal-inner {
+  position: relative;
+  width: 100%;
+  max-width: 900px;
+  max-height: 90vh;
+}
+
+.lujan-video-section__modal-close {
+  position: absolute;
+  top: -44px;
+  right: 0;
+  width: 44px;
+  height: 44px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #000;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.2s, color 0.2s;
+}
+
+.lujan-video-section__modal-close:hover {
+  background: #222;
+  color: #fff;
+}
+
+.lujan-video-section__modal-close svg {
+  width: 20px;
+  height: 20px;
+}
+
+.lujan-video-section__video {
+  width: 100%;
+  max-height: 90vh;
+  display: block;
+  background: #000;
+}
+
+@media (max-width: 1024px) {
+  .lujan-video-section {
+    padding: 0 2em;
+    min-height: 200px;
+  }
+}
+
+@media (max-width: 767px) {
+  .lujan-video-section {
+    padding: 0 1em;
+    min-height: 160px;
+    justify-content: center;
+  }
+
+  .lujan-video-section__play {
+    width: 120px;
+    height: 120px;
+    padding: 0;
+  }
+
+  .lujan-video-section__play .icon.icon-play {
+    font-size: 64px;
+  }
+
+  .lujan-video-section__play-icon {
+    width: 76px;
+    height: 76px;
+    margin-left: 4px;
+  }
+
+  .lujan-video-section__modal {
+    padding: 1rem;
+  }
+
+  .lujan-video-section__modal-close {
+    top: -40px;
+    right: 0;
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* ----- Publicaciones / Nuestras redes sociales (vitivinicolalujan-offline b45492c) ----- */
+.lujan-publicaciones {
+  width: 100%;
+  margin: 0;
+  padding: 4em;
+  background-color: #fff9ef;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.6s ease-out, transform 0.5s ease-out;
+}
+
+.lujan-publicaciones--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.lujan-publicaciones__inner {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.lujan-publicaciones__header {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 1em 1em 1.5em;
+  margin-bottom: 0;
+  border-radius: 15px;
+}
+
+.lujan-publicaciones__title {
+  font-family: "Margiona", sans-serif;
+  font-size: 3.8rem;
+  font-weight: 500;
+  line-height: 3.5rem;
+  letter-spacing: 0.3px;
+  color: #b2966d;
+  text-align: center;
+  margin: 0 0 0.2em 0;
+  max-width: 79.295%;
+}
+
+.lujan-publicaciones__subtitle {
+  font-family: "Satoshi", sans-serif;
+  font-size: 1.2em;
+  font-weight: 500;
+  color: #c65441;
+  text-align: center;
+  margin: 0;
+  max-width: 79.295%;
+}
+
+.lujan-publicaciones__divider {
+  display: block;
+  width: 80px;
+  height: 0.25em;
+  background-color: #9a3c62;
+  border: none;
+  margin: 0.6em 0 0 0;
+  border-radius: 2px;
+}
+
+.lujan-publicaciones__grid {
+  display: flex;
+  flex-direction: row;
+  gap: 1em;
+  width: 100%;
+  margin-top: 0;
+  max-height: 465px;
+}
+
+.lujan-publicaciones__card {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.lujan-publicaciones__image-link {
+  flex: 0 0 400px;
+  min-height: 0;
+  height: 400px;
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-decoration: none;
+}
+
+.lujan-publicaciones__image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+  vertical-align: middle;
+}
+
+.lujan-publicaciones__social {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75em 1.25em;
+  margin: 0.75em 0 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lujan-publicaciones__social li {
+  margin: 0;
+  padding: 0;
+}
+
+.lujan-publicaciones__social-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2em;
+  height: 2em;
+  color: #c65441;
+  text-decoration: none;
+  transition: color 0.2s, opacity 0.2s;
+}
+
+.lujan-publicaciones__social-link:hover {
+  color: #9a3c62;
+  opacity: 0.9;
+}
+
+.lujan-publicaciones__social-link:focus-visible {
+  outline: 2px solid #9a3c62;
+  outline-offset: 3px;
+}
+
+/* ElementsKit: icon-facebook \eb43, icon-message-1 \ea43 */
+.lujan-publicaciones__social-link .icon.icon-facebook,
+.lujan-publicaciones__social-link .icon.icon-message-1 {
+  font-family: elementskit, sans-serif;
+  font-style: normal;
+  font-weight: 400;
+  font-size: 1.5rem;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  display: block;
+}
+
+.lujan-publicaciones__social-link .icon.icon-facebook::before {
+  content: "\eb43";
+}
+
+.lujan-publicaciones__social-link .icon.icon-message-1::before {
+  content: "\ea43";
+}
+
+.lujan-publicaciones__social-link svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+@media (max-width: 1024px) {
+  .lujan-publicaciones {
+    padding: 3em 2em;
+  }
+
+  .lujan-publicaciones__title {
+    font-size: 3rem;
+    line-height: 3.2rem;
+  }
+
+  .lujan-publicaciones__grid {
+    flex-wrap: wrap;
+    gap: 1em;
+    max-height: none;
+  }
+
+  .lujan-publicaciones__card {
+    flex: 1 1 calc(50% - 0.5em);
+    min-width: 200px;
+  }
+
+  .lujan-publicaciones__image-link {
+    flex: none;
+    height: 280px;
+    min-height: 280px;
+  }
+
+  .lujan-publicaciones__image {
+    height: 100%;
+    object-fit: contain;
+  }
+}
+
+@media (max-width: 767px) {
+  .lujan-publicaciones {
+    padding: 3em 2em;
+  }
+
+  .lujan-publicaciones__title {
+    font-size: 3rem;
+    line-height: 3.2rem;
+  }
+
+  .lujan-publicaciones__grid {
+    flex-wrap: wrap;
+    gap: 1em;
+    max-height: none;
+  }
+
+  .lujan-publicaciones__card {
+    flex: 1 1 calc(50% - 0.5em);
+    min-width: 200px;
+  }
+
+  .lujan-publicaciones__image-link {
+    flex: none;
+    height: 280px;
+    min-height: 280px;
+  }
+
+  .lujan-publicaciones__image {
+    height: 100%;
+    object-fit: contain;
   }
 }

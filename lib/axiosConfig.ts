@@ -47,7 +47,13 @@ apiClient.interceptors.response.use(
         data: error.response.data,
       })
     } else if (error.request) {
-      console.error("No response received from API")
+      const url = error.config?.baseURL && error.config?.url
+        ? `${error.config.baseURL}${error.config.url}`
+        : "unknown URL"
+      console.error("No response received from API", {
+        url,
+        hint: "Comprueba que el backend esté en ejecución y que NEXT_PUBLIC_BACKEND_ENDPOINT en .env.local sea correcto.",
+      })
     } else {
       console.error("Error setting up request:", error.message)
     }
