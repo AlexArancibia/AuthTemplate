@@ -1870,9 +1870,9 @@ body {
 
 .lujan-publicaciones__title {
   font-family: "Margiona", sans-serif;
-  font-size: 3.8rem;
+  font-size: 60.8px;
   font-weight: 500;
-  line-height: 3.5rem;
+  line-height: 1.15;
   letter-spacing: 0.3px;
   color: #b2966d;
   text-align: center;
@@ -1920,11 +1920,11 @@ body {
 }
 
 .lujan-publicaciones__image-link {
-  flex: 0 0 400px;
+  flex: 1 1 auto;
   min-height: 0;
-  height: 400px;
   display: block;
   width: 100%;
+  aspect-ratio: 1352 / 1354;
   overflow: hidden;
   text-decoration: none;
 }
@@ -2007,25 +2007,25 @@ body {
   }
 
   .lujan-publicaciones__title {
-    font-size: 3rem;
-    line-height: 3.2rem;
+    font-size: 48px;
+    line-height: 1.15;
   }
 
   .lujan-publicaciones__grid {
     flex-wrap: wrap;
-    gap: 1em;
+    gap: 20px;
     max-height: none;
   }
 
   .lujan-publicaciones__card {
-    flex: 1 1 calc(50% - 0.5em);
+    flex: 1 1 calc(50% - 10px);
     min-width: 200px;
   }
 
   .lujan-publicaciones__image-link {
     flex: none;
-    height: 280px;
-    min-height: 280px;
+    aspect-ratio: 1352 / 1354;
+    height: auto;
   }
 
   .lujan-publicaciones__image {
@@ -2040,25 +2040,25 @@ body {
   }
 
   .lujan-publicaciones__title {
-    font-size: 3rem;
-    line-height: 3.2rem;
+    font-size: 32px;
+    line-height: 1.15;
   }
 
   .lujan-publicaciones__grid {
     flex-wrap: wrap;
-    gap: 1em;
+    gap: 20px;
     max-height: none;
   }
 
   .lujan-publicaciones__card {
-    flex: 1 1 calc(50% - 0.5em);
-    min-width: 200px;
+    flex: 1 1 calc(50% - 10px);
+    min-width: 0; /* permite 2 columnas en cel (antes 200px forzaba 1) */
   }
 
   .lujan-publicaciones__image-link {
     flex: none;
-    height: 280px;
-    min-height: 280px;
+    aspect-ratio: 1352 / 1354;
+    height: auto;
   }
 
   .lujan-publicaciones__image {
