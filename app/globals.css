@@ -141,7 +141,7 @@ body {
 }
 
 /* ========== Luján – Esfuerzo que Transciende (#acerca) ========== */
-/* Spec: docs/analisis-esfuerzo-transciende-html-css.md */
+/* Spec: docs/analisis-esfuerzo-transciende-html-css.md — Desktop: 19202ba6 padding 4em 4em 6em 4em */
 
 .lujan-esfuerzo {
   display: flex;
@@ -153,6 +153,7 @@ body {
   background-color: #fff9ef;
 }
 
+/* e-con-inner: desktop padding según spec (opcional 10px); gap 40px */
 .lujan-esfuerzo__inner {
   display: flex;
   flex-direction: row;
@@ -160,8 +161,8 @@ body {
   width: 100%;
   max-width: 1500px; /* original: --content-width:1500px en 19202ba6 (min-width:768px) */
   margin: 0 auto;
-  padding: 10px; /* desktop */
-  gap: 40px; /* fijo desktop */
+  padding: 10px;
+  gap: 40px;
 }
 
 .lujan-esfuerzo__col-text,
@@ -173,12 +174,13 @@ body {
   max-width: calc(148% / 3);
 }
 
+/* Desktop: 7551e883 — padding 5em 1em 3em 0 (analisis-esfuerzo 2.3) */
 .lujan-esfuerzo__content {
   display: flex;
   flex-direction: column;
   justify-content: center;
   width: 100%;
-  padding: 80px 16px 48px 0;
+  padding: 5em 1em 3em 0;
   gap: 0;
 }
 
@@ -356,9 +358,7 @@ body {
 }
 
 /* ========== Luján – Categorías de producto (Vinos, Piscos, Cremas, Personaliza) ========== */
-/* Spec: docs/analisis-categorias-producto-vinos-piscos-html-css.md */
-
-/* Desktop: según HTML d7f1912 (padding-top 4em), b32e811 (row), d31ed9a 30% imagen + texto */
+/* Spec: docs/analisis-categorias-producto-vinos-piscos-html-css.md — Desktop: d7f1912 padding-top 4em, b32e811 padding 0 */
 .lujan-categorias {
   width: 100%;
   margin: 0;
@@ -381,7 +381,7 @@ body {
   flex-wrap: nowrap;
   gap: 0;
   min-height: 286px;
-  padding: 0 0 16px 0; /* desk */
+  padding: 0 0 16px 0;
 }
 
 .lujan-categorias__card {
@@ -692,7 +692,7 @@ body {
 }
 
 /* ========== Luján – Nuestros Productos (carrusel) ========== */
-/* Migrado desde vitivinicolalujan-offline index.html ~1482–1518 (Elementor + JKit product carousel) */
+/* Migrado desde vitivinicolalujan-offline index.html ~1482–1518 (Elementor + JKit). Desktop: contenedor padding 80px 0 4em; inner sin padding */
 
 .lujan-nuestros-productos {
   width: 100%;
@@ -948,7 +948,7 @@ body {
 }
 
 /* ========== Luján – Testimonios (carrusel) ========== */
-/* Migrado desde vitivinicolalujan-offline index.html ~1520–1586 (Elements Kit Testimonial style_6 + block-style-three) */
+/* Migrado desde vitivinicolalujan-offline index.html ~1520–1586. Desktop: section padding 43px 0; card padding 30px; inner 0 1.5rem */
 
 .lujan-testimonios {
   width: 100%;
@@ -1082,7 +1082,7 @@ body {
 }
 
 /* ========== Luján – Nuestras Fotos (grid + carrusel) ========== */
-/* Migrado desde vitivinicolalujan-offline index.html ~1597–1631 (Elementor + JKit gallery) */
+/* Migrado desde vitivinicolalujan-offline index.html ~1597–1631. Desktop: section padding 3em 4em 4em */
 
 .lujan-nuestras-fotos {
   width: 100%;
@@ -1315,7 +1315,7 @@ body {
 }
 
 /* ========== Luján – Ven a Nuestra Vitivinícola ========== */
-/* Migrado desde vitivinicolalujan-offline index.html ~1639–1712 (contenedor 1d91427). */
+/* Migrado desde vitivinicolalujan-offline index.html ~1639–1712 (contenedor 1d91427). Desktop: padding 5em 32px 5em 0 */
 
 .lujan-ven-vitivinicola {
   width: 100%;
@@ -1535,12 +1535,14 @@ body {
 }
 
 /* ========== Luján – Página Nosotros (vitivinicolalujan-offline wp-json pages/1943) ========== */
+/* Spec: docs/analisis-pagina-nosotros-lujan.md — Desktop: 06e29bd padding 0 0 0 2em; 548fbee min-height 305px padding 0; tagline 16px 13px 0 15px */
 
 /* Hero Nosotros */
 .lujan-nosotros-hero {
   position: relative;
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;
   justify-content: flex-start;
   align-items: center;
   min-height: 63vh;
@@ -1569,7 +1571,7 @@ body {
   padding: 0;
 }
 .lujan-nosotros-hero__title {
-  margin: 0 0 -0.5rem 0;
+  margin: 0 0 7px 0;
   font-family: "Margiona", sans-serif;
   font-size: 5em;
   font-weight: 500;
@@ -1580,7 +1582,7 @@ body {
   max-width: 74.509%;
 }
 .lujan-nosotros-hero__tagline {
-  margin: 0;
+  margin: 0 0 14.4px 0;
   padding: 16px 13px 0 15px;
   font-family: "Margiona", sans-serif;
   font-size: 3rem;
@@ -1592,7 +1594,7 @@ body {
   background-color: #912e60;
 }
 
-/* Trabaja con Nosotros */
+/* Trabaja con Nosotros — Desktop: 0e8b0b1 padding 5em 4em, gap 6em (analisis-pagina-nosotros §4) */
 .lujan-nosotros-trabaja {
   width: 100%;
   background-color: #fff9ef;
@@ -1617,6 +1619,7 @@ body {
 }
 .lujan-nosotros-trabaja__img {
   width: 100%;
+  padding: 0 2.6px;
   border-radius: 8% 0 0 0;
   object-fit: cover;
 }
@@ -1625,6 +1628,7 @@ body {
   flex-direction: column;
   flex: 1;
   width: 100%;
+  min-width: 0;
 }
 .lujan-nosotros-trabaja__row-top {
   display: flex;
@@ -1638,32 +1642,30 @@ body {
 }
 .lujan-nosotros-trabaja__h1 {
   margin: 0;
-  padding: 0 0 0.5em 0;
+  padding: 0 0 8px 0;
   font-family: "Margiona", sans-serif;
   font-size: 3.8rem;
   font-weight: 500;
   line-height: 3.5rem;
   letter-spacing: 0.3px;
-  -webkit-text-stroke: 1px #000;
   color: #2b2824;
   text-align: start;
 }
 .lujan-nosotros-trabaja__h2 {
   margin: 0;
-  padding: 0.5em 1em 0 1em;
+  padding: 8px 16px 0 16px;
   font-family: "Margiona", sans-serif;
   font-size: 3.8rem;
   font-weight: 500;
   line-height: 3.5rem;
   letter-spacing: 0.3px;
-  -webkit-text-stroke: 1px #000;
   color: #fff;
   background-color: #9a3c62;
   align-self: flex-start;
 }
 .lujan-nosotros-trabaja__divider {
   display: block;
-  width: 6%;
+  width: 17%;
   margin: 15px 0;
   border-top: 0.35em solid #9a3c62;
 }
@@ -1677,7 +1679,7 @@ body {
 .lujan-nosotros-trabaja__text {
   width: 79%;
   max-width: 79%;
-  margin: 0;
+  margin: 0 0 20px 0;
   font-family: "Satoshi", sans-serif;
   font-size: 1.15rem;
   font-weight: 400;
@@ -1695,24 +1697,30 @@ body {
   flex-direction: row;
   justify-content: flex-start;
   gap: 2em;
-  max-width: 1600px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   margin: 0 auto;
   padding: 0;
 }
+/* Desktop: 3em 2em 5em 2em (analisis-pagina-nosotros §5) */
 .lujan-nosotros-tarjetas__card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  flex: 0 0 30%;
-  max-width: 30%;
-  padding: 3em 2em 5em;
+  flex: 1 1 30%;
+  min-width: 0;
+  max-width: none;
+  padding: 3em 2em 5em 2em;
 }
 .lujan-nosotros-tarjetas__card-img-wrap {
-  margin: 0;
+  margin: 0 auto;
   padding: 0 0 2em 0;
   text-align: center;
 }
 .lujan-nosotros-tarjetas__card-img {
+  display: block;
+  margin: 0 auto;
   opacity: 0.98;
 }
 .lujan-nosotros-tarjetas__card--card-1 .lujan-nosotros-tarjetas__card-img {
@@ -1726,6 +1734,7 @@ body {
 }
 .lujan-nosotros-tarjetas__card-title {
   margin: 0;
+  margin-bottom: 14.4px;
   padding: 0;
   font-family: "Margiona", sans-serif;
   font-size: 2.2rem;
@@ -1745,7 +1754,7 @@ body {
   text-align: center;
 }
 
-/* Visita vitivinícola (Nosotros) */
+/* Visita vitivinícola (Nosotros) — Desktop: dc933a3 padding 6em 4em; contenido 4em 4em 4em 0 (analisis-pagina-nosotros §6) */
 .lujan-nosotros-visita {
   width: 100%;
   background-color: #f4ebde;
@@ -1775,11 +1784,13 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 4em 4em 4em 0;
+  padding: 0 0 0 64px;
   flex: 1;
+  height: auto;
+  min-height: 0;
 }
 .lujan-nosotros-visita__title {
-  margin: 0 0 -0.4em 0;
+  margin: 0 0 0.5em 0;
   font-family: "Margiona", sans-serif;
   font-size: 3.8rem;
   font-weight: 500;
@@ -1808,9 +1819,26 @@ body {
   color: #7a7a7a;
 }
 
-/* El Campo y el Sol */
+/* Desktop explícito: asegurar padding del content (evitar caché/orden) */
+@media (min-width: 1026px) {
+  .lujan-nosotros-visita__inner {
+    height: 609px;
+  }
+  .lujan-nosotros-visita__content {
+    padding: 0 0 0 64px;
+    height: auto;
+    min-height: 0;
+  }
+  .lujan-nosotros-visita__title {
+    margin: 0 0 0.5em 0;
+  }
+}
+
+/* El Campo y el Sol — Desktop: 05f62c8 padding 4em; e44bd23 col-text padding 6em 6em 6em 0 (analisis-pagina-nosotros §7) */
 .lujan-nosotros-campo {
   width: 100%;
+  padding-left: 0;
+  padding-right: 0;
 }
 .lujan-nosotros-campo__inner {
   display: flex;
@@ -1826,7 +1854,7 @@ body {
   flex-direction: column;
   width: 45.648%;
   max-width: 45.648%;
-  padding: 6em 6em 6em 0;
+  padding: 6em;
 }
 .lujan-nosotros-campo__headings {
   display: flex;
@@ -1835,13 +1863,12 @@ body {
 }
 .lujan-nosotros-campo__h1 {
   margin: 0;
-  padding: 0 0 0.5em 0;
+  padding: 0 0 8px 0;
   font-family: "Margiona", sans-serif;
   font-size: 3.8rem;
   font-weight: 500;
-  line-height: 3.5rem;
+  line-height: 1.15;
   letter-spacing: 0.3px;
-  -webkit-text-stroke: 1px #000;
   color: #2b2824;
   text-align: start;
 }
@@ -1850,9 +1877,8 @@ body {
   font-family: "Margiona", sans-serif;
   font-size: 3.8rem;
   font-weight: 500;
-  line-height: 3.5rem;
+  line-height: 1.15;
   letter-spacing: 0.3px;
-  -webkit-text-stroke: 1px #000;
   color: #9a3c62;
   width: 85.5%;
   max-width: 85.5%;
@@ -1866,6 +1892,7 @@ body {
 }
 .lujan-nosotros-campo__text {
   margin: 0;
+  padding-top: 20px;
   font-family: "Satoshi", sans-serif;
   font-size: 1rem;
   font-weight: 400;
@@ -1878,20 +1905,26 @@ body {
   justify-content: center;
   align-items: center;
   flex: 1;
+  min-height: 0;
 }
 .lujan-nosotros-campo__img {
-  max-width: 81%;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
   height: auto;
   object-fit: contain;
+  display: block;
 }
 
-/* Nosotros – Tablet (≤1024px) */
-@media (max-width: 1024px) {
+/* Nosotros – Tablet (≤1025px para incluir 1024) */
+@media (max-width: 1025px) {
   .lujan-nosotros-hero {
     min-height: 31vh;
-    justify-content: flex-end;
+    height: 353px;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
     align-items: flex-end;
-    padding: 2em;
+    padding: 32px 30px 16px 30px;
     background-image: url("/lujan/nosotros/hero-tablet.webp");
     background-position: top center;
   }
@@ -1900,9 +1933,13 @@ body {
   }
   .lujan-nosotros-hero__content {
     padding: 0;
+    align-items: flex-start;
   }
   .lujan-nosotros-hero__title {
     font-size: 4rem;
+    text-align: left;
+    width: 100%;
+    max-width: 100%;
   }
   .lujan-nosotros-hero__tagline {
     font-size: 2.6rem;
@@ -1925,11 +1962,26 @@ body {
   }
   .lujan-nosotros-trabaja__row-top {
     gap: 5%;
+    padding-bottom: 20px;
+  }
+  .lujan-nosotros-trabaja__h1,
+  .lujan-nosotros-trabaja__h2 {
+    font-size: 48px;
   }
   .lujan-nosotros-trabaja__text {
     width: 90%;
     max-width: 90%;
-    font-size: 0.95em;
+    font-size: 15.2px;
+  }
+  .lujan-nosotros-tarjetas__inner {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .lujan-nosotros-tarjetas__card {
+    flex: 1 1 30%;
+    min-width: 0;
+    max-width: none;
+    padding: 45px 30px 75px;
   }
   .lujan-nosotros-tarjetas__card-title {
     font-size: 1.7rem;
@@ -1940,6 +1992,14 @@ body {
   .lujan-nosotros-visita__content {
     padding: 0;
     align-self: center;
+    align-items: center;
+  }
+  .lujan-nosotros-visita__title {
+    font-size: 48px;
+    text-align: center;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
   }
   .lujan-nosotros-visita__img-desktop {
     display: none;
@@ -1965,21 +2025,30 @@ body {
   .lujan-nosotros-campo__col-text {
     padding: 0;
   }
+  .lujan-nosotros-campo__h1,
+  .lujan-nosotros-campo__h2 {
+    font-size: 48px;
+  }
   .lujan-nosotros-campo__text {
     width: 100%;
     max-width: 100%;
     text-align: justify;
+    font-size: 15.2px;
   }
   .lujan-nosotros-campo__img {
     max-width: 100%;
-    height: 100%;
-    object-fit: cover;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
   }
 }
 
 /* Nosotros – Móvil (≤767px) */
 @media (max-width: 767px) {
   .lujan-nosotros-hero {
+    height: 342px;
     padding: 0;
     background-position: center center;
   }
@@ -2017,17 +2086,29 @@ body {
   .lujan-nosotros-trabaja__row-top {
     flex-direction: column;
     align-items: flex-start;
-    padding: 4em 0 0;
+    padding: 60px 19.5px 0;
   }
   .lujan-nosotros-trabaja__headings {
     align-self: center;
   }
   .lujan-nosotros-trabaja__h1,
   .lujan-nosotros-trabaja__h2 {
+    font-size: 32px;
     text-align: center;
+  }
+  #trabaja-title.lujan-nosotros-trabaja__h1 {
+    height: auto;
+    line-height: 1.2;
+    padding-bottom: 7.5px;
   }
   .lujan-nosotros-trabaja__h2 {
     align-self: center;
+    box-sizing: border-box;
+    height: 50.7px;
+    padding: 7.5px 15px 0;
+    line-height: 1;
+    display: flex;
+    align-items: center;
   }
   .lujan-nosotros-trabaja__divider {
     width: 10%;
@@ -2086,10 +2167,13 @@ body {
     line-height: 1.4rem;
   }
   .lujan-nosotros-visita__inner {
-    padding: 4em 1em;
+    padding: 60px 16px 45px 16px;
   }
   .lujan-nosotros-visita__content {
-    margin: 0 0 -0.4em 0;
+    margin: 0;
+  }
+  .lujan-nosotros-visita__title {
+    font-size: 32px;
   }
   .lujan-nosotros-visita__row {
     flex-direction: column-reverse;
@@ -2103,12 +2187,13 @@ body {
     width: 92%;
     max-width: 92%;
     text-align: center;
-    padding: 0 0 18px 0;
+    padding: 0 0 32.4px 0;
     align-self: center;
+    font-size: 14.25px;
   }
   .lujan-nosotros-campo__inner {
-    flex-direction: column-reverse;
-    padding: 5em 1em;
+    flex-direction: column;
+    padding: 75px 15px;
     gap: 1em;
   }
   .lujan-nosotros-campo__col-text {
@@ -2116,11 +2201,16 @@ body {
     max-width: 100%;
     padding: 0;
   }
+  .lujan-nosotros-campo__col-img {
+    padding-left: 60px;
+    padding-right: 60px;
+  }
   .lujan-nosotros-campo__h1,
   .lujan-nosotros-campo__h2 {
     text-align: center;
     width: 100%;
     max-width: 100%;
+    font-size: 32px;
   }
   .lujan-nosotros-campo__divider {
     width: 10%;
@@ -2133,9 +2223,12 @@ body {
     max-width: 92%;
     text-align: center;
     align-self: center;
+    font-size: 14.4px;
   }
   .lujan-nosotros-campo__img {
-    max-width: 75%;
+    width: 100%;
+    max-width: 100%;
+    object-fit: cover;
   }
 }
 

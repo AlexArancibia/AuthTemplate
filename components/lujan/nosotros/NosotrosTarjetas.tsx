@@ -43,39 +43,46 @@ const CARDS = [
   },
 ] as const;
 
+/** Solo el bloque de tarjetas (inner + cards) para incrustar en otra sección */
+export function NosotrosTarjetasInner() {
+  return (
+    <div className="lujan-nosotros-tarjetas__inner">
+      {CARDS.map((card) => (
+        <div
+          key={card.id}
+          className={`lujan-nosotros-tarjetas__card lujan-nosotros-tarjetas__card--${card.modifier}`}
+          style={{ backgroundColor: card.bg }}
+        >
+          <div className="lujan-nosotros-tarjetas__card-img-wrap">
+            <Image
+              src={card.image}
+              alt=""
+              width={card.imageWidth}
+              height={card.imageHeight}
+              className="lujan-nosotros-tarjetas__card-img"
+            />
+          </div>
+          <p className="lujan-nosotros-tarjetas__card-title">
+            {card.title.split("\n").map((line, i) => (
+              <span key={i}>
+                {line}
+                {i === 0 && <br />}
+              </span>
+            ))}
+          </p>
+          <p className="lujan-nosotros-tarjetas__card-desc">
+            {card.description}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function NosotrosTarjetas() {
   return (
     <section className="lujan-nosotros-tarjetas" aria-label="Beneficios">
-      <div className="lujan-nosotros-tarjetas__inner">
-        {CARDS.map((card) => (
-          <div
-            key={card.id}
-            className={`lujan-nosotros-tarjetas__card lujan-nosotros-tarjetas__card--${card.modifier}`}
-            style={{ backgroundColor: card.bg }}
-          >
-            <div className="lujan-nosotros-tarjetas__card-img-wrap">
-              <Image
-                src={card.image}
-                alt=""
-                width={card.imageWidth}
-                height={card.imageHeight}
-                className="lujan-nosotros-tarjetas__card-img"
-              />
-            </div>
-            <p className="lujan-nosotros-tarjetas__card-title">
-              {card.title.split("\n").map((line, i) => (
-                <span key={i}>
-                  {line}
-                  {i === 0 && <br />}
-                </span>
-              ))}
-            </p>
-            <p className="lujan-nosotros-tarjetas__card-desc">
-              {card.description}
-            </p>
-          </div>
-        ))}
-      </div>
+      <NosotrosTarjetasInner />
     </section>
   );
 }

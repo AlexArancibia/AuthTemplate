@@ -6,6 +6,7 @@
  */
 
 import Image from "next/image";
+import { NosotrosTarjetasInner } from "./NosotrosTarjetas";
 
 const TRABAJA_TEXT =
   "Buscamos aliados estratégicos para expandir nuestra presencia y llevar nuestros exclusivos piscos y vinos a más clientes. Si eres distribuidor, dueño de restaurante, bar, o estás organizando un evento, queremos ofrecerte productos de alta calidad y una colaboración sólida y confiable.";
@@ -42,21 +43,22 @@ export function TrabajaConNosotros() {
               </h2>
               <h2 className="lujan-nosotros-trabaja__h2">Nosotros</h2>
               <span className="lujan-nosotros-trabaja__divider" aria-hidden />
+              <div className="lujan-nosotros-trabaja__row-bottom">
+                {/* Imagen solo móvil */}
+                <div className="lujan-nosotros-trabaja__img-mobile">
+                  <Image
+                    src="/lujan/nosotros/trabaja-imagen.webp"
+                    alt=""
+                    width={1518}
+                    height={2325}
+                    className="lujan-nosotros-trabaja__img"
+                  />
+                </div>
+                <p className="lujan-nosotros-trabaja__text">{TRABAJA_TEXT}</p>
+              </div>
             </div>
           </div>
-          <div className="lujan-nosotros-trabaja__row-bottom">
-            {/* Imagen solo móvil */}
-            <div className="lujan-nosotros-trabaja__img-mobile">
-              <Image
-                src="/lujan/nosotros/trabaja-imagen.webp"
-                alt=""
-                width={1518}
-                height={2325}
-                className="lujan-nosotros-trabaja__img"
-              />
-            </div>
-            <p className="lujan-nosotros-trabaja__text">{TRABAJA_TEXT}</p>
-          </div>
+          <NosotrosTarjetasInner />
         </div>
       </div>
     </section>

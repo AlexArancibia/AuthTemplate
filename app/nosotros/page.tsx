@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import {
   NosotrosHero,
   TrabajaConNosotros,
-  NosotrosTarjetas,
   VisitaVitivinicolaNosotros,
   ElCampoYElSol,
 } from "@/components/lujan/nosotros";
@@ -23,7 +22,6 @@ export default function NosotrosPage() {
     <>
       <NosotrosHero />
       <TrabajaConNosotros />
-      <NosotrosTarjetas />
       <VisitaVitivinicolaNosotros />
       <ElCampoYElSol />
     </>
