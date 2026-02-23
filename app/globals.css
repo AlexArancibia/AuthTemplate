@@ -35,7 +35,7 @@ body {
   .elementor-widget-container {
     padding-bottom: 21.6px;
     margin-bottom: 0;
-  }
+  } 
 }
 
 /* Luján – Fuente Margiona (hero) */
@@ -160,15 +160,17 @@ body {
   width: 100%;
   max-width: 1500px; /* original: --content-width:1500px en 19202ba6 (min-width:768px) */
   margin: 0 auto;
-  gap: 0;
+  padding: 10px; /* desktop */
+  gap: 40px; /* fijo desktop */
 }
 
-.lujan-esfuerzo__col-text {
+.lujan-esfuerzo__col-text,
+.lujan-esfuerzo__col-left {
   display: flex;
   flex-direction: row;
   justify-content: center;
-  flex: 0 0 45.45%;
-  max-width: 45.45%;
+  flex: 0 0 calc(148% / 3); /* 148/3% primera columna */
+  max-width: calc(148% / 3);
 }
 
 .lujan-esfuerzo__content {
@@ -186,10 +188,11 @@ body {
 
 .lujan-esfuerzo__heading-wrap--first {
   padding: 0 0 1em 0;
+  margin: 0; /* desktop: sin margen */
 }
 
-.lujan-esfuerzo__heading-wrap:not(:last-child) {
-  margin-block-end: 20px;
+.lujan-esfuerzo__heading-wrap:not(:last-child):not(.lujan-esfuerzo__heading-wrap--first) {
+  margin-block-end: 20px; /* desktop */
 }
 
 .lujan-esfuerzo__title {
@@ -234,10 +237,14 @@ body {
   text-align: left;
 }
 
-.lujan-esfuerzo__col-image {
-  flex: 0 0 54.55%;
-  max-width: 54.55%;
+.lujan-esfuerzo__col-image,
+.lujan-esfuerzo__col-right {
+  flex: 0 0 48%; /* 48% segunda columna */
+  max-width: 48%;
   min-height: 280px;
+}
+
+.lujan-esfuerzo__col-image {
   background-image: url("/lujan/home/esfuerzo-transciende.webp");
   background-size: cover;
   background-position: center;
@@ -252,15 +259,15 @@ body {
 
   .lujan-esfuerzo__inner {
     max-width: 1024px;
+    gap: calc(8% / 3);
+    padding: 0;
   }
 
-  .lujan-esfuerzo__col-text {
+  .lujan-esfuerzo__col-text,
+  .lujan-esfuerzo__col-left {
     justify-content: space-between;
-  }
-
-  .lujan-esfuerzo__col-text {
-    flex: 0 0 45.63%;
-    max-width: 45.63%;
+    flex: 0 0 calc(148% / 3);
+    max-width: calc(148% / 3);
   }
 
   .lujan-esfuerzo__title {
@@ -268,9 +275,10 @@ body {
     line-height: 3.2rem;
   }
 
-  .lujan-esfuerzo__col-image {
-    flex: 0 0 50%;
-    max-width: 50%;
+  .lujan-esfuerzo__col-image,
+  .lujan-esfuerzo__col-right {
+    flex: 0 0 48%;
+    max-width: 48%;
   }
 
   .lujan-esfuerzo__content {
@@ -289,9 +297,11 @@ body {
     flex-direction: column;
     max-width: 100%;
     width: 100%;
+    padding: 0 !important; /* cel: quitar padding 10 del base */
   }
 
-  .lujan-esfuerzo__col-text {
+  .lujan-esfuerzo__col-text,
+  .lujan-esfuerzo__col-left {
     flex: 1 1 100%;
     max-width: 100%;
     margin: 0;
@@ -337,7 +347,8 @@ body {
     text-align: center;
   }
 
-  .lujan-esfuerzo__col-image {
+  .lujan-esfuerzo__col-image,
+  .lujan-esfuerzo__col-right {
     flex: 1 1 100%;
     max-width: 100%;
     min-height: 320px;
@@ -359,7 +370,7 @@ body {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 1500px;
+  max-width: 1628px; /* 1500 + 128 desktop */
   margin: 0 auto;
   padding: 0 64px 64px;
 }
@@ -369,7 +380,8 @@ body {
   flex-direction: row;
   flex-wrap: nowrap;
   gap: 0;
-  padding: 0 0 56px 0;
+  min-height: 286px;
+  padding: 0 0 16px 0; /* desk */
 }
 
 .lujan-categorias__card {
@@ -387,16 +399,37 @@ body {
   display: flex;
   flex-direction: row;
   justify-content: center;
-  align-items: flex-start;
+  align-items: center; /* centrado vertical (desk) */
   flex: 0 0 31%;
   max-width: 31%;
   padding: 0;
+  overflow: hidden; /* si la imagen se sale de ancho, se corta */
 }
 
 .lujan-categorias__card-image {
   display: block;
+  width: auto;
+  max-width: none;
+  height: 250px; /* altura fija desk */
+  object-fit: contain;
   object-position: center center;
   transition: transform 0.35s ease-out, filter 0.35s ease-out;
+}
+
+.lujan-categorias__card-image[src="/home/copa-pisco.png"] {
+  padding-top: 10px;
+}
+
+.lujan-categorias__card-image[src="/home/oackging.png"] {
+  padding-top: 10px;
+}
+
+.lujan-categorias__card-image[src="/home/copa-vino.png"] {
+  height: 280px;
+  max-height: 280px;
+  margin-top: -10px;
+  margin-bottom: -10px;
+  margin-left: -15px;
 }
 
 .lujan-categorias__card:hover .lujan-categorias__card-image {
@@ -438,47 +471,6 @@ body {
   animation-delay: 0.35s;
 }
 
-/* Desktop: estilos por categoría (del HTML original 02c8a39, 51dcf67, b627e13, 83cfa20) */
-.lujan-categorias__card--vinos .lujan-categorias__card-image-wrap {
-  margin: -14px 0 3px 0;
-}
-.lujan-categorias__card--vinos .lujan-categorias__card-image {
-  width: 100%;
-  max-width: 100%;
-  height: 246px;
-  object-fit: cover;
-}
-
-.lujan-categorias__card--piscos .lujan-categorias__card-image-wrap {
-  margin: -43px 0 -23px 0;
-}
-.lujan-categorias__card--piscos .lujan-categorias__card-image {
-  width: 100%;
-  max-width: 100%;
-  height: 400px;
-  object-fit: contain;
-}
-
-.lujan-categorias__card--cremas-macerados .lujan-categorias__card-image-wrap {
-  margin: -12px 0 -8px 0;
-}
-.lujan-categorias__card--cremas-macerados .lujan-categorias__card-image {
-  width: 37%;
-  max-width: 100%;
-  height: 256px;
-  object-fit: contain;
-}
-
-.lujan-categorias__card--personaliza .lujan-categorias__card-image-wrap {
-  margin: -25px 0 -16px 0;
-}
-.lujan-categorias__card--personaliza .lujan-categorias__card-image {
-  width: 49%;
-  max-width: 100%;
-  height: 287px;
-  object-fit: contain;
-}
-
 .lujan-categorias__card-content {
   flex: 1 1 auto;
   min-width: 0;
@@ -490,15 +482,15 @@ body {
   font-family: "Margiona", sans-serif;
   font-size: 32px;
   font-weight: 500;
-  line-height: 2.7rem;
+  line-height: 2.2rem;
   letter-spacing: 0.3px;
   color: #b2966d;
 }
 
 .lujan-categorias__card-divider {
   display: block;
-  width: 6%;
-  max-width: 2em;
+  width: 12%;
+  max-width: 4rem;
   margin: 10px 0;
   border-top: 0.25em solid #9a3c62;
 }
@@ -508,7 +500,7 @@ body {
   font-family: "Satoshi", sans-serif;
   font-size: 13px;
   font-weight: 400;
-  line-height: 1.2rem;
+  line-height: 16px; /* desk */
   letter-spacing: 0.5px;
   color: #817c7b;
   text-align: left;
@@ -518,7 +510,7 @@ body {
 .lujan-categorias__banner {
   min-height: 680px;
   width: 100%;
-  margin-top: 2em;
+  margin-top: 0; /* desk: sin margen superior */
   background-image: url("/home/cata-bodega.webp");
   background-size: cover;
   background-position: center;
@@ -529,6 +521,9 @@ body {
 
 /* Tablet (768px–1024px) */
 @media (max-width: 1024px) {
+  .lujan-categorias.lujan-categorias--visible {
+    padding-top: 48px;
+  }
   .lujan-categorias__inner {
     padding: 0;
   }
@@ -539,6 +534,7 @@ body {
     align-items: center;
     gap: 2em;
     padding: 32px;
+    height: 588px; /* tablet */
   }
 
   .lujan-categorias__card {
@@ -546,68 +542,44 @@ body {
     max-width: 45%;
     flex-direction: row;
     gap: 0 1em;
-    min-height: 265px;
+    height: 246px; /* tablet: 246 - 16 */
+    min-height: 246px; /* anula min-height 265px del base */
     align-items: center;
   }
 
   .lujan-categorias__card-image-wrap {
     flex: 0 0 25%;
     max-width: 25%;
+    align-items: center; /* centrado vertical tablet */
+    overflow: hidden; /* si la imagen se pasa de ancho, se corta */
   }
 
   .lujan-categorias__card-content {
     flex: 1 1 auto;
     min-width: 0;
     padding: 1em 0 1em 1em;
+    align-self: flex-start; /* pegado arriba en tablet */
   }
 
-  .lujan-categorias__card--vinos .lujan-categorias__card-image-wrap {
+  .lujan-categorias__card-image-wrap {
     margin: 0;
-    overflow: hidden;
   }
-  .lujan-categorias__card--vinos .lujan-categorias__card-image {
-    width: calc(100% + 24px);
+  .lujan-categorias__card-image {
+    width: auto;
     max-width: none;
-    height: auto;
-    min-height: 198px;
-    margin: -20px -20px -0px -0px;
-    object-fit: cover;
-  }
-
-  .lujan-categorias__card--piscos .lujan-categorias__card-image-wrap {
-    margin: 0;
-  }
-  .lujan-categorias__card--piscos .lujan-categorias__card-image {
-    max-width: 76%;
-    height: 265px;
-    width: auto;
+    height: 230px; /* tablet */
+    max-height: 230px;
     object-fit: contain;
   }
-
-  .lujan-categorias__card--cremas-macerados .lujan-categorias__card-image-wrap {
-    margin: 0;
-  }
-  .lujan-categorias__card--cremas-macerados .lujan-categorias__card-image {
-    height: 198px;
-    max-width: 100%;
-    width: auto;
-    object-fit: contain;
-  }
-
-  .lujan-categorias__card--personaliza .lujan-categorias__card-image-wrap {
-    margin: 0;
-    padding: 0 0 2em 0;
-  }
-  .lujan-categorias__card--personaliza .lujan-categorias__card-image {
-    width: 94%;
-    max-width: 100%;
-    height: 205px;
-    object-fit: contain;
+  .lujan-categorias__card-image[src="/home/copa-vino.png"] {
+    height: 230px;
+    max-height: 230px;
+    margin: 0; /* mismo tamaño que el resto en tablet */
   }
 
   .lujan-categorias__card-title {
     font-size: 44.8px;
-    line-height: 2.7rem;
+    line-height: 2.2rem;
   }
 
   .lujan-categorias__card-desc {
@@ -635,8 +607,10 @@ body {
     flex-wrap: wrap;
     justify-content: flex-start;
     align-items: center;
-    gap: 0 5%;
-    padding: 0 0 56px;
+    gap: 0; /* cel */
+    height: 1020px;
+    padding: 0 0 60px;
+    max-width: 1020px;
   }
 
   .lujan-categorias__card {
@@ -644,78 +618,50 @@ body {
     max-width: 100%;
     flex-direction: row;
     gap: 0 5%;
-    min-height: 0;
+    height: 240px; /* cel */
+    min-height: 240px;
     align-items: center;
   }
 
   .lujan-categorias__card-image-wrap {
     flex: 0 0 20%;
     max-width: 20%;
+    overflow: hidden; /* cel: se cortan por los lados */
   }
 
-  .lujan-categorias__card--vinos {
-    min-height: 240px;
-  }
-  .lujan-categorias__card--vinos .lujan-categorias__card-image-wrap {
-    margin: 0;
-  }
-  .lujan-categorias__card--vinos .lujan-categorias__card-image {
-    width: 100%;
-    height: 240px;
-    object-fit: cover;
-  }
-
-  .lujan-categorias__card--piscos {
-    min-height: 240px;
-  }
-  .lujan-categorias__card--piscos .lujan-categorias__card-image-wrap {
-    margin: 0;
-    padding: 0 6px 0 16px;
-  }
-  .lujan-categorias__card--piscos .lujan-categorias__card-image {
-    width: 100%;
-    max-width: 100%;
-    height: 240px;
-    object-fit: contain;
-  }
-
-  .lujan-categorias__card--cremas-macerados {
-    min-height: 240px;
-  }
-  .lujan-categorias__card--cremas-macerados .lujan-categorias__card-image-wrap {
-    margin: 0;
-    padding: 0 0 0 1em;
-  }
-  .lujan-categorias__card--cremas-macerados .lujan-categorias__card-image {
-    width: 75%;
-    max-width: 100%;
-    height: 240px;
-    object-fit: contain;
-  }
-
+  .lujan-categorias__card--vinos,
+  .lujan-categorias__card--piscos,
+  .lujan-categorias__card--cremas-macerados,
   .lujan-categorias__card--personaliza {
     min-height: 240px;
   }
-  .lujan-categorias__card--personaliza .lujan-categorias__card-image-wrap {
+  .lujan-categorias__card-image-wrap {
     margin: 0;
-    padding: 0 0 0 34px;
+    padding: 0;
   }
-  .lujan-categorias__card--personaliza .lujan-categorias__card-image {
-    width: 75%;
-    max-width: 100%;
-    height: 240px;
+  .lujan-categorias__card-image {
+    width: auto;
+    max-width: none;
+    height: 180px; /* cel */
+    max-height: 180px;
     object-fit: contain;
+  }
+  .lujan-categorias__card-image[src="/home/copa-vino.png"] {
+    height: 180px;
+    max-height: 180px;
+    margin: 0 0 0 -12px; /* cel: margen negativo izquierdo */
   }
 
   .lujan-categorias__card-content {
     flex: 0 0 70%;
     max-width: 70%;
     padding: 0;
+    align-self: center; /* cel: centrado vertical */
   }
 
   .lujan-categorias__card-title {
     font-size: 2rem;
-    line-height: 2.5rem;
+    line-height: 2rem;
   }
 
   .lujan-categorias__card-desc {
@@ -1585,6 +1531,611 @@ body {
     font-size: 0.9rem;
     padding: 1em 0 1.5em 0;
     text-align: center;
+  }
+}
+
+/* ========== Luján – Página Nosotros (vitivinicolalujan-offline wp-json pages/1943) ========== */
+
+/* Hero Nosotros */
+.lujan-nosotros-hero {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  min-height: 63vh;
+  padding: 0 0 0 2em;
+  background-image: url("/lujan/nosotros/hero-desktop.webp");
+  background-position: center left;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+.lujan-nosotros-hero__overlay {
+  position: absolute;
+  inset: 0;
+  background-color: #000;
+  opacity: 0.2;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+.lujan-nosotros-hero__content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-start;
+  min-height: 305px;
+  padding: 0;
+}
+.lujan-nosotros-hero__title {
+  margin: 0 0 -0.5rem 0;
+  font-family: "Margiona", sans-serif;
+  font-size: 5em;
+  font-weight: 500;
+  line-height: 3.5rem;
+  letter-spacing: 0.3px;
+  color: #fff9ef;
+  width: 74.509%;
+  max-width: 74.509%;
+}
+.lujan-nosotros-hero__tagline {
+  margin: 0;
+  padding: 16px 13px 0 15px;
+  font-family: "Margiona", sans-serif;
+  font-size: 3rem;
+  font-weight: 500;
+  line-height: 2rem;
+  letter-spacing: 1.5px;
+  word-spacing: 9px;
+  color: #c99c4c;
+  background-color: #912e60;
+}
+
+/* Trabaja con Nosotros */
+.lujan-nosotros-trabaja {
+  width: 100%;
+  background-color: #fff9ef;
+}
+.lujan-nosotros-trabaja__inner {
+  display: flex;
+  flex-direction: row;
+  gap: 6em;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 5em 4em;
+}
+.lujan-nosotros-trabaja__img-desktop {
+  flex: 0 0 29.239%;
+  max-width: 29.239%;
+}
+.lujan-nosotros-trabaja__img-tablet {
+  display: none;
+}
+.lujan-nosotros-trabaja__img-mobile {
+  display: none;
+}
+.lujan-nosotros-trabaja__img {
+  width: 100%;
+  border-radius: 8% 0 0 0;
+  object-fit: cover;
+}
+.lujan-nosotros-trabaja__col {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+}
+.lujan-nosotros-trabaja__row-top {
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+}
+.lujan-nosotros-trabaja__headings {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.lujan-nosotros-trabaja__h1 {
+  margin: 0;
+  padding: 0 0 0.5em 0;
+  font-family: "Margiona", sans-serif;
+  font-size: 3.8rem;
+  font-weight: 500;
+  line-height: 3.5rem;
+  letter-spacing: 0.3px;
+  -webkit-text-stroke: 1px #000;
+  color: #2b2824;
+  text-align: start;
+}
+.lujan-nosotros-trabaja__h2 {
+  margin: 0;
+  padding: 0.5em 1em 0 1em;
+  font-family: "Margiona", sans-serif;
+  font-size: 3.8rem;
+  font-weight: 500;
+  line-height: 3.5rem;
+  letter-spacing: 0.3px;
+  -webkit-text-stroke: 1px #000;
+  color: #fff;
+  background-color: #9a3c62;
+  align-self: flex-start;
+}
+.lujan-nosotros-trabaja__divider {
+  display: block;
+  width: 6%;
+  margin: 15px 0;
+  border-top: 0.35em solid #9a3c62;
+}
+.lujan-nosotros-trabaja__row-bottom {
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+}
+.lujan-nosotros-trabaja__text {
+  width: 79%;
+  max-width: 79%;
+  margin: 0;
+  font-family: "Satoshi", sans-serif;
+  font-size: 1.15rem;
+  font-weight: 400;
+  line-height: 1.4rem;
+  letter-spacing: 0.5px;
+  color: #7a7a7a;
+}
+
+/* Tarjetas Nosotros */
+.lujan-nosotros-tarjetas {
+  width: 100%;
+}
+.lujan-nosotros-tarjetas__inner {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 2em;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0;
+}
+.lujan-nosotros-tarjetas__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 0 0 30%;
+  max-width: 30%;
+  padding: 3em 2em 5em;
+}
+.lujan-nosotros-tarjetas__card-img-wrap {
+  margin: 0;
+  padding: 0 0 2em 0;
+  text-align: center;
+}
+.lujan-nosotros-tarjetas__card-img {
+  opacity: 0.98;
+}
+.lujan-nosotros-tarjetas__card--card-1 .lujan-nosotros-tarjetas__card-img {
+  max-width: 55%;
+}
+.lujan-nosotros-tarjetas__card--card-2 .lujan-nosotros-tarjetas__card-img {
+  max-width: 60%;
+}
+.lujan-nosotros-tarjetas__card--card-3 .lujan-nosotros-tarjetas__card-img {
+  max-width: 35%;
+}
+.lujan-nosotros-tarjetas__card-title {
+  margin: 0;
+  padding: 0;
+  font-family: "Margiona", sans-serif;
+  font-size: 2.2rem;
+  font-weight: 500;
+  line-height: 2.6rem;
+  color: #fff;
+  text-align: center;
+}
+.lujan-nosotros-tarjetas__card-desc {
+  margin: 0;
+  font-family: "Satoshi", sans-serif;
+  font-size: 0.9rem;
+  font-weight: 400;
+  line-height: 1.2rem;
+  letter-spacing: 0.5px;
+  color: #fff;
+  text-align: center;
+}
+
+/* Visita vitivinícola (Nosotros) */
+.lujan-nosotros-visita {
+  width: 100%;
+  background-color: #f4ebde;
+}
+.lujan-nosotros-visita__inner {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 6em 4em;
+}
+.lujan-nosotros-visita__img-desktop {
+  flex: 0 0 auto;
+  max-width: 45%;
+}
+.lujan-nosotros-visita__img-tablet-mobile {
+  display: none;
+}
+.lujan-nosotros-visita__img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+.lujan-nosotros-visita__content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 4em 4em 4em 0;
+  flex: 1;
+}
+.lujan-nosotros-visita__title {
+  margin: 0 0 -0.4em 0;
+  font-family: "Margiona", sans-serif;
+  font-size: 3.8rem;
+  font-weight: 500;
+  line-height: 3.5rem;
+  letter-spacing: 0.3px;
+  color: #2b2824;
+}
+.lujan-nosotros-visita__title-accent {
+  color: #9a3c62;
+}
+.lujan-nosotros-visita__row {
+  display: flex;
+  flex-direction: row;
+  gap: 5%;
+  align-items: flex-start;
+}
+.lujan-nosotros-visita__text {
+  flex: 1;
+  max-width: 734px;
+  margin: 0;
+  font-family: "Satoshi", sans-serif;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.2rem;
+  letter-spacing: 0.5px;
+  color: #7a7a7a;
+}
+
+/* El Campo y el Sol */
+.lujan-nosotros-campo {
+  width: 100%;
+}
+.lujan-nosotros-campo__inner {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 0 5em;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 4em 4em;
+}
+.lujan-nosotros-campo__col-text {
+  display: flex;
+  flex-direction: column;
+  width: 45.648%;
+  max-width: 45.648%;
+  padding: 6em 6em 6em 0;
+}
+.lujan-nosotros-campo__headings {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.lujan-nosotros-campo__h1 {
+  margin: 0;
+  padding: 0 0 0.5em 0;
+  font-family: "Margiona", sans-serif;
+  font-size: 3.8rem;
+  font-weight: 500;
+  line-height: 3.5rem;
+  letter-spacing: 0.3px;
+  -webkit-text-stroke: 1px #000;
+  color: #2b2824;
+  text-align: start;
+}
+.lujan-nosotros-campo__h2 {
+  margin: 0;
+  font-family: "Margiona", sans-serif;
+  font-size: 3.8rem;
+  font-weight: 500;
+  line-height: 3.5rem;
+  letter-spacing: 0.3px;
+  -webkit-text-stroke: 1px #000;
+  color: #9a3c62;
+  width: 85.5%;
+  max-width: 85.5%;
+  text-align: start;
+}
+.lujan-nosotros-campo__divider {
+  display: block;
+  width: 6%;
+  margin: 10px 0;
+  border-top: 0.35em solid #9a3c62;
+}
+.lujan-nosotros-campo__text {
+  margin: 0;
+  font-family: "Satoshi", sans-serif;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.2rem;
+  letter-spacing: 0.5px;
+  color: #7a7a7a;
+}
+.lujan-nosotros-campo__col-img {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+}
+.lujan-nosotros-campo__img {
+  max-width: 81%;
+  height: auto;
+  object-fit: contain;
+}
+
+/* Nosotros – Tablet (≤1024px) */
+@media (max-width: 1024px) {
+  .lujan-nosotros-hero {
+    min-height: 31vh;
+    justify-content: flex-end;
+    align-items: flex-end;
+    padding: 2em;
+    background-image: url("/lujan/nosotros/hero-tablet.webp");
+    background-position: top center;
+  }
+  .lujan-nosotros-hero__overlay {
+    opacity: 0;
+  }
+  .lujan-nosotros-hero__content {
+    padding: 0;
+  }
+  .lujan-nosotros-hero__title {
+    font-size: 4rem;
+  }
+  .lujan-nosotros-hero__tagline {
+    font-size: 2.6rem;
+  }
+  .lujan-nosotros-trabaja__inner {
+    padding: 4em 1em;
+  }
+  .lujan-nosotros-trabaja__img-desktop {
+    display: none;
+  }
+  .lujan-nosotros-trabaja__img-tablet {
+    display: block;
+    width: 230.887px;
+    max-width: 230.887px;
+    flex-shrink: 0;
+  }
+  .lujan-nosotros-trabaja__img-tablet .lujan-nosotros-trabaja__img {
+    width: 84%;
+    max-width: 100%;
+  }
+  .lujan-nosotros-trabaja__row-top {
+    gap: 5%;
+  }
+  .lujan-nosotros-trabaja__text {
+    width: 90%;
+    max-width: 90%;
+    font-size: 0.95em;
+  }
+  .lujan-nosotros-tarjetas__card-title {
+    font-size: 1.7rem;
+  }
+  .lujan-nosotros-visita__inner {
+    padding: 6em 3em;
+  }
+  .lujan-nosotros-visita__content {
+    padding: 0;
+    align-self: center;
+  }
+  .lujan-nosotros-visita__img-desktop {
+    display: none;
+  }
+  .lujan-nosotros-visita__img-tablet-mobile {
+    display: block;
+    width: 30%;
+    max-width: 30%;
+  }
+  .lujan-nosotros-visita__row {
+    flex-direction: row;
+    gap: 5%;
+  }
+  .lujan-nosotros-visita__text {
+    width: 60%;
+    max-width: 60%;
+    font-size: 0.95em;
+  }
+  .lujan-nosotros-campo__inner {
+    padding: 5em 3em;
+    gap: 0 5em;
+  }
+  .lujan-nosotros-campo__col-text {
+    padding: 0;
+  }
+  .lujan-nosotros-campo__text {
+    width: 100%;
+    max-width: 100%;
+    text-align: justify;
+  }
+  .lujan-nosotros-campo__img {
+    max-width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+/* Nosotros – Móvil (≤767px) */
+@media (max-width: 767px) {
+  .lujan-nosotros-hero {
+    padding: 0;
+    background-position: center center;
+  }
+  .lujan-nosotros-hero__overlay {
+    opacity: 0.26;
+  }
+  .lujan-nosotros-hero__content {
+    min-height: 342px;
+    padding: 1em;
+  }
+  .lujan-nosotros-hero__title {
+    font-size: 3rem;
+  }
+  .lujan-nosotros-hero__tagline {
+    font-size: 1.9rem;
+  }
+  .lujan-nosotros-trabaja__inner {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+  }
+  .lujan-nosotros-trabaja__img-tablet {
+    display: none;
+  }
+  .lujan-nosotros-trabaja__img-mobile {
+    display: block;
+    width: 92.572%;
+    max-width: 92.572%;
+  }
+  .lujan-nosotros-trabaja__img-mobile .lujan-nosotros-trabaja__img {
+    width: 100%;
+    max-width: 100%;
+  }
+  .lujan-nosotros-trabaja__row-top {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 4em 0 0;
+  }
+  .lujan-nosotros-trabaja__headings {
+    align-self: center;
+  }
+  .lujan-nosotros-trabaja__h1,
+  .lujan-nosotros-trabaja__h2 {
+    text-align: center;
+  }
+  .lujan-nosotros-trabaja__h2 {
+    align-self: center;
+  }
+  .lujan-nosotros-trabaja__divider {
+    width: 10%;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+  }
+  .lujan-nosotros-trabaja__row-bottom {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  .lujan-nosotros-trabaja__text {
+    width: 100%;
+    max-width: 100%;
+    padding: 39px 10px 10px 10px;
+    text-align: justify;
+    align-self: center;
+  }
+  .lujan-nosotros-tarjetas__inner {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    gap: 0;
+  }
+  .lujan-nosotros-tarjetas__card {
+    flex: 0 0 90%;
+    max-width: 90%;
+    margin: 10px 0;
+    padding: 1em;
+  }
+  .lujan-nosotros-tarjetas__card-img-wrap {
+    width: 84px;
+    max-width: 84px;
+    align-self: center;
+  }
+  .lujan-nosotros-tarjetas__card--card-1 .lujan-nosotros-tarjetas__card-img {
+    width: 69%;
+    max-width: 100%;
+  }
+  .lujan-nosotros-tarjetas__card--card-2 .lujan-nosotros-tarjetas__card-img {
+    width: 71%;
+    max-width: 100%;
+  }
+  .lujan-nosotros-tarjetas__card--card-3 .lujan-nosotros-tarjetas__card-img {
+    width: 41%;
+    max-width: 100%;
+  }
+  .lujan-nosotros-tarjetas__card-title {
+    font-size: 1.6rem;
+    line-height: 1.9rem;
+    width: 100%;
+  }
+  .lujan-nosotros-tarjetas__card-desc {
+    font-size: 0.9em;
+    line-height: 1.4rem;
+  }
+  .lujan-nosotros-visita__inner {
+    padding: 4em 1em;
+  }
+  .lujan-nosotros-visita__content {
+    margin: 0 0 -0.4em 0;
+  }
+  .lujan-nosotros-visita__row {
+    flex-direction: column-reverse;
+  }
+  .lujan-nosotros-visita__img-tablet-mobile {
+    width: 40.182%;
+    max-width: 40.182%;
+    align-self: center;
+  }
+  .lujan-nosotros-visita__text {
+    width: 92%;
+    max-width: 92%;
+    text-align: center;
+    padding: 0 0 18px 0;
+    align-self: center;
+  }
+  .lujan-nosotros-campo__inner {
+    flex-direction: column-reverse;
+    padding: 5em 1em;
+    gap: 1em;
+  }
+  .lujan-nosotros-campo__col-text {
+    width: 100%;
+    max-width: 100%;
+    padding: 0;
+  }
+  .lujan-nosotros-campo__h1,
+  .lujan-nosotros-campo__h2 {
+    text-align: center;
+    width: 100%;
+    max-width: 100%;
+  }
+  .lujan-nosotros-campo__divider {
+    width: 10%;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+  }
+  .lujan-nosotros-campo__text {
+    width: 92%;
+    max-width: 92%;
+    text-align: center;
+    align-self: center;
+  }
+  .lujan-nosotros-campo__img {
+    max-width: 75%;
   }
 }
 
