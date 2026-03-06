@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect, useMemo } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { useCartStore } from "@/stores/cartStore"
 import { useEmailStore } from "@/stores/emailStore"
@@ -134,8 +134,6 @@ export default function CheckoutPage() {
   const { shopSettings, shippingMethods, paymentProviders, coupons, couponCode, createOrder } = useMainStore()
   const { currentUser, loading: userLoading, fetchUserByEmail, createAddress, deleteAddress } = useUserStore()
   const { sendOrderEmails } = useEmailStore()
-  const searchParams = useSearchParams()
-  
   const { selectedCurrencyId, acceptedCurrencies } = useCurrencyStore()
   const activeCurrency = acceptedCurrencies.find(c => c.id === selectedCurrencyId)
   const activeShopSettings = shopSettings?.[0]
@@ -157,13 +155,20 @@ export default function CheckoutPage() {
   const [selectedBillingAddressId, setSelectedBillingAddressId] = useState<string | null>(null)
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null)
   
-  // Determinar el paso inicial basado en si viene del login
-  const getInitialStep = () => {
-    const fromLogin = searchParams.get('fromLogin')
-    return fromLogin === 'true' ? STEPS.CUSTOMER_INFO : STEPS.CART_REVIEW
-  }
-  
-  const [currentStep, setCurrentStep] = useState(getInitialStep())
+  // Paso inicial: CUSTOMER_INFO solo si viene del login (sessionStorage), no por URL (seguridad M-02)
+  const [currentStep, setCurrentStep] = useState(() => {
+    if (typeof window === "undefined") return STEPS.CART_REVIEW
+    try {
+      const fromLogin = sessionStorage.getItem("checkout_from_login")
+      if (fromLogin) {
+        sessionStorage.removeItem("checkout_from_login")
+        return STEPS.CUSTOMER_INFO
+      }
+    } catch {
+      // sessionStorage no disponible (ej. incógnito con restricciones)
+    }
+    return STEPS.CART_REVIEW
+  })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [pageLoading, setPageLoading] = useState(true)

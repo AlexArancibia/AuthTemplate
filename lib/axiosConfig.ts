@@ -1,5 +1,9 @@
 import axios, { type AxiosInstance, type InternalAxiosRequestConfig } from "axios"
+import { logger } from "@/lib/logger"
 
+// TODO(security): A futuro mover la API key a una variable solo de servidor
+// (sin prefijo NEXT_PUBLIC_) y hacer que todas las llamadas al backend pasen
+// por API routes de Next.js, en lugar de exponer la API key en el bundle.
 // Ensure environment variables are properly typed
 declare global {
   namespace NodeJS {
@@ -25,7 +29,7 @@ apiClient.interceptors.request.use(
     if (process.env.NEXT_PUBLIC_API_KEY) {
       config.headers["Authorization"] = `Bearer ${process.env.NEXT_PUBLIC_API_KEY}`
     } else {
-      console.warn("API key not found in environment variables")
+      logger.warn("API key not found in environment variables")
     }
 
     return config
@@ -42,14 +46,11 @@ apiClient.interceptors.response.use(
   },
   (error) => {
     if (error.response) {
-      console.error("API Error:", {
-        status: error.response.status,
-        data: error.response.data,
-      })
+      logger.error({ status: error.response.status, data: error.response.data }, "API Error")
     } else if (error.request) {
-      console.error("No response received from API")
+      logger.error("No response received from API")
     } else {
-      console.error("Error setting up request:", error.message)
+      logger.error({ message: error.message }, "Error setting up request")
     }
     return Promise.reject(error)
   },

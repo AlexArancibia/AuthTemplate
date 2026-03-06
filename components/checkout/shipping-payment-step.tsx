@@ -321,24 +321,8 @@ export function ShippingPaymentStep({
               return;
             }
 
-            // Pago exitoso - Actualizar orden
+            // Pago exitoso - La API route ya marcó la orden como PAID en el backend (X-Order-Update-Secret)
             try {
-              await updateOrder(order.id, {
-                orderNumber: order.orderNumber,
-                paymentStatus: PaymentStatus.COMPLETED,
-                financialStatus: OrderFinancialStatus.PAID,
-                paymentDetails: {
-                  provider: selectedProvider?.name || "Culqi",
-                  chargeId: data?.data?.id,
-                  amount: data?.data?.amount,
-                  currency: data?.data?.currency_code,
-                  sourceId: data?.data?.source_id,
-                  outcome: data?.data?.outcome,
-                  completedAt: new Date().toISOString(),
-                  raw: data,
-                },
-              });
-
               const updatedOrderForEmails: Order = {
                 ...order,
                 paymentStatus: PaymentStatus.COMPLETED,

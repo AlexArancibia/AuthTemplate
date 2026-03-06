@@ -1,4 +1,6 @@
 import { db } from "@/lib/db";
+import { logger } from "@/lib/logger";
+import { sendVerificationEmail } from "@/lib/send-verification";
 import { loginSchema } from "@/lib/zod";
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
@@ -74,37 +76,20 @@ export default {
             },
           })
 
-          // enviar email de verificación usando el API endpoint
           try {
-            const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/email/send-verification`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                email: user.email,
-                verificationToken: token,
-                verificationUrl: process.env.NEXTAUTH_URL || 'http://localhost:3000'
-              })
+            const verificationUrl = process.env.NEXTAUTH_URL || "http://localhost:3000"
+            const result = await sendVerificationEmail({
+              email: user.email,
+              verificationToken: token,
+              verificationUrl,
             })
-
-            const contentType = response.headers.get('content-type')
-            let result
-            if (contentType && contentType.includes('application/json')) {
-              result = await response.json()
-            } else {
-              const text = await response.text()
-              throw new Error(`Respuesta no es JSON: ${text}`)
-            }
-
-            if (!response.ok || !result.success) {
+            if (!result.success) {
               throw new Error(result.error || "Error enviando email de verificación")
             }
-
-            console.log("Email de verificación enviado:", result.messageId)
+            logger.info({ messageId: result.messageId }, "Email de verificación enviado")
           } catch (error) {
             // Log del error pero no fallar el proceso
-            console.error("Error enviando email de verificación:", error)
+            logger.error({ err: error }, "Error enviando email de verificación")
             throw new Error("Por favor verifica tu email para continuar")
           }
 
@@ -116,4 +101,12 @@ export default {
     }),
   ],
   trustHost: true,
+  // L-03: Explícito SameSite=Lax en cookies de sesión (protección CSRF)
+  cookies: {
+    sessionToken: {
+      options: {
+        sameSite: "lax",
+      },
+    },
+  },
 } satisfies NextAuthConfig

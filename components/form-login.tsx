@@ -47,6 +47,13 @@ const FormLogin = ({
 
   const fetchUserByEmail = useUserStore((state) => state.fetchUserByEmail)
 
+  // Si viene del checkout, marcar para que al redirigir arranque en CUSTOMER_INFO (no en CART_REVIEW)
+  useEffect(() => {
+    if (typeof window !== "undefined" && redirectTo && redirectTo.startsWith("/checkout")) {
+      sessionStorage.setItem("checkout_from_login", "1")
+    }
+  }, [redirectTo])
+
   async function onSubmit(values: z.infer<typeof loginSchema>) {
     setFormError(null);
     startTransition(async () => {
@@ -63,9 +70,13 @@ const FormLogin = ({
           await fetchUserByEmail(values.email)
           toast.success("¡Inicio de sesión exitoso!", {
             id: "login",
-            description: "Redirigiendo al inicio...",
+            description: "Redirigiendo...",
           })
-          router.push("/?auth=success")
+          if (redirectTo && redirectTo !== "/") {
+            router.push(redirectTo.startsWith("/checkout") ? `${redirectTo}${redirectTo.includes("?") ? "&" : "?"}auth=success` : redirectTo)
+          } else {
+            router.push("/?auth=success")
+          }
         }
       } catch {
         const errMsg = "Ocurrió un error inesperado. Intenta de nuevo.";

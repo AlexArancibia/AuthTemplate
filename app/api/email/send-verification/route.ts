@@ -1,60 +1,46 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { emailVerificationTemplate } from "@/lib/email-templates"
-import crypto from "crypto"
-import { sendEmailToClient } from "@/lib/nodemailer"
+import { checkRateLimit } from "@/lib/rate-limit"
+import { sendVerificationEmail } from "@/lib/send-verification"
+import { logger } from "@/lib/logger"
+
+const INTERNAL_SECRET_HEADER = "x-send-verification-internal-secret"
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("🔥 Endpoint /api/email/send-verification llamado")
+    const internalSecret = process.env.SEND_VERIFICATION_INTERNAL_KEY
+    const provided = request.headers.get(INTERNAL_SECRET_HEADER)
+    if (!internalSecret || provided !== internalSecret) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+    }
+
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "unknown"
+    if (!checkRateLimit(`send-verification:ip:${ip}`, 15)) {
+      return NextResponse.json({ error: "Demasiadas solicitudes" }, { status: 429 })
+    }
 
     const body = await request.json()
-    console.log("📧 Body recibido:", { email: body.email, hasToken: !!body.verificationToken })
-
     const { email, verificationToken, verificationUrl } = body as {
       email: string
       verificationToken?: string
       verificationUrl?: string
     }
 
-    if (!email) {
-      console.log("❌ Email no proporcionado")
-      return NextResponse.json({ error: "Email requerido" }, { status: 400 })
+    const result = await sendVerificationEmail({ email, verificationToken, verificationUrl })
+
+    if (!result.success) {
+      const status = result.error === "Demasiados intentos para este email" ? 429 : 400
+      return NextResponse.json({ error: result.error || "Error enviando verificación" }, { status })
     }
-
-    // Generar token si no se proporciona
-    const token = verificationToken || crypto.randomBytes(32).toString("hex")
-    console.log("🔑 Token generado/usado:", token.substring(0, 10) + "...")
-
-    // URL base para verificación
-    const baseUrl = verificationUrl || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
-    const verifyUrl = `${baseUrl}/api/auth/verify-email?token=${token}`
-
-    const subject = "Verificación de Email - Confirma tu cuenta"
-    const html = emailVerificationTemplate(token, verifyUrl)
-
-    console.log("📤 Enviando email a:", email)
-
-    const result = await sendEmailToClient({
-      to: email,
-      subject,
-      html,
-    })
-
-    console.log("✅ Email enviado exitosamente:", result.messageId)
 
     return NextResponse.json({
       success: true,
       message: "Email de verificación enviado correctamente",
       messageId: result.messageId,
-      verificationToken: token,
     })
   } catch (error) {
-    console.error("💥 Error en endpoint send-verification:", error)
+    logger.error({ err: error }, "[send-verification] Error")
     return NextResponse.json(
-      {
-        error: "Error interno del servidor",
-        details: error instanceof Error ? error.message : "Error desconocido",
-      },
+      { error: "Error interno del servidor" },
       { status: 500 },
     )
   }

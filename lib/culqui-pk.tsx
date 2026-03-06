@@ -1,4 +1,5 @@
 import apiClient from "@/lib/axiosConfig";
+import { logger } from "@/lib/logger";
 
 const STORE_ID = process.env.NEXT_PUBLIC_STORE_ID;
 
@@ -30,6 +31,38 @@ const fetchCulquiProvider = async () => {
     return culquiProvider;
 };
 
+/** Obtiene payment providers con credenciales completas (incl. secret_key). Solo servidor. */
+async function fetchCulquiProviderWithCredentials(): Promise<any> {
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT;
+    const secret = process.env.SERVER_INTERNAL_KEY;
+    if (!backendUrl || !secret) {
+        throw new Error(
+            "NEXT_PUBLIC_BACKEND_ENDPOINT y SERVER_INTERNAL_KEY deben estar definidos para obtener secret_key."
+        );
+    }
+    const res = await fetch(
+        `${backendUrl}/payment-providers/${storePath}?status=all`,
+        {
+            headers: { "X-Server-Secret": secret },
+        }
+    );
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(
+            `Backend payment-providers: ${res.status} ${text?.slice(0, 200) || ""}`
+        );
+    }
+    const data = await res.json();
+    const providers = extractProviders(data);
+    const culquiProvider = providers.find(
+        (provider: any) => provider.name === "Culqui"
+    );
+    if (!culquiProvider) {
+        throw new Error("Proveedor de pago 'Culqui' no encontrado.");
+    }
+    return culquiProvider;
+}
+
 export async function getPublicKey() {
     try {
         const culquiProvider = await fetchCulquiProvider();
@@ -41,23 +74,23 @@ export async function getPublicKey() {
 
         return publicKey;
     } catch (error) {
-        console.error("❌ Error al obtener la Public Key de Culqi:", error);
+        logger.error({ err: error }, "Error al obtener la Public Key de Culqi");
         throw new Error("No se pudo obtener la Public Key de Culqi");
     }
 }
 
 export async function getSecretKey() {
     try {
-        const culquiProvider = await fetchCulquiProvider();
+        const culquiProvider = await fetchCulquiProviderWithCredentials();
         const secretKey = culquiProvider.credentials?.secret_key;
 
         if (!secretKey) {
-            throw new Error("La Public Key de Culqi no está disponible.");
+            throw new Error("La Secret Key de Culqi no está disponible.");
         }
 
         return secretKey;
     } catch (error) {
-        console.error("❌ Error al obtener la secretKey de Culqi:", error);
+        logger.error({ err: error }, "Error al obtener la secretKey de Culqi");
         throw new Error("No se pudo obtener la secretKey de Culqi");
     }
 }

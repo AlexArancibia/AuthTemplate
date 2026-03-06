@@ -1,98 +1,47 @@
 "use server";
 
+import { z } from "zod";
 import { db } from "@/lib/db";
+import { logger } from "@/lib/logger";
 import { nanoid } from "nanoid";
 import { sendEmailToClient } from "@/lib/nodemailer";
 
 export const forgotPassword = async (email: string) => {
-  console.log("🚀 [forgotPassword] Iniciando proceso de reseteo de contraseña");
-  console.log("📧 [forgotPassword] Email recibido:", email);
-  
-  // Validación básica del email
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  console.log("🔍 [forgotPassword] Validando formato de email...");
-  
-  if (!email || !emailRegex.test(email)) {
-    console.log("❌ [forgotPassword] Email inválido:", {
-      email,
-      isEmpty: !email,
-      failsRegex: !emailRegex.test(email)
-    });
+  if (!email || !z.string().email().safeParse(email).success) {
     return { error: "Email inválido." };
   }
-  
-  console.log("✅ [forgotPassword] Email válido, procediendo a buscar usuario");
 
   try {
-    // Buscar al usuario directamente usando Prisma
-    console.log("🔍 [forgotPassword] Buscando usuario en la base de datos...");
     const existingUser = await db.user.findUnique({
-      where: {
-        email,
-      },
-    });
-    
-    console.log("🔎 [forgotPassword] Resultado de búsqueda de usuario:", {
-      found: !!existingUser,
-      userId: existingUser?.id || null,
-      userEmail: existingUser?.email || null
+      where: { email },
     });
 
-    // Retornar mensaje genérico si no existe (seguridad)
     if (!existingUser) {
-      console.log("⚠️ [forgotPassword] Usuario no encontrado, retornando mensaje genérico por seguridad");
       return {
         success:
           "Si existe una cuenta con ese email, recibirás un enlace para resetear tu contraseña.",
       };
     }
 
-    console.log("✅ [forgotPassword] Usuario encontrado, generando token de reseteo");
-    
     const token = nanoid();
     const expires = new Date(Date.now() + 1000 * 60 * 60 * 1); // 1 hora
-    
-    console.log("🎫 [forgotPassword] Token generado:", {
-      token: token.substring(0, 8) + "...", // Solo mostrar primeros 8 caracteres por seguridad
-      expires: expires.toISOString(),
-      expiresIn: "1 hora"
-    });
 
-    // Eliminar tokens anteriores
-    console.log("🗑️ [forgotPassword] Eliminando tokens anteriores para el email:", email);
-    const deletedTokens = await db.passwordResetToken.deleteMany({
+    await db.passwordResetToken.deleteMany({
       where: {
         identifier: email,
       },
     });
-    
-    console.log("🗑️ [forgotPassword] Tokens anteriores eliminados:", {
-      count: deletedTokens.count
-    });
 
-    // Crear nuevo token
-    console.log("💾 [forgotPassword] Creando nuevo token en la base de datos...");
-    const newToken = await db.passwordResetToken.create({
+    await db.passwordResetToken.create({
       data: {
         identifier: email,
         token,
         expires,
       },
     });
-    
-    console.log("✅ [forgotPassword] Token creado exitosamente:", {
-      identifier: newToken.identifier,
-      expires: newToken.expires.toISOString()
-    });
 
     const resetLink = `${process.env.NEXTAUTH_URL}/reset-password?token=${token}`;
-    console.log("🔗 [forgotPassword] Link de reseteo generado:", {
-      baseUrl: process.env.NEXTAUTH_URL,
-      fullLink: resetLink.replace(token, token.substring(0, 8) + "...") // Ocultar token completo
-    });
 
-    console.log("📤 [forgotPassword] Intentando enviar email de reseteo...");
-    
     try {
       // Usar sendEmailToClient en lugar de sendPasswordResetEmail
       await sendEmailToClient({
@@ -101,19 +50,21 @@ export const forgotPassword = async (email: string) => {
         html: generatePasswordResetEmailHTML(resetLink, existingUser.name || "Usuario")
       });
 
-      console.log("✅ [forgotPassword] Email de reseteo enviado exitosamente a:", email);
+      logger.info("[forgotPassword] Email de reseteo enviado exitosamente");
       
       return {
         success:
           "Si existe una cuenta con ese email, recibirás un enlace para resetear tu contraseña.",
       };
     } catch (emailError) {
-      console.error("❌ [forgotPassword] Error al enviar email de reseteo:", {
-        error: emailError,
-        errorMessage: emailError instanceof Error ? emailError.message : 'Error desconocido',
-        errorStack: emailError instanceof Error ? emailError.stack : null,
-        recipientEmail: email
-      });
+      logger.error(
+        {
+          err: emailError,
+          errorMessage: emailError instanceof Error ? emailError.message : "Error desconocido",
+          errorStack: emailError instanceof Error ? emailError.stack : null,
+        },
+        "[forgotPassword] Error al enviar email de reseteo"
+      );
       
       return {
         error:
@@ -122,12 +73,14 @@ export const forgotPassword = async (email: string) => {
     }
     
   } catch (dbError) {
-    console.error("❌ [forgotPassword] Error en operaciones de base de datos:", {
-      error: dbError,
-      errorMessage: dbError instanceof Error ? dbError.message : 'Error desconocido',
-      errorStack: dbError instanceof Error ? dbError.stack : null,
-      email: email
-    });
+    logger.error(
+      {
+        err: dbError,
+        errorMessage: dbError instanceof Error ? dbError.message : "Error desconocido",
+        errorStack: dbError instanceof Error ? dbError.stack : null,
+      },
+      "[forgotPassword] Error en operaciones de base de datos"
+    );
     
     return {
       error: "Error interno del servidor. Intenta de nuevo más tarde."

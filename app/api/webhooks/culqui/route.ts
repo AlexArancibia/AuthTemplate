@@ -1,20 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { getSecretKey } from "@/lib/culqui-pk";
+import { logger } from "@/lib/logger";
+import { checkRateLimit } from "@/lib/rate-limit";
 import apiClient from "@/lib/axiosConfig";
 import { PaymentStatus, OrderFinancialStatus } from "@/types/common";
 
 const SIGNATURE_HEADER = "x-culqi-signature";
 
+const LEN_HMAC_SHA256_HEX = 64;
+
 const verifySignature = (payload: string, signature: string | null, secret: string) => {
   if (!signature) return false;
 
   const computed = crypto.createHmac("sha256", secret).update(payload).digest("hex");
-
   const signatureBuffer = Buffer.from(signature, "utf8");
   const computedBuffer = Buffer.from(computed, "utf8");
 
-  if (signatureBuffer.length !== computedBuffer.length) {
+  if (signatureBuffer.length !== LEN_HMAC_SHA256_HEX || computedBuffer.length !== LEN_HMAC_SHA256_HEX) {
+    const a = Buffer.alloc(LEN_HMAC_SHA256_HEX);
+    const b = Buffer.alloc(LEN_HMAC_SHA256_HEX);
+    signatureBuffer.copy(a, 0, 0, Math.min(signatureBuffer.length, LEN_HMAC_SHA256_HEX));
+    computedBuffer.copy(b, 0, 0, Math.min(computedBuffer.length, LEN_HMAC_SHA256_HEX));
+    void crypto.timingSafeEqual(a, b);
     return false;
   }
 
@@ -23,6 +31,11 @@ const verifySignature = (payload: string, signature: string | null, secret: stri
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
+    if (!checkRateLimit(`webhook:${ip}`, 100)) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
     const secretKey = await getSecretKey();
     
     // Leer el body primero
@@ -35,105 +48,78 @@ export async function POST(req: NextRequest) {
       req.headers.get("culqi-signature") ||
       req.headers.get("X-CULQI-SIGNATURE");
     
-    // Logging para debug - ver todos los headers disponibles
-    const allHeaders: Record<string, string> = {};
-    req.headers.forEach((value, key) => {
-      allHeaders[key] = value;
-    });
-    
-    console.log("[Culqi webhook] Headers recibidos:", {
-      allHeaders,
-      signatureHeader: signature,
-      bodyLength: rawBody.length,
-      bodyPreview: rawBody.substring(0, 200), // Primeros 200 caracteres del body
-    });
-
-    // Permitir continuar sin firma solo en desarrollo
-    const isDevelopment = process.env.NODE_ENV === "development";
-    const skipSignatureCheck = isDevelopment && !signature;
+    logger.debug({ bodyLength: rawBody.length, hasSignature: !!signature }, "[Culqi webhook] Petición recibida");
 
     if (!verifySignature(rawBody, signature, secretKey)) {
-      if (!skipSignatureCheck) {
-        console.error("[Culqi webhook] Firma inválida", {
-          hasSignature: !!signature,
-          signatureLength: signature?.length,
-          signatureValue: signature,
-          bodyLength: rawBody.length,
-          bodyPreview: rawBody.substring(0, 200),
-          secretKeyLength: secretKey?.length,
-        });
-        return NextResponse.json(
-          { error: "Invalid Culqi signature" },
-          { status: 400 }
-        );
-      }
-      console.warn("[Culqi webhook] Saltando verificación de firma en desarrollo");
-    } else {
-      console.log("[Culqi webhook] Firma verificada correctamente");
+      return NextResponse.json(
+        { error: "Invalid Culqi signature" },
+        { status: 400 }
+      );
     }
 
     const event = JSON.parse(rawBody);
     const eventType = event.type || event.event_type;
 
-    console.log("[Culqi webhook] Evento recibido:", {
-      eventType,
-      eventId: event.id,
-      eventData: event.data ? "presente" : "ausente",
-    });
+    logger.debug(
+      { eventType, eventId: event.id, eventData: event.data ? "presente" : "ausente" },
+      "[Culqi webhook] Evento recibido"
+    );
 
     switch (eventType) {
       case "charge.created":
       case "charge.captured":
-        console.log("[Culqi webhook] Evento de charge ignorado (ya manejado en flujo normal)");
+        logger.debug("[Culqi webhook] Evento de charge ignorado (ya manejado en flujo normal)");
         break;
 
       case "charge.creation.failed":
         try {
           const failData = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
           const body = failData?.body || failData;
-          console.warn("[Culqi webhook] charge.creation.failed:", {
-            param: body?.param,
-            merchant_message: body?.merchant_message,
-            type: body?.type,
-          });
+          logger.warn(
+            { param: body?.param, merchant_message: body?.merchant_message, type: body?.type },
+            "[Culqi webhook] charge.creation.failed"
+          );
         } catch {
-          console.warn("[Culqi webhook] charge.creation.failed (event.data sin parsear):", event.data);
+          logger.warn({ eventData: event.data }, "[Culqi webhook] charge.creation.failed (event.data sin parsear)");
         }
         break;
 
       case "charge.refunded":
       case "refund.creation.succeeded":
         // Manejar devolución desde el panel de Culqi
-        console.log("[Culqi webhook] Procesando reembolso...");
+        logger.debug("[Culqi webhook] Procesando reembolso...");
         await handleRefund(event);
-        console.log("[Culqi webhook] Reembolso procesado exitosamente");
+        logger.debug("[Culqi webhook] Reembolso procesado exitosamente");
         break;
 
       default:
         // Evento no manejado, ignorar silenciosamente
-        console.log("[Culqi webhook] Evento no manejado:", eventType);
+        logger.debug({ eventType }, "[Culqi webhook] Evento no manejado");
         break;
     }
 
     return NextResponse.json({ received: true });
   } catch (error) {
-    console.error("[Culqi webhook] Error processing webhook", error);
+    logger.error({ err: error }, "[Culqi webhook] Error processing webhook");
     return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 });
   }
 }
 
 async function handleRefund(event: any) {
   try {
-    console.log("[Culqi webhook] handleRefund iniciado", {
-      eventType: event.type || event.event_type,
-      hasData: !!event.data,
-      hasRefund: !!event.refund,
-      hasCharge: !!event.charge,
-    });
+    logger.debug(
+      {
+        eventType: event.type || event.event_type,
+        hasData: !!event.data,
+        hasRefund: !!event.refund,
+        hasCharge: !!event.charge,
+      },
+      "[Culqi webhook] handleRefund iniciado"
+    );
 
     const STORE_ID = process.env.NEXT_PUBLIC_STORE_ID;
     if (!STORE_ID) {
-      console.error("[Culqi webhook] STORE_ID no está definido");
+      logger.error("[Culqi webhook] STORE_ID no está definido");
       return;
     }
 
@@ -142,28 +128,31 @@ async function handleRefund(event: any) {
     if (typeof event.data === 'string') {
       try {
         parsedData = JSON.parse(event.data);
-        console.log("[Culqi webhook] event.data parseado como JSON");
+        logger.debug("[Culqi webhook] event.data parseado como JSON");
       } catch {
         parsedData = event.data;
-        console.log("[Culqi webhook] event.data no es JSON válido, usando como está");
+        logger.debug("[Culqi webhook] event.data no es JSON válido, usando como está");
       }
     } else {
       parsedData = event.data;
-      console.log("[Culqi webhook] event.data ya es objeto");
+      logger.debug("[Culqi webhook] event.data ya es objeto");
     }
 
     const refundData = parsedData || event.refund;
     const chargeData = parsedData?.charge || event.charge || parsedData;
     
-    console.log("[Culqi webhook] Datos extraídos:", {
-      hasRefundData: !!refundData,
-      hasChargeData: !!chargeData,
-      refundId: refundData?.id,
-      chargeId: chargeData?.id || refundData?.charge_id || refundData?.chargeId,
-    });
-    
+    logger.debug(
+      {
+        hasRefundData: !!refundData,
+        hasChargeData: !!chargeData,
+        refundId: refundData?.id,
+        chargeId: chargeData?.id || refundData?.charge_id || refundData?.chargeId,
+      },
+      "[Culqi webhook] Datos extraídos"
+    );
+
     if (!refundData && !chargeData) {
-      console.error("[Culqi webhook] No se encontraron datos de refund ni charge");
+      logger.error("[Culqi webhook] No se encontraron datos de refund ni charge");
       return;
     }
 
@@ -173,12 +162,12 @@ async function handleRefund(event: any) {
       refundData?.charge?.metadata?.orderId ||
       chargeData?.metadata?.orderId;
 
-    console.log("[Culqi webhook] orderId inicial:", orderId);
+    logger.debug({ orderId }, "[Culqi webhook] orderId inicial");
 
     // Si no encontramos orderId, buscar el charge en Culqi
     if (!orderId) {
       const chargeId = refundData?.charge_id || refundData?.chargeId || chargeData?.id;
-      console.log("[Culqi webhook] orderId no encontrado, buscando charge en Culqi:", chargeId);
+      logger.debug({ chargeId }, "[Culqi webhook] orderId no encontrado, buscando charge en Culqi");
       
       if (chargeId) {
         try {
@@ -194,43 +183,49 @@ async function handleRefund(event: any) {
           if (chargeResponse.ok) {
             const chargeInfo = await chargeResponse.json();
             orderId = chargeInfo.metadata?.orderId;
-            console.log("[Culqi webhook] orderId encontrado en Culqi:", orderId);
+            logger.debug({ orderId }, "[Culqi webhook] orderId encontrado en Culqi");
           } else {
-            console.error("[Culqi webhook] Error al obtener charge de Culqi:", chargeResponse.status, chargeResponse.statusText);
+            logger.error(
+              { status: chargeResponse.status, statusText: chargeResponse.statusText },
+              "[Culqi webhook] Error al obtener charge de Culqi"
+            );
           }
         } catch (error) {
-          console.error("[Culqi webhook] Error al buscar charge en Culqi:", error);
+          logger.error({ err: error }, "[Culqi webhook] Error al buscar charge en Culqi");
         }
       }
     }
 
     if (!orderId) {
-      console.error("[Culqi webhook] No se encontró orderId", {
-        refundId: refundData?.id,
-        chargeId: refundData?.charge_id || refundData?.chargeId || chargeData?.id,
-        refundMetadata: refundData?.metadata,
-        chargeMetadata: chargeData?.metadata,
-      });
+      logger.error(
+        {
+          refundId: refundData?.id,
+          chargeId: refundData?.charge_id || refundData?.chargeId || chargeData?.id,
+          refundMetadata: refundData?.metadata,
+          chargeMetadata: chargeData?.metadata,
+        },
+        "[Culqi webhook] No se encontró orderId"
+      );
       return;
     }
 
-    console.log("[Culqi webhook] orderId encontrado:", orderId);
+    logger.debug({ orderId }, "[Culqi webhook] orderId encontrado");
 
     // Buscar y actualizar la orden
     try {
-      console.log("[Culqi webhook] Buscando orden:", orderId);
+      logger.debug({ orderId }, "[Culqi webhook] Buscando orden");
       const orderResponse = await apiClient.get(`/orders/${STORE_ID}/${orderId}`);
       const order = orderResponse.data?.data || orderResponse.data;
       
       if (!order?.id) {
-        console.error("[Culqi webhook] Orden no encontrada", { orderId, responseData: orderResponse.data });
+        logger.error({ orderId, responseData: orderResponse.data }, "[Culqi webhook] Orden no encontrada");
         return;
       }
 
-      console.log("[Culqi webhook] Orden encontrada, actualizando estado a reembolsado", {
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-      });
+      logger.debug(
+        { orderId: order.id, orderNumber: order.orderNumber },
+        "[Culqi webhook] Orden encontrada, actualizando estado a reembolsado"
+      );
 
       const updateData = {
         orderNumber: order.orderNumber,
@@ -247,29 +242,24 @@ async function handleRefund(event: any) {
         },
       };
 
-      console.log("[Culqi webhook] Datos de actualización:", updateData);
+      logger.debug({ updateData }, "[Culqi webhook] Datos de actualización");
 
       await apiClient.put(`/orders/${STORE_ID}/${order.id}`, updateData);
-      
-      console.log("[Culqi webhook] Orden actualizada exitosamente");
+
+      logger.debug("[Culqi webhook] Orden actualizada exitosamente");
     } catch (error: any) {
-      console.error("[Culqi webhook] Error al procesar refund", {
-        orderId,
-        error: error.response?.data || error.message,
-        errorStack: error.stack,
-      });
+      logger.error(
+        {
+          orderId,
+          error: error.response?.data || error.message,
+          errorStack: error.stack,
+        },
+        "[Culqi webhook] Error al procesar refund"
+      );
       throw error;
     }
   } catch (error) {
-    console.error("[Culqi webhook] Error en handleRefund", error);
+    logger.error({ err: error }, "[Culqi webhook] Error en handleRefund");
     throw error;
   }
 }
-
-export function GET() {
-  return NextResponse.json(
-    { message: "Culqi webhook endpoint" },
-    { status: 200 }
-  );
-}
-

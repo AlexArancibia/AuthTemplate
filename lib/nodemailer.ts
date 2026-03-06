@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer"
+import { logger } from "@/lib/logger"
 
 // Configuración del transportador de correo
 const createTransporter = () => {
@@ -12,14 +13,8 @@ const createTransporter = () => {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
-    // Configuración específica para SpaceMail
+    tls: { rejectUnauthorized: true },
     ...(isSpaceMail ? {
-      tls: {
-        rejectUnauthorized: false,
-        ciphers: 'SSLv3',
-        checkServerIdentity: () => undefined,
-        servername: undefined
-      },
       connectionTimeout: 60000,
       greetingTimeout: 30000,
       socketTimeout: 60000,
@@ -27,11 +22,7 @@ const createTransporter = () => {
       maxConnections: 1,
       maxMessages: 3,
       rateLimit: 14
-    } : {
-      tls: {
-        rejectUnauthorized: process.env.NODE_ENV === "production" ? true : false
-      }
-    })
+    } : {})
   }
   
   return nodemailer.createTransport(config)
@@ -61,10 +52,10 @@ export const sendEmailToClient = async ({
     }
 
     const result = await transporter.sendMail(mailOptions)
-    console.log("Email enviado al cliente:", result.messageId)
+    logger.info({ messageId: result.messageId }, "Email enviado al cliente")
     return { success: true, messageId: result.messageId }
   } catch (error) {
-    console.error("Error enviando email al cliente:", error)
+    logger.error({ err: error }, "Error enviando email al cliente")
     throw error
   }
 }
@@ -92,10 +83,10 @@ export const sendEmailToAdmin = async ({
     }
 
     const result = await transporter.sendMail(mailOptions)
-    console.log("Email enviado al administrador:", result.messageId)
+    logger.info({ messageId: result.messageId }, "Email enviado al administrador")
     return { success: true, messageId: result.messageId }
   } catch (error) {
-    console.error("Error enviando email al administrador:", error)
+    logger.error({ err: error }, "Error enviando email al administrador")
     throw error
   }
 }
@@ -105,10 +96,10 @@ export const verifyEmailConfig = async () => {
   try {
     const transporter = createTransporter()
     await transporter.verify()
-    console.log("Configuración de correo verificada correctamente")
+    logger.info("Configuración de correo verificada correctamente")
     return true
   } catch (error) {
-    console.error("Error en la configuración de correo:", error)
+    logger.error({ err: error }, "Error en la configuración de correo")
     return false
   }
 }

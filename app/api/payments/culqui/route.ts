@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
+import { z } from "zod";
 import { getSecretKey } from "@/lib/culqui-pk";
+import { logger } from "@/lib/logger";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const sanitizePhone = (value?: string) => (value ?? "").replace(/\D/g, "");
-const CORS_ORIGIN = "https://anj.com/";
+const CORS_ORIGIN = (process.env.CORS_ORIGIN || process.env.NEXTAUTH_URL || "https://anj.com").replace(/\/$/, "");
 
 interface CulqiError {
   merchant_message?: string;
@@ -69,44 +73,48 @@ export async function OPTIONS() {
 }
 
 export async function POST(req: NextRequest) {
-  const requestId = `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const requestId = `req-${crypto.randomUUID()}`;
   const requestStartedAt = Date.now();
 
   try {
-    console.log("[Culqi Payment] Inicio petición", { requestId, at: new Date().toISOString() });
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
+    if (!checkRateLimit(`payment:${ip}`, 15)) {
+      return createErrorResponse("Demasiadas solicitudes. Intenta de nuevo en unos minutos.", 429, requestId);
+    }
+
+    logger.info({ requestId, at: new Date().toISOString() }, "[Culqi Payment] Inicio petición");
 
     // 1. Parsear y validar body
     let requestBody;
     try {
       requestBody = await req.json();
     } catch {
-      console.warn("[Culqi Payment] Body inválido (no JSON)", { requestId });
+      logger.warn({ requestId }, "[Culqi Payment] Body inválido (no JSON)");
       return createErrorResponse("Formato de solicitud inválido", 400, requestId);
     }
 
     const { token, amount: reqAmount, currency, description, email, firstName, lastName, phone, address, city, countryCode, orderId } = requestBody;
 
-    console.log("[Culqi Payment] Body recibido", {
-      requestId,
-      orderId,
-      amount: reqAmount,
-      currency,
-      emailPrefix: email ? `${email.slice(0, 3)}***` : "",
-      descriptionLength: typeof description === "string" ? description.length : 0,
-      tokenPrefix: token ? `${String(token).slice(0, 12)}...` : "(vacío)",
-      tokenLength: token ? String(token).length : 0,
-      hasAntifraud: !!(firstName || lastName || phone || address || city),
-      serverTime: new Date().toISOString(),
-    });
+    logger.debug(
+      {
+        requestId,
+        orderId,
+        amount: reqAmount,
+        currency,
+        hasToken: !!token,
+        hasAntifraud: !!(firstName || lastName || phone || address || city),
+      },
+      "[Culqi Payment] Body recibido"
+    );
 
     // 2. Validar campos requeridos
     const missingFields = [token ? null : "token", reqAmount ? null : "amount", currency ? null : "currency", email ? null : "email", orderId ? null : "orderId"].filter(Boolean) as string[];
     if (missingFields.length > 0) {
-      console.warn("[Culqi Payment] Faltan campos", { requestId, missingFields });
+      logger.warn({ requestId, missingFields }, "[Culqi Payment] Faltan campos");
       return createErrorResponse(`Faltan campos requeridos: ${missingFields.join(", ")}`, 400, requestId);
     }
 
-    // 3. Obtener secret key
+    // 3. Obtener secret key (vía endpoint solo-servidor con X-Server-Secret)
     let secretKey: string;
     try {
       secretKey = await getSecretKey();
@@ -117,18 +125,18 @@ export async function POST(req: NextRequest) {
     // 4. Validaciones
     const sanitizedPhone = sanitizePhone(phone);
     if (phone && (sanitizedPhone.length < 6 || sanitizedPhone.length > 14)) {
-      console.warn("[Culqi Payment] Teléfono inválido", { requestId, orderId, phoneLen: sanitizedPhone.length });
+      logger.warn({ requestId, orderId, phoneLen: sanitizedPhone.length }, "[Culqi Payment] Teléfono inválido");
       return createErrorResponse("Número de teléfono inválido. Debe tener entre 6 y 14 dígitos.", 400, requestId);
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      console.warn("[Culqi Payment] Email inválido", { requestId, orderId, emailPrefix: email?.slice(0, 5) });
+    if (!z.string().email().safeParse(email).success) {
+      logger.warn({ requestId, orderId }, "[Culqi Payment] Email inválido");
       return createErrorResponse("El formato del email no es válido", 400, requestId);
     }
 
     const numericAmount = Number(reqAmount);
     if (isNaN(numericAmount) || numericAmount <= 0) {
-      console.warn("[Culqi Payment] Monto inválido", { requestId, orderId, reqAmount });
+      logger.warn({ requestId, orderId, reqAmount }, "[Culqi Payment] Monto inválido");
       return createErrorResponse("El monto debe ser un número positivo", 400, requestId);
     }
 
@@ -142,21 +150,24 @@ export async function POST(req: NextRequest) {
       country_code: countryCode || "PE",
     };
 
-    console.log("[Culqi Payment] Payload a Culqi (sin token completo)", {
-      requestId,
-      orderId,
-      amount: numericAmount,
-      currency_code: currency,
-      descriptionLength: chargeDescription.length,
-      antifraudKeys: Object.keys(antifraudPayload),
-      elapsedMs: Date.now() - requestStartedAt,
-    });
+    logger.debug(
+      {
+        requestId,
+        orderId,
+        amount: numericAmount,
+        currency_code: currency,
+        descriptionLength: chargeDescription.length,
+        antifraudKeys: Object.keys(antifraudPayload),
+        elapsedMs: Date.now() - requestStartedAt,
+      },
+      "[Culqi Payment] Payload a Culqi (sin token completo)"
+    );
 
     // 5. Realizar petición a Culqi
     let response: Response;
     let responseText: string;
 
-    console.log("[Culqi Payment] Llamando API Culqi /v2/charges", { requestId });
+    logger.debug({ requestId }, "[Culqi Payment] Llamando API Culqi /v2/charges");
     try {
       response = await fetch("https://api.culqi.com/v2/charges", {
         method: "POST",
@@ -175,15 +186,18 @@ export async function POST(req: NextRequest) {
         }),
       });
       responseText = await response.text();
-      console.log("[Culqi Payment] Respuesta Culqi recibida", {
-        requestId,
-        status: response.status,
-        statusOk: response.ok,
-        bodyLength: responseText?.length,
-        elapsedMs: Date.now() - requestStartedAt,
-      });
+      logger.debug(
+        {
+          requestId,
+          status: response.status,
+          statusOk: response.ok,
+          bodyLength: responseText?.length,
+          elapsedMs: Date.now() - requestStartedAt,
+        },
+        "[Culqi Payment] Respuesta Culqi recibida"
+      );
     } catch (err) {
-      console.error("[Culqi Payment] Error de red al llamar Culqi", { requestId, error: err });
+      logger.error({ requestId, err }, "[Culqi Payment] Error de red al llamar Culqi");
       return createErrorResponse("Error de conexión con el procesador de pagos. Intenta nuevamente.", 503, requestId);
     }
 
@@ -198,22 +212,22 @@ export async function POST(req: NextRequest) {
     // 7. Manejar errores de Culqi
     if (!response.ok) {
       const culqiError = parseCulqiError(data);
-      console.warn("[Culqi Payment] Culqi rechazó el cargo", {
-        requestId,
-        orderId,
-        status: response.status,
-        type: data?.type,
-        param: data?.param,
-        merchant_message: data?.merchant_message,
-        code: data?.code,
-        decline_code: data?.decline_code,
-        elapsedMs: Date.now() - requestStartedAt,
-      });
-      if (response.status === 422 || data?.type === "parameter_error") {
-        console.error("[Culqi Payment] parameter_error (detalle)", {
+      logger.warn(
+        {
           requestId,
-          body: responseText?.slice(0, 500),
-        });
+          orderId,
+          status: response.status,
+          type: data?.type,
+          param: data?.param,
+          merchant_message: data?.merchant_message,
+          code: data?.code,
+          decline_code: data?.decline_code,
+          elapsedMs: Date.now() - requestStartedAt,
+        },
+        "[Culqi Payment] Culqi rechazó el cargo"
+      );
+      if (response.status === 422 || data?.type === "parameter_error") {
+        logger.error({ requestId, body: responseText?.slice(0, 500) }, "[Culqi Payment] parameter_error (detalle)");
       }
       let statusCode = 400;
       if (response.status >= 500) statusCode = 502;
@@ -234,25 +248,73 @@ export async function POST(req: NextRequest) {
     // 8. Validar y retornar respuesta exitosa
     const chargeData = data as CulqiResponse;
     if (!chargeData.id) {
-      console.error("[Culqi Payment] Respuesta sin charge id", { requestId, orderId, dataKeys: data ? Object.keys(data) : [] });
+      logger.error(
+        { requestId, orderId, dataKeys: data ? Object.keys(data) : [] },
+        "[Culqi Payment] Respuesta sin charge id"
+      );
       return createErrorResponse("Respuesta incompleta del procesador de pagos", 502, requestId);
     }
 
-    console.log("[Culqi Payment] Pago exitoso", {
-      requestId,
-      orderId,
-      chargeId: chargeData.id,
-      amount: chargeData.amount,
-      outcomeType: chargeData.outcome?.type,
-      elapsedMs: Date.now() - requestStartedAt,
-    });
+    logger.info(
+      {
+        requestId,
+        orderId,
+        chargeId: chargeData.id,
+        amount: chargeData.amount,
+        outcomeType: chargeData.outcome?.type,
+        elapsedMs: Date.now() - requestStartedAt,
+      },
+      "[Culqi Payment] Pago exitoso"
+    );
+
+    // Mark order as PAID in backend (server-only secret; client cannot set PAID)
+    const storeId = process.env.NEXT_PUBLIC_STORE_ID;
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT;
+    const orderUpdateSecret = process.env.ORDER_UPDATE_SECRET;
+    if (storeId && backendUrl && orderId && orderUpdateSecret) {
+      try {
+        const putRes = await fetch(`${backendUrl}/orders/${storeId}/${orderId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Order-Update-Secret": orderUpdateSecret,
+          },
+          body: JSON.stringify({
+            financialStatus: "PAID",
+            paymentStatus: "COMPLETED",
+            paymentDetails: {
+              provider: "Culqi",
+              chargeId: chargeData.id,
+              amount: chargeData.amount,
+              currency_code: chargeData.currency_code,
+              source_id: (chargeData as any).source_id,
+              outcome: chargeData.outcome,
+              completedAt: new Date().toISOString(),
+              raw: chargeData,
+            },
+          }),
+        });
+        if (!putRes.ok) {
+          logger.error(
+            { requestId, orderId, status: putRes.status, body: await putRes.text().catch(() => "") },
+            "[Culqi Payment] Backend PUT order PAID failed"
+          );
+        }
+      } catch (putErr) {
+        logger.error({ requestId, orderId, err: putErr }, "[Culqi Payment] Backend PUT order PAID error");
+      }
+    } else {
+      if (!orderUpdateSecret) {
+        logger.warn({ requestId, orderId }, "[Culqi Payment] ORDER_UPDATE_SECRET not set; order will not be marked PAID in backend");
+      }
+    }
 
     return NextResponse.json(
       { success: true, data: chargeData, requestId },
       { headers: { "Access-Control-Allow-Origin": CORS_ORIGIN } }
     );
   } catch (error) {
-    console.error("[Culqi Payment] Unexpected error:", { requestId, error });
+    logger.error({ requestId, err: error }, "[Culqi Payment] Unexpected error");
     return createErrorResponse("Error interno al procesar el pago. Contacta con soporte si el problema persiste.", 500, requestId);
   }
 }
