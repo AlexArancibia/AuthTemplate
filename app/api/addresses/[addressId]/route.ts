@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { auth } from "@/auth"
+import { addressPatchSchema } from "@/lib/zod"
 
 // PATCH: Actualizar una dirección existente
 export async function PATCH(request: Request, { params }: { params: Promise<{ addressId: string }> }) {
@@ -29,28 +30,55 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ad
       return NextResponse.json({ message: "No tienes permiso para modificar esta dirección" }, { status: 403 })
     }
 
-    // Obtener los datos para actualizar
-    const data = await request.json()
+    // Obtener y validar datos (allowlist: solo campos permitidos)
+    let raw: unknown
+    try {
+      raw = await request.json()
+    } catch {
+      return NextResponse.json({ message: "Cuerpo de solicitud inválido" }, { status: 400 })
+    }
+
+    const parsed = addressPatchSchema.safeParse(raw)
+    if (!parsed.success) {
+      const firstError = parsed.error.flatten().fieldErrors
+      const msg = Object.values(firstError).flat().join("; ") || "Datos de actualización inválidos"
+      return NextResponse.json({ message: msg }, { status: 400 })
+    }
+
+    const data = parsed.data
+    const updateData: Record<string, unknown> = {}
+    if (data.address1 !== undefined) updateData.address1 = data.address1
+    if (data.address2 !== undefined) updateData.address2 = data.address2
+    if (data.city !== undefined) updateData.city = data.city
+    if (data.province !== undefined) updateData.province = data.province
+    if (data.zip !== undefined) updateData.zip = data.zip
+    if (data.country !== undefined) updateData.country = data.country
+    if (data.phone !== undefined) updateData.phone = data.phone
+    if (data.company !== undefined) updateData.company = data.company
+    if (data.isDefault !== undefined) updateData.isDefault = data.isDefault
+    if (data.addressType !== undefined) updateData.addressType = data.addressType
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ message: "No hay campos válidos para actualizar" }, { status: 400 })
+    }
 
     // Si se está estableciendo como predeterminada, actualizar otras direcciones del mismo tipo
     if (data.isDefault) {
       await db.address.updateMany({
         where: {
           userId: currentAddress.userId,
-          addressType: currentAddress.addressType,
+          addressType: (data.addressType ?? currentAddress.addressType) as "shipping" | "billing" | "both",
           isDefault: true,
           id: { not: addressId },
         },
-        data: {
-          isDefault: false,
-        },
+        data: { isDefault: false },
       })
     }
 
-    // Actualizar la dirección
+    // Actualizar la dirección (solo campos allowlist)
     const updatedAddress = await db.address.update({
       where: { id: addressId },
-      data,
+      data: updateData,
     })
 
     return NextResponse.json(updatedAddress)

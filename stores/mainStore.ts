@@ -13,7 +13,7 @@ import type { ExchangeRate } from "@/types/exchangeRate"
 import type { ProductVariant } from "@/types/productVariant"
 import type { Content } from "@/types/content"
 import type { User } from "@/types/user"
-import type { PaymentProvider, PaymentTransaction } from "@/types/payments"
+import type { PaymentProvider } from "@/types/payments"
 import type { HeroSection } from "@/types/heroSection"
 import type { CardSection, CreateCardSectionDto, UpdateCardSectionDto } from "@/types/card"
 import type { TeamMember, TeamSection, CreateTeamSectionDto, UpdateTeamSectionDto } from "@/types/team"
@@ -32,8 +32,7 @@ import type {
   SearchExchangeRateParams,
   SearchHeroSectionParams,
   SearchFbtParams,
-  SearchShippingMethodParams,
-  SearchPaymentTransactionParams
+  SearchShippingMethodParams
 } from "@/types/pagination"
 
 // Obtener el storeId del entorno
@@ -94,7 +93,6 @@ interface MainStore {
   coupons: Coupon[]
   shippingMethods: ShippingMethod[]
   paymentProviders: PaymentProvider[]
-  paymentTransactions: PaymentTransaction[]
   currencies: Currency[]
   exchangeRates: ExchangeRate[]
   contents: Content[]
@@ -117,7 +115,6 @@ interface MainStore {
     orders: PaginationMeta | null
     coupons: PaginationMeta | null
     shippingMethods: PaginationMeta | null
-    paymentTransactions: PaginationMeta | null
     currencies: PaginationMeta | null
     exchangeRates: PaginationMeta | null
     contents: PaginationMeta | null
@@ -143,7 +140,6 @@ interface MainStore {
   clearCoupon: () =>  Promise<void>
   fetchShippingMethods: (params?: SearchShippingMethodParams, forceRefresh?: boolean) => Promise<PaginatedResponse<ShippingMethod>>
   fetchPaymentProviders: () => Promise<PaymentProvider[]>
-  fetchPaymentTransactions: (params?: SearchPaymentTransactionParams, forceRefresh?: boolean) => Promise<PaginatedResponse<PaymentTransaction>>
   fetchContents: (params?: SearchContentParams, forceRefresh?: boolean) => Promise<PaginatedResponse<Content>>
   fetchUsers: () => Promise<User[]>
   fetchShopSettings: () => Promise<ShopSettings>
@@ -160,7 +156,6 @@ interface MainStore {
   // Mantener solo los métodos de creación y actualización para orders y refunds
   createOrder: (data: any) => Promise<Order>
   updateOrder: (id: string, data: any) => Promise<Order>
-  createRefund: (data: any) => Promise<void>
 
   submitFormEmail: (formData: any) => Promise<void>
   sendEmail: (to: string, subject: string, html: string) => Promise<void>
@@ -202,7 +197,6 @@ export const useMainStore = create<MainStore>((set, get) => ({
   currencies: [],
   exchangeRates: [],
   paymentProviders: [],
-  paymentTransactions: [],
   frequentlyBoughtTogether: [],
   loading: false,
   error: null,
@@ -216,7 +210,6 @@ export const useMainStore = create<MainStore>((set, get) => ({
     orders: null,
     coupons: null,
     shippingMethods: null,
-    paymentTransactions: null,
     currencies: null,
     exchangeRates: null,
     contents: null,
@@ -543,30 +536,6 @@ export const useMainStore = create<MainStore>((set, get) => ({
     }
   },
 
-  // Método fetchPaymentTransactions con paginación
-  fetchPaymentTransactions: async (params: SearchPaymentTransactionParams = {}, forceRefresh = false) => {
-    if (!STORE_ID) {
-      throw new Error("No store ID provided in environment variables")
-    }
-
-    set({ loading: true, error: null })
-    try {
-      const queryParams = buildQueryParams(params)
-      const response = await apiClient.get<PaginatedResponse<PaymentTransaction>>(`/payment-transactions/${STORE_ID}${queryParams ? `?${queryParams}` : ''}`)
-      
-      const { data, pagination } = extractPaginatedData<PaymentTransaction[]>(response)
-      set({
-        paymentTransactions: data,
-        paginationMeta: { ...get().paginationMeta, paymentTransactions: pagination },
-        loading: false,
-      })
-      return { data, pagination }
-    } catch (error) {
-      set({ error: "Failed to fetch payment transactions", loading: false })
-      throw error
-    }
-  },
-
   // Método fetchContents con paginación
   fetchContents: async (params: SearchContentParams = {}, forceRefresh = false) => {
     if (!STORE_ID) {
@@ -819,17 +788,6 @@ export const useMainStore = create<MainStore>((set, get) => ({
       return updatedOrder
     } catch (error) {
       set({ error: "Failed to update order", loading: false })
-      throw error
-    }
-  },
-
-  createRefund: async (data: any) => {
-    set({ loading: true, error: null })
-    try {
-      await apiClient.post("/refunds", data)
-      set({ loading: false })
-    } catch (error) {
-      set({ error: "Failed to create refund", loading: false })
       throw error
     }
   },

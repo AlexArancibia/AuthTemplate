@@ -10,10 +10,7 @@ const createTransporter = () => {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
-    // Deshabilitar verificación SSL para servidores con certificados autofirmados
-    tls: {
-      rejectUnauthorized: false
-    }
+    tls: { rejectUnauthorized: true }
   })
 }
 

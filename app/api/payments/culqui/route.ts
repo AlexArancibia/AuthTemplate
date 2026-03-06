@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSecretKey } from "@/lib/culqui-pk";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 // Helper para obtener el origin correcto según el entorno
 const getAllowedOrigin = () => {
-  // En producción, usar el dominio específico. Si NEXTAUTH_URL existe, úsalo
-  if (process.env.NODE_ENV === 'production') {
-    return process.env.NEXTAUTH_URL || "https://clefast.com.pe/";
+  if (process.env.NODE_ENV === "production") {
+    const base = process.env.CORS_ORIGIN || process.env.NEXTAUTH_URL || "https://clefast.com.pe";
+    return base.replace(/\/$/, "");
   }
-  // En desarrollo, permitir localhost y variaciones
   return "*";
 };
 
@@ -24,6 +24,14 @@ export async function OPTIONS() {
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
+    if (!checkRateLimit(`payment:${ip}`, 15)) {
+      return NextResponse.json(
+        { error: "Demasiadas solicitudes. Intenta de nuevo en unos minutos." },
+        { status: 429, headers: { "Access-Control-Allow-Origin": getAllowedOrigin() } }
+      );
+    }
+
     const {
       token, amount, currency, description, email,
       firstName, lastName, phone, address, city, countryCode,
