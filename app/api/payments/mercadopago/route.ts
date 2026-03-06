@@ -3,8 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAccessToken } from "@/lib/mercadopago-ac";
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 
-const accessToken = await getAccessToken();
-const client = new MercadoPagoConfig({ accessToken: accessToken });
 const localUrl = process.env.NEXT_PUBLIC_LOCAL_PUBLIC_URL
 
 
@@ -25,6 +23,11 @@ export async function OPTIONS() {
 
 export async function POST(req: NextRequest) {
   try {
+    // IMPORTANT: avoid top-level MercadoPago initialization so builds don't fail
+    // when env vars are missing. We only resolve credentials at request time.
+    const accessToken = await getAccessToken();
+    const client = new MercadoPagoConfig({ accessToken });
+
     const {
       // mismos datos que ya mandas a Culqi:
       amount, // en CENTIMOS si viene de Culqi
@@ -53,7 +56,7 @@ export async function POST(req: NextRequest) {
     }
     // Si origin no es https, usar https://sporttperu.com/ como fallback temporal
     if (!/^https:\/\//i.test(origin)) {
-      origin = "localhost:3000";
+      origin = "http://localhost:3000";
     }
 
     // Si no envías items detallados, crea uno con description+amount:
@@ -111,7 +114,7 @@ export async function POST(req: NextRequest) {
         installments: 1
       },
       // redirectMode: "modal",
-      notification_url: `${localUrl}/api/webhooks/mercadopago`,
+      ...(localUrl ? { notification_url: `${localUrl}/api/webhooks/mercadopago` } : {}),
     };
 
     // Usar el SDK oficial para crear la preferencia

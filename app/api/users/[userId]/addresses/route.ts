@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { auth } from "@/auth"
+import { addressCreateSchema } from "@/lib/zod"
 
 // POST: Crear una nueva dirección para un usuario
 export async function POST(request: Request, { params }: { params: Promise<{ userId: string }> }) {
@@ -13,8 +14,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ use
 
     const { userId } = await params
 
-    // Obtener los datos para crear la dirección
-    const data = await request.json()
+    let raw: unknown
+    try {
+      raw = await request.json()
+    } catch {
+      return NextResponse.json({ message: "Cuerpo de solicitud inválido" }, { status: 400 })
+    }
+
+    const parsed = addressCreateSchema.safeParse(raw)
+    if (!parsed.success) {
+      const firstError = parsed.error.flatten().fieldErrors
+      const msg = Object.values(firstError).flat().join("; ") || "Datos de dirección inválidos"
+      return NextResponse.json({ message: msg }, { status: 400 })
+    }
+
+    const data = parsed.data
 
     // Verificar que el usuario existe
     const user = await db.user.findUnique({
@@ -34,7 +48,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ use
       )
     }
 
-    // Si la dirección es predeterminada, actualizar otras direcciones del mismo tipo
     if (data.isDefault) {
       await db.address.updateMany({
         where: {
@@ -42,16 +55,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ use
           addressType: data.addressType,
           isDefault: true,
         },
-        data: {
-          isDefault: false,
-        },
+        data: { isDefault: false },
       })
     }
 
-    // Crear la nueva dirección
     const newAddress = await db.address.create({
       data: {
-        ...data,
+        addressType: data.addressType,
+        address1: data.address1,
+        address2: data.address2 ?? null,
+        city: data.city,
+        province: data.province ?? null,
+        zip: data.zip,
+        country: data.country,
+        phone: data.phone ?? null,
+        company: data.company ?? null,
+        isDefault: data.isDefault ?? false,
         userId,
       },
     })

@@ -1,14 +1,12 @@
 "use server";
 
+import { z } from "zod";
 import { db } from "@/lib/db";
 import { nanoid } from "nanoid";
 import { sendEmailToClient } from "@/lib/nodemailer";
 
 export const forgotPassword = async (email: string) => {
-  // Validación básica del email
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  
-  if (!email || !emailRegex.test(email)) {
+  if (!email || !z.string().email().safeParse(email).success) {
     return { error: "Email inválido." };
   }
 

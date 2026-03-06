@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSecretKey } from "@/lib/culqui-pk";
+import { checkRateLimit } from "@/lib/rate-limit";
+
+const CORS_ORIGIN = (process.env.CORS_ORIGIN || process.env.NEXTAUTH_URL || "https://sporttperu.com").replace(/\/$/, "");
 
 export async function OPTIONS() {
   return NextResponse.json({}, {
     status: 200,
     headers: {
-      "Access-Control-Allow-Origin": "https://sporttperu.com/",
+      "Access-Control-Allow-Origin": CORS_ORIGIN,
       "Access-Control-Allow-Methods": "POST, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type, Authorization",
     },
@@ -14,6 +17,14 @@ export async function OPTIONS() {
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "unknown";
+    if (!checkRateLimit(`payment:${ip}`, 15)) {
+      return NextResponse.json(
+        { error: "Demasiadas solicitudes. Intenta de nuevo en unos minutos." },
+        { status: 429, headers: { "Access-Control-Allow-Origin": CORS_ORIGIN } }
+      );
+    }
+
     const {
       token, amount, currency, description, email,
       firstName, lastName, phone, address, city, countryCode,
@@ -58,14 +69,14 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, data }, {
         headers: {
-            "Access-Control-Allow-Origin": "https://sporttperu.com/",
+            "Access-Control-Allow-Origin": CORS_ORIGIN,
         },
     });
   } catch (error) {
     return NextResponse.json({ error: "Error procesando el pago" }, {
       status: 500,
       headers: {
-        "Access-Control-Allow-Origin": "https://sporttperu.com/",
+        "Access-Control-Allow-Origin": CORS_ORIGIN,
       },
     });
   }

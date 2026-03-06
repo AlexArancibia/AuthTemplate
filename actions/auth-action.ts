@@ -2,6 +2,7 @@
 
 import { signIn } from "@/auth"
 import { db } from "@/lib/db"
+import { sendVerificationEmail } from "@/lib/send-verification"
 import { type loginSchema, registerSchema } from "@/lib/zod"
 import bcrypt from "bcryptjs"
 import { AuthError } from "next-auth"
@@ -82,34 +83,19 @@ export const registerAction = async (values: z.infer<typeof registerSchema>) => 
       },
     })
     try {
-      const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/email/send-verification`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: data.email,
-          verificationToken: token,
-          verificationUrl: process.env.NEXTAUTH_URL || 'http://localhost:3000'
-        })
+      const verificationUrl = process.env.NEXTAUTH_URL || "http://localhost:3000"
+      const result = await sendVerificationEmail({
+        email: data.email,
+        verificationToken: token,
+        verificationUrl,
       })
-      const contentType = response.headers.get('content-type')
-      let result
-      if (contentType && contentType.includes('application/json')) {
-        result = await response.json()
-      } else {
-        const text = await response.text()
-        throw new Error(`Respuesta no es JSON: ${text}`)
-      }
-      if (!response.ok || !result.success) {
+      if (!result.success) {
         throw new Error(result.error || "Error enviando email de verificación")
       }
     } catch (error) {
-      // Log del error pero no fallar el proceso
       console.error("Error enviando email de verificación:", error)
     }
 
-    // Avisar que la cuenta fue creada
     return { success: true, message: "Cuenta creada correctamente. Revisa tu correo para verificarla." }
   } catch (error) {
     if (error instanceof AuthError) {

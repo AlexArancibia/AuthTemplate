@@ -12,14 +12,8 @@ const createTransporter = () => {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
-    // Configuración específica para SpaceMail
+    tls: { rejectUnauthorized: true },
     ...(isSpaceMail ? {
-      tls: {
-        rejectUnauthorized: false,
-        ciphers: 'SSLv3',
-        checkServerIdentity: () => undefined,
-        servername: undefined
-      },
       connectionTimeout: 60000,
       greetingTimeout: 30000,
       socketTimeout: 60000,
@@ -27,11 +21,7 @@ const createTransporter = () => {
       maxConnections: 1,
       maxMessages: 3,
       rateLimit: 14
-    } : {
-      tls: {
-        rejectUnauthorized: process.env.NODE_ENV === "production" ? true : false
-      }
-    })
+    } : {})
   }
   
   return nodemailer.createTransport(config)

@@ -1,17 +1,19 @@
-// Helper backend para actualizar una orden
-import type { Order } from "@/types/order"
-
 // app/api/webhooks/mercadopago/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { MercadoPagoConfig, Payment } from "mercadopago";
 import { getAccessToken } from "@/lib/mercadopago-ac";
-import apiClient from "@/lib/axiosConfig"
 
-const accessToken = await getAccessToken()
-const mpClient = new MercadoPagoConfig({ accessToken });
+export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      // Acknowledge webhook to avoid repeated retries when MP is not configured.
+      return NextResponse.json({ received: true }, { status: 200 });
+    }
+
+    const mpClient = new MercadoPagoConfig({ accessToken });
     const body = await req.json();
 
     const type = body.type || body.action || body.topic || null;

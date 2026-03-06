@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { auth } from "@/auth"
+import { userPatchSchema } from "@/lib/zod"
 
 // GET: Obtener usuario por email
 export async function GET(request: Request, { params }: { params: Promise<{ email: string }> }) {
@@ -69,8 +70,35 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ em
       return NextResponse.json({ message: "No tienes permiso para modificar estos datos" }, { status: 403 })
     }
 
-    // Obtener los datos para actualizar
-    const data = await request.json()
+    // Obtener y validar datos (allowlist: solo campos permitidos)
+    let raw: unknown
+    try {
+      raw = await request.json()
+    } catch {
+      return NextResponse.json({ message: "Cuerpo de solicitud inválido" }, { status: 400 })
+    }
+
+    const parsed = userPatchSchema.safeParse(raw)
+    if (!parsed.success) {
+      const firstError = parsed.error.flatten().fieldErrors
+      const msg = Object.values(firstError).flat().join("; ") || "Datos de actualización inválidos"
+      return NextResponse.json({ message: msg }, { status: 400 })
+    }
+
+    const data = parsed.data
+    const updateData: Record<string, unknown> = {}
+    if (data.name !== undefined) updateData.name = data.name
+    if (data.firstName !== undefined) updateData.firstName = data.firstName
+    if (data.lastName !== undefined) updateData.lastName = data.lastName
+    if (data.phone !== undefined) updateData.phone = data.phone
+    if (data.company !== undefined) updateData.company = data.company
+    if (data.taxId !== undefined) updateData.taxId = data.taxId
+    if (data.image !== undefined) updateData.image = data.image
+    if (data.acceptsMarketing !== undefined) updateData.acceptsMarketing = data.acceptsMarketing
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ message: "No hay campos válidos para actualizar" }, { status: 400 })
+    }
 
     // Verificar que el usuario existe antes de actualizarlo
     const existingUser = await db.user.findUnique({
@@ -81,10 +109,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ em
       return NextResponse.json({ message: "Usuario no encontrado" }, { status: 404 })
     }
 
-    // Actualizar el usuario en la base de datos
+    // Actualizar el usuario en la base de datos (solo campos allowlist)
     const updatedUser = await db.user.update({
       where: { email },
-      data,
+      data: updateData,
       include: {
         accounts: true,
         addresses: {
