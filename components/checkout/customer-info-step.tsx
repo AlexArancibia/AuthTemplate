@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useGeographicDataStore } from "@/stores/locationStore"
 import { useUserStore } from "@/stores/userStore"
 import { toast } from "sonner"; 
@@ -137,6 +137,13 @@ export function CustomerInfoStep({
     fetchCities
   } = useGeographicDataStore()
 
+  // Igual que anjsports: mostrar solo Perú si existe (code3), sino todos
+  const availableCountries = useMemo(() => {
+    const list = Array.isArray(countries) ? countries : []
+    const peruOnly = list.filter(c => c.code3 === "PER")
+    return peruOnly.length > 0 ? peruOnly : list
+  }, [countries])
+
   useEffect(() => {
     fetchCountries()
   }, [fetchCountries])
@@ -163,9 +170,10 @@ export function CustomerInfoStep({
   }, [formData.billingCountryId, formData.billingStateId, fetchCities])
 
   const handleCountryChange = (value: string) => {
-    const country = countries.find(c => c.code3 === value)
+    const country = availableCountries.find(c => c.code3 === value)
     handleInputChange({ target: { name: "country", value: country?.name || "" } } as any)
     handleInputChange({ target: { name: "countryCode3", value } } as any)
+    handleInputChange({ target: { name: "countryCode", value: country?.code || "" } } as any)
     handleInputChange({ target: { name: "countryId", value: country?.id || "" } } as any)
     // Limpiar estado y ciudad
     handleInputChange({ target: { name: "state", value: "" } } as any)
@@ -190,9 +198,10 @@ export function CustomerInfoStep({
   }
 
   const handleBillingCountryChange = (value: string) => {
-    const country = countries.find(c => c.code3 === value)
+    const country = availableCountries.find(c => c.code3 === value)
     handleInputChange({ target: { name: "billingCountry", value: country?.name || "" } } as any)
     handleInputChange({ target: { name: "billingCountryCode3", value } } as any)
+    handleInputChange({ target: { name: "billingCountryCode", value: country?.code || "" } } as any)
     handleInputChange({ target: { name: "billingCountryId", value: country?.id || "" } } as any)
     // Limpiar estado y ciudad de billing
     handleInputChange({ target: { name: "billingState", value: "" } } as any)
@@ -483,12 +492,11 @@ export function CustomerInfoStep({
                       onKeyDown={e => e.stopPropagation()}
                     />
                   </div>
-                  {(Array.isArray(countries) ? countries : [])
-                    .filter(c => c.name?.toLowerCase().includes(countryFilter.toLowerCase()))
-                    .filter(c => c.name?.toLowerCase() === 'perú' || c.name?.toLowerCase() === 'peru')
+                  {availableCountries
+                    .filter(c => (c.name || "").toLowerCase().includes((countryFilter || "").toLowerCase()))
                     .map(c => (
                       <SelectItem key={c.code} value={c.code3}>{c.name}</SelectItem>
-                  ))}
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -691,12 +699,11 @@ export function CustomerInfoStep({
                           onKeyDown={e => e.stopPropagation()}
                         />
                       </div>
-                      {(Array.isArray(countries) ? countries : [])
-                        .filter(c => c.name?.toLowerCase().includes(billingCountryFilter.toLowerCase()))
-                        .filter(c => c.name?.toLowerCase() === 'perú' || c.name?.toLowerCase() === 'peru')
+                      {availableCountries
+                        .filter(c => (c.name || "").toLowerCase().includes((billingCountryFilter || "").toLowerCase()))
                         .map(c => (
                           <SelectItem key={c.code} value={c.code3}>{c.name}</SelectItem>
-                      ))}
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>

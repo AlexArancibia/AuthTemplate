@@ -1,7 +1,6 @@
 import apiClient from "@/lib/axiosConfig"
 import type { Country, State, City } from "@/types/location"
 import { create } from "zustand"
-import axios from "axios"
 
 type Location = {
   countries: Country[]
@@ -12,6 +11,18 @@ type Location = {
   fetchCities: (countryId: string, stateId: string) => Promise<void>
 }
 
+// Igual que anjsports: maneja distintos formatos de respuesta del API
+const pickArray = <T extends Country | State | City>(
+  payload: unknown,
+  fallbackKey: "countries" | "states" | "cities"
+): T[] => {
+  if (!payload) return []
+  if (Array.isArray(payload)) return payload as T[]
+  if (Array.isArray((payload as any)?.data)) return (payload as any).data as T[]
+  if (Array.isArray((payload as any)?.[fallbackKey])) return (payload as any)[fallbackKey] as T[]
+  return []
+}
+
 export const useGeographicDataStore = create<Location>((set, get) => ({
   countries: [],
   states: {},
@@ -20,25 +31,21 @@ export const useGeographicDataStore = create<Location>((set, get) => ({
   async fetchCountries() {
     if (get().countries.length) return
     const res = await apiClient.get("/shipping-methods/geographic-data")
-    const data = res.data?.data
-    set({ countries: Array.isArray(data) ? data : [] })
+    const countries = pickArray<Country>(res?.data?.data ?? res?.data, "countries")
+    set({ countries })
   },
 
   async fetchStates(countryId: string) {
     if (get().states[countryId]) return
     const res = await apiClient.get(`/shipping-methods/geographic-data/${countryId}`)
-    const data = res.data?.data
-    set(state => ({
-      states: { ...state.states, [countryId]: Array.isArray(data) ? data : [] }
-    }))
+    const data = pickArray<State>(res?.data?.data ?? res?.data, "states")
+    set(state => ({ states: { ...state.states, [countryId]: data } }))
   },
 
   async fetchCities(countryId: string, stateId: string) {
     if (get().cities[stateId]) return
     const res = await apiClient.get(`/shipping-methods/geographic-data/${countryId}/${stateId}`)
-    const data = res.data?.data
-    set(state => ({
-      cities: { ...state.cities, [stateId]: Array.isArray(data) ? data : [] }
-    }))
+    const data = pickArray<City>(res?.data?.data ?? res?.data, "cities")
+    set(state => ({ cities: { ...state.cities, [stateId]: data } }))
   }
 }))
