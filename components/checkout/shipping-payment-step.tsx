@@ -193,19 +193,19 @@ export function ShippingPaymentStep({
   };
 
 
-  const filteredShippingMethods = shippingMethods.filter((method) =>
-    method.prices.some((price) =>
+  const filteredShippingMethods = (Array.isArray(shippingMethods) ? shippingMethods : []).filter((method) =>
+    Array.isArray(method.prices) && method.prices.some((price) =>
       price.cityNames?.some(
         (city) => city.toLowerCase() === formData.city.toLowerCase()
       )
     )
   )
 
-  const pickupMethod = shippingMethods.find((method) =>
+  const pickupMethod = (Array.isArray(shippingMethods) ? shippingMethods : []).find((method) =>
     method.name.toLowerCase().includes("recojo")
   )
 
-  const agencyMethod = shippingMethods.find((method) =>
+  const agencyMethod = (Array.isArray(shippingMethods) ? shippingMethods : []).find((method) =>
     method.name.toLowerCase().includes("envio solo hasta agencia") ||
     method.name.toLowerCase().includes("envío solo hasta agencia")
   )

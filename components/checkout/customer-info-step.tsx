@@ -483,9 +483,9 @@ export function CustomerInfoStep({
                       onKeyDown={e => e.stopPropagation()}
                     />
                   </div>
-                  {countries
-                    .filter(c => c.name.toLowerCase().includes(countryFilter.toLowerCase()))
-                    .filter(c => c.name.toLowerCase() === 'perú' || c.name.toLowerCase() === 'peru')
+                  {(Array.isArray(countries) ? countries : [])
+                    .filter(c => c.name?.toLowerCase().includes(countryFilter.toLowerCase()))
+                    .filter(c => c.name?.toLowerCase() === 'perú' || c.name?.toLowerCase() === 'peru')
                     .map(c => (
                       <SelectItem key={c.code} value={c.code3}>{c.name}</SelectItem>
                   ))}
@@ -691,9 +691,9 @@ export function CustomerInfoStep({
                           onKeyDown={e => e.stopPropagation()}
                         />
                       </div>
-                      {countries
-                        .filter(c => c.name.toLowerCase().includes(billingCountryFilter.toLowerCase()))
-                        .filter(c => c.name.toLowerCase() === 'perú' || c.name.toLowerCase() === 'peru')
+                      {(Array.isArray(countries) ? countries : [])
+                        .filter(c => c.name?.toLowerCase().includes(billingCountryFilter.toLowerCase()))
+                        .filter(c => c.name?.toLowerCase() === 'perú' || c.name?.toLowerCase() === 'peru')
                         .map(c => (
                           <SelectItem key={c.code} value={c.code3}>{c.name}</SelectItem>
                       ))}

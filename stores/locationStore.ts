@@ -20,22 +20,25 @@ export const useGeographicDataStore = create<Location>((set, get) => ({
   async fetchCountries() {
     if (get().countries.length) return
     const res = await apiClient.get("/shipping-methods/geographic-data")
-    set({ countries: res.data.data })
+    const data = res.data?.data
+    set({ countries: Array.isArray(data) ? data : [] })
   },
 
   async fetchStates(countryId: string) {
     if (get().states[countryId]) return
     const res = await apiClient.get(`/shipping-methods/geographic-data/${countryId}`)
+    const data = res.data?.data
     set(state => ({
-      states: { ...state.states, [countryId]: res.data.data }
+      states: { ...state.states, [countryId]: Array.isArray(data) ? data : [] }
     }))
   },
 
   async fetchCities(countryId: string, stateId: string) {
     if (get().cities[stateId]) return
     const res = await apiClient.get(`/shipping-methods/geographic-data/${countryId}/${stateId}`)
+    const data = res.data?.data
     set(state => ({
-      cities: { ...state.cities, [stateId]: res.data.data }
+      cities: { ...state.cities, [stateId]: Array.isArray(data) ? data : [] }
     }))
   }
 }))
