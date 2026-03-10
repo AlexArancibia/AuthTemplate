@@ -269,7 +269,7 @@ export function OrderSummary({
                 </span>
                 <span className="font-medium pl-1">
                   {currency}
-                  {(Number(item.variant.prices[0].price) * item.quantity).toFixed(2)}
+                  {getSafeItemTotal(item).toFixed(2)}
                 </span>
               </div>
             )
@@ -380,7 +380,7 @@ export function OrderSummary({
           const isPickup = methodName.includes("recojo") || methodName.includes("pickup") || methodName.includes("tienda")
           if (isPickup) return null // No mostrar mensajes de envío gratis en recojo
           
-          const priceData = selectedMethod.prices[0]
+          const priceData = selectedMethod.prices?.[0]
           // Convertir a número para asegurar comparaciones y .toFixed()
           const freeThreshold = Number(priceData?.freeShippingThreshold || 100)
           const subtotalAfterDiscount = subtotal - totalDiscounts
