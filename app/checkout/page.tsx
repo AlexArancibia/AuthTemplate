@@ -65,7 +65,7 @@ const STEPS = {
 
 export default function CheckoutPage() {
   const { items, clearCart, getTotal } = useCartStore()
-  const { shopSettings, shippingMethods, paymentProviders, coupons, couponCode, createOrder } = useMainStore()
+  const { shopSettings, shippingMethods, paymentProviders, coupons, couponCode, createOrder, fetchShippingMethods, fetchPaymentProviders, fetchShopSettings, fetchCoupons } = useMainStore()
   const { currentUser, loading: userLoading, fetchUserByEmail, createAddress, deleteAddress } = useUserStore()
   const { sendOrderEmails } = useEmailStore()
   const searchParams = useSearchParams()
@@ -250,6 +250,23 @@ export default function CheckoutPage() {
     }, 0)
   }
 
+
+  // Cargar shippingMethods, paymentProviders, shopSettings y coupons al montar checkout
+  useEffect(() => {
+    const loadCheckoutData = async () => {
+      try {
+        await Promise.all([
+          fetchShippingMethods(),
+          fetchPaymentProviders(),
+          fetchShopSettings(),
+          fetchCoupons(),
+        ])
+      } catch (error) {
+        console.error("[Checkout] Error cargando datos:", error)
+      }
+    }
+    loadCheckoutData()
+  }, [fetchShippingMethods, fetchPaymentProviders, fetchShopSettings, fetchCoupons])
 
   // Initial page loading
   useEffect(() => {

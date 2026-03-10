@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { toast } from "sonner";
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { motion } from "framer-motion"
 import { ArrowLeft, Loader2, Package, Truck, CreditCard } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -193,44 +193,42 @@ export function ShippingPaymentStep({
   };
 
 
-  const filteredShippingMethods = (Array.isArray(shippingMethods) ? shippingMethods : []).filter((method) =>
-    Array.isArray(method.prices) && method.prices.some((price) =>
-      price.cityNames?.some(
-        (city) => city.toLowerCase() === formData.city.toLowerCase()
+  const cityLower = (formData.city || "").trim().toLowerCase()
+
+  const methodsToShow = useMemo(() => {
+    const methods = Array.isArray(shippingMethods) ? shippingMethods : []
+    const isPickup = (name: string) => {
+      const n = name.toLowerCase()
+      return n.includes("recojo") || n.includes("pickup") || n.includes("tienda")
+    }
+
+    const filtered = methods.filter((method) =>
+      Array.isArray(method.prices) &&
+      method.prices.some((price) =>
+        Array.isArray(price.cityNames) &&
+        price.cityNames.some((city) => (city || "").toLowerCase() === cityLower)
       )
     )
-  )
 
-  const pickupMethod = (Array.isArray(shippingMethods) ? shippingMethods : []).find((method) =>
-    method.name.toLowerCase().includes("recojo")
-  )
+    const pickup = methods.find((m) => isPickup(m.name))
+    const agency = methods.find(
+      (m) =>
+        m.name.toLowerCase().includes("envio solo hasta agencia") ||
+        m.name.toLowerCase().includes("envío solo hasta agencia")
+    )
+    const isNotLima = (formData.state || "").toLowerCase() !== "lima"
 
-  const agencyMethod = (Array.isArray(shippingMethods) ? shippingMethods : []).find((method) =>
-    method.name.toLowerCase().includes("envio solo hasta agencia") ||
-    method.name.toLowerCase().includes("envío solo hasta agencia")
-  )
+    const result = [...filtered]
+    if (pickup && !result.some((m) => m.id === pickup.id)) result.push(pickup)
+    if (agency && isNotLima && !result.some((m) => m.id === agency.id)) result.push(agency)
 
-  const isNotLimaProvincia = formData.state?.toLowerCase() !== "lima"
-
-  let methodsToShow = [...filteredShippingMethods]
-  
-  if (pickupMethod && !methodsToShow.find(m => m.id === pickupMethod.id)) {
-    methodsToShow.push(pickupMethod)
-  }
-  
-  if (agencyMethod && isNotLimaProvincia && !methodsToShow.find(m => m.id === agencyMethod.id)) {
-    methodsToShow.push(agencyMethod)
-  }
-
-  // Ordenar para que recojo aparezca primero
-  methodsToShow.sort((a, b) => {
-    const aIsPickup = a.name.toLowerCase().includes("recojo") || a.name.toLowerCase().includes("pickup") || a.name.toLowerCase().includes("tienda")
-    const bIsPickup = b.name.toLowerCase().includes("recojo") || b.name.toLowerCase().includes("pickup") || b.name.toLowerCase().includes("tienda")
-    
-    if (aIsPickup && !bIsPickup) return -1
-    if (!aIsPickup && bIsPickup) return 1
-    return 0
-  })
+    result.sort((a, b) => {
+      if (isPickup(a.name) && !isPickup(b.name)) return -1
+      if (!isPickup(a.name) && isPickup(b.name)) return 1
+      return 0
+    })
+    return result
+  }, [shippingMethods, formData.city, formData.state])
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-8">
@@ -249,25 +247,13 @@ export function ShippingPaymentStep({
             className="space-y-4"
           >
             {methodsToShow.map((method) => {
-              const priceData = method.prices[0]
+              const priceData = method.prices?.[0]
               const basePrice = Number(priceData?.price || 0)
-              // TEMPORAL: Usar 100 como threshold por defecto mientras el backend no lo guarda
-              // Convertir a número para asegurar que tenga el método .toFixed()
               const freeThreshold = Number(priceData?.freeShippingThreshold || 100)
-              
-              // DEBUG: Ver qué datos llegan
-              console.log('🔍 DEBUG Método:', method.name)
-              console.log('📦 priceData completo:', priceData)
-              console.log('💰 freeThreshold:', freeThreshold)
-              console.log('🛒 subtotal después de descuentos:', total)
-              
-              // Calcular si califica para envío gratis (usando subtotal después de descuentos)
-              const qualifiesForFreeShipping = freeThreshold && total >= freeThreshold
+              const qualifiesForFreeShipping = freeThreshold > 0 && total >= freeThreshold
               const isFree = basePrice === 0 || qualifiesForFreeShipping
               const finalPrice = qualifiesForFreeShipping ? 0 : basePrice
-              
-              // Detectar si es recojo en tienda (múltiples variaciones)
-              const methodName = method.name.toLowerCase()
+              const methodName = (method.name || "").toLowerCase()
               const isPickup = methodName.includes("recojo") || methodName.includes("pickup") || methodName.includes("tienda")
 
               return (
@@ -278,7 +264,7 @@ export function ShippingPaymentStep({
                   <RadioGroupItem value={method.id} id={method.id} />
                   <Label htmlFor={method.id} className="flex-1 cursor-pointer">
                     <div className="flex items-center">
-                      {method.name.toLowerCase().includes("express") ? (
+                      {methodName.includes("express") ? (
                         <Package className="mr-3 h-5 w-5 text-primary" />
                       ) : (
                         <Truck className="mr-3 h-5 w-5 text-primary" />
@@ -313,10 +299,10 @@ export function ShippingPaymentStep({
                         {/* Mostrar progreso hacia envío gratis (solo si NO es recojo) */}
                         {!isPickup && freeThreshold && !qualifiesForFreeShipping && (
                           <p className="text-xs text-blue-600 mt-1">
-                            ¡Envío gratis desde {paymentProviders[0]?.currency.symbol}{freeThreshold.toFixed(2)}!
+                            ¡Envío gratis desde {(paymentProviders[0]?.currency?.symbol ?? "S/")}{freeThreshold.toFixed(2)}!
                             {total > 0 && (
                               <span className="ml-1 text-gray-500">
-                                (Te faltan {paymentProviders[0]?.currency.symbol}{(freeThreshold - total).toFixed(2)})
+                                (Te faltan {(paymentProviders[0]?.currency?.symbol ?? "S/")}{(freeThreshold - total).toFixed(2)})
                               </span>
                             )}
                           </p>
@@ -342,8 +328,7 @@ export function ShippingPaymentStep({
                     </Badge>
                   ) : (
                     <span className="font-medium">
-                      {paymentProviders[0]?.currency.symbol}
-                      {Number(finalPrice).toFixed(2)}
+                      {(paymentProviders[0]?.currency?.symbol ?? "S/")}{Number(finalPrice).toFixed(2)}
                     </span>
                   )}
                 </div>
@@ -369,7 +354,7 @@ export function ShippingPaymentStep({
             onValueChange={(value) => handleSelectChange("paymentMethod", value)}
             className="space-y-4"
           >
-            {paymentProviders.map((provider) => (
+            {(Array.isArray(paymentProviders) ? paymentProviders : []).map((provider) => (
               <div
                 key={provider.id}
                 className="flex items-center space-x-2 border rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
@@ -405,7 +390,7 @@ export function ShippingPaymentStep({
         )}
 
         {formData.paymentMethod &&
-          paymentProviders
+          (Array.isArray(paymentProviders) ? paymentProviders : [])
             .find((p) => p.id === formData.paymentMethod)
             ?.name.toLowerCase()
             .includes("tarjeta") && (
