@@ -1,13 +1,8 @@
-import { db } from "@/lib/db";
-import { logger } from "@/lib/logger";
-import { sendVerificationEmail } from "@/lib/send-verification";
-import { loginSchema } from "@/lib/zod";
-import bcrypt from "bcryptjs";
-import { nanoid } from "nanoid";
+// Lazy imports para que el middleware (Edge) no cargue módulos Node-only (db, bcrypt, nodemailer).
+// Solo se cargan cuando authorize() se ejecuta en el API route.
 import type { NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-export const runtime = 'nodejs'
-import Google from "next-auth/providers/google"
+import Google from "next-auth/providers/google";
 
 // En desarrollo local: si NEXTAUTH_URL apunta a producción, usar localhost
 if (process.env.NODE_ENV === "development" && process.env.NEXTAUTH_URL && !process.env.NEXTAUTH_URL.includes("localhost")) {
@@ -25,6 +20,12 @@ export default {
     }),
     Credentials({
       authorize: async (credentials) => {
+        const { loginSchema } = await import("@/lib/zod");
+        const { db } = await import("@/lib/db");
+        const bcrypt = (await import("bcryptjs")).default;
+        const { nanoid } = await import("nanoid");
+        const { sendVerificationEmail } = await import("@/lib/send-verification");
+
         const { data, success } = loginSchema.safeParse(credentials)
 
         if (!success) {
@@ -86,10 +87,10 @@ export default {
             if (!result.success) {
               throw new Error(result.error || "Error enviando email de verificación")
             }
-            logger.info({ messageId: result.messageId }, "Email de verificación enviado")
+            console.log("[auth] Email de verificación enviado", { messageId: result.messageId })
           } catch (error) {
             // Log del error pero no fallar el proceso
-            logger.error({ err: error }, "Error enviando email de verificación")
+            console.error("[auth] Error enviando email de verificación", error)
             throw new Error("Por favor verifica tu email para continuar")
           }
 
