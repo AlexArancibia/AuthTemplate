@@ -37,6 +37,8 @@ interface GroupedPresentation {
   values: string[]
 }
 
+const SIZE_OPTIONS = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"]
+
 function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPrice, selectedCurrencyId, acceptedCurrencies }: ProductFiltersProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -468,6 +470,29 @@ const filteredProducts = products
                 className="px-4 py-2 text-sm border rounded-md bg-gray-100 text-gray-400 cursor-not-allowed"
               >
                 {type}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Tallas (hardcodeadas, usando filtros de atributos existentes) */}
+      <div>
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-2">Tallas</h3>
+          <div className="flex flex-wrap gap-3">
+            {SIZE_OPTIONS.map((size) => (
+              <button
+                key={size}
+                type="button"
+                onClick={() => handleVariantChange("Talla", size)}
+                className={`px-3 py-1 rounded-full border text-sm transition ${
+                  (selectedVariants["Talla"] || []).includes(size)
+                    ? "bg-black text-white border-black"
+                    : "bg-white text-black border-gray-300"
+                }`}
+              >
+                {size}
               </button>
             ))}
           </div>
