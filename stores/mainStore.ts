@@ -71,6 +71,19 @@ const buildQueryParams = (params: any = {}) => {
           }
         }
       } else {
+        // Manejar objetos especiales (attributeFilters como JSON)
+        if (key === 'attributeFilters' && typeof value === 'object') {
+          const entries = Object.entries(value as Record<string, string[]>)
+          if (entries.length > 0) {
+            const jsonValue = JSON.stringify(value)
+            debugLog(`🔧 [buildQueryParams] Adding attributeFilters JSON: ${jsonValue}`)
+            queryParams.append(key, jsonValue)
+          } else {
+            debugLog("🔧 [buildQueryParams] Skipping empty attributeFilters object")
+          }
+          return
+        }
+
         // Para strings, usar trim() antes de agregar
         const stringValue = typeof value === 'string' ? value.trim() : String(value)
         debugLog(`🔧 [buildQueryParams] Adding param: ${key} = ${stringValue}`)

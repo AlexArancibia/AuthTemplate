@@ -118,6 +118,8 @@ export default function ProductList({
       try {
         const validSortBy: ProductSortBy = (initialSortBy !== 'featured' ? initialSortBy : 'createdAt') as ProductSortBy
         
+        const hasVariantFilters = initialVariantFilters && Object.keys(initialVariantFilters).length > 0
+
         const params: SearchProductParams = {
           page: currentPage,
           limit: 9,
@@ -130,6 +132,7 @@ export default function ProductList({
           ...(initialCategories.length > 0 && { categorySlugs: initialCategories }),
           ...(initialVendors.length > 0 && { vendor: initialVendors }),
           ...(initialCollectionIds.length > 0 && { collectionIds: initialCollectionIds }),
+          ...(hasVariantFilters && { attributeFilters: initialVariantFilters }),
         }
 
         await fetchProducts(params)

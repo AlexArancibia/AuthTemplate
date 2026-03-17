@@ -43,6 +43,7 @@ export interface SearchProductParams extends Omit<PaginationParams, 'sortBy'> {
   inStock?: boolean
   sortBy?: ProductSortBy
   status?: string[]  // Estados de productos: ACTIVE, ARCHIVED, DRAFT
+  attributeFilters?: Record<string, string[]>
 }
 
 // Parámetros específicos para búsqueda de órdenes
