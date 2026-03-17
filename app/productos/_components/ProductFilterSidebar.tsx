@@ -23,6 +23,8 @@ interface ProductFilterSidebarProps {
   isMobile?: boolean
 }
 
+const SIZE_OPTIONS = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"]
+
 // Helper: Máximo por defecto según código de moneda
 const getDefaultMaxPrice = (code: string): number => {
   const maxByCurrency: Record<string, number> = { USD: 500, PEN: 2000 }
@@ -101,10 +103,15 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     const collectionParam = searchParams.get("collections")
     return collectionParam ? collectionParam.split(",") : []
   })
+  const [selectedSizes, setSelectedSizes] = useState<string[]>(() => {
+    const sizeParam = searchParams.get("variant_Talla")
+    return sizeParam ? sizeParam.split(",") : []
+  })
   const [showCategories, setShowCategories] = useState(true)
   const [showVendors, setShowVendors] = useState(true)
   const [showCollections, setShowCollections] = useState(true)
   const [showPriceFilter, setShowPriceFilter] = useState(true)
+  const [showSizes, setShowSizes] = useState(true)
 
   // Estados locales para los inputs (para permitir escritura libre sin actualizar URL)
   const [minPriceInput, setMinPriceInput] = useState<string>(initialPriceRange[0].toString())
@@ -121,6 +128,7 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     categories: string[],
     vendors: string[],
     collections: string[],
+    sizes: string[],
     price: [number, number],
     search: string
   ) => {
@@ -139,6 +147,11 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     // Add selected collections (comma-separated format)
     if (collections.length > 0) {
       params.set("collections", collections.join(","))
+    }
+
+    // Add selected sizes as variant filter (Talla)
+    if (sizes.length > 0) {
+      params.set("variant_Talla", sizes.join(","))
     }
 
     // Add price range (only if different from default range)
@@ -196,17 +209,25 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     }
 
     const timeoutId = setTimeout(() => {
-      updateURL(selectedCategories, selectedVendors, selectedCollections, priceRange, searchTerm)
+      updateURL(
+        selectedCategories,
+        selectedVendors,
+        selectedCollections,
+        selectedSizes,
+        priceRange,
+        searchTerm,
+      )
     }, searchTerm ? 500 : 0) // Debounce only for search term
 
     return () => clearTimeout(timeoutId)
-  }, [selectedCategories, selectedVendors, selectedCollections, priceRange, searchTerm, updateURL])
+  }, [selectedCategories, selectedVendors, selectedCollections, selectedSizes, priceRange, searchTerm, updateURL])
 
   // Clear all filters
   const clearFilters = () => {
     setSelectedCategories([])
     setSelectedVendors([])
     setSelectedCollections([])
+    setSelectedSizes([])
     setPriceRange([productPriceRange.min, productPriceRange.max])
     setSearchTerm("")
     router.push(pathname, { scroll: false })
@@ -236,6 +257,11 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
 
   const handleCollectionChange = useCallback(
     (collectionId: string) => createToggleHandler(setSelectedCollections, collectionId),
+    [createToggleHandler]
+  )
+
+  const handleSizeChange = useCallback(
+    (size: string) => createToggleHandler(setSelectedSizes, size),
     [createToggleHandler]
   )
 
@@ -287,10 +313,11 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     selectedCategories.length > 0 ||
     selectedVendors.length > 0 ||
     selectedCollections.length > 0 ||
+    selectedSizes.length > 0 ||
     priceRange[0] > productPriceRange.min ||
     priceRange[1] < productPriceRange.max ||
     searchTerm !== "",
-    [selectedCategories.length, selectedVendors.length, selectedCollections.length, priceRange, productPriceRange.min, productPriceRange.max, searchTerm]
+    [selectedCategories.length, selectedVendors.length, selectedCollections.length, selectedSizes.length, priceRange, productPriceRange.min, productPriceRange.max, searchTerm]
   )
 
   const containerClasses = isMobile
@@ -404,6 +431,23 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
           ))}
         </FilterSection>
       )}
+
+      {/* Sizes (Tallas) */}
+      <FilterSection
+        title="Tallas"
+        isOpen={showSizes}
+        onToggle={() => setShowSizes(!showSizes)}
+      >
+        {SIZE_OPTIONS.map((size) => (
+          <CheckboxFilter
+            key={size}
+            id={`size-${size}`}
+            label={size}
+            checked={selectedSizes.includes(size)}
+            onChange={() => handleSizeChange(size)}
+          />
+        ))}
+      </FilterSection>
 
       {/* Price Range */}
       <div className="space-y-3">
