@@ -37,7 +37,37 @@ interface GroupedPresentation {
   values: string[]
 }
 
-const SIZE_OPTIONS = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"]
+const SIZE_OPTIONS = ["XXXS", "XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"]
+
+// Mantiene la UI en tallas "base" y solo amplía el query con su equivalente 2x/3x del mismo nivel.
+const TALLA_TO_EQUIVALENT: Record<string, string> = {
+  XXS: "2XS",
+  XXL: "2XL",
+  XXXS: "3XS",
+  XXXL: "3XL",
+}
+
+const EQUIVALENT_TO_TALLA: Record<string, string> = {
+  "2XS": "XXS",
+  "2XL": "XXL",
+  "3XS": "XXXS",
+  "3XL": "XXXL",
+}
+
+function normalizeTallasFromUrl(tallas: string[]): string[] {
+  const out = new Set<string>()
+  for (const talla of tallas) out.add(EQUIVALENT_TO_TALLA[talla] ?? talla)
+  return Array.from(out)
+}
+
+function expandTallasForQuery(tallas: string[]): string[] {
+  const out = new Set<string>(tallas)
+  for (const talla of tallas) {
+    const eq = TALLA_TO_EQUIVALENT[talla]
+    if (eq) out.add(eq)
+  }
+  return Array.from(out)
+}
 
 function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPrice, selectedCurrencyId, acceptedCurrencies }: ProductFiltersProps) {
   const router = useRouter()
@@ -62,7 +92,13 @@ function ProductFiltersContent({ onFilterChange, initialFilters, minPrice, maxPr
   })
   // Add collection IDs state
   const [selectedCollections, setSelectedCollections] = useState<string[]>(initialFilters.collectionIds || [])
-  const [selectedVariants, setSelectedVariants] = useState<Record<string, string[]>>(initialFilters.variants)
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string[]>>(() => {
+    const variants = { ...initialFilters.variants }
+    if (Array.isArray(variants.Talla)) {
+      variants.Talla = normalizeTallasFromUrl(variants.Talla)
+    }
+    return variants
+  })
   const [priceRange, setPriceRange] = useState<[number, number]>(initialFilters.priceRange)
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm)
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
@@ -103,12 +139,7 @@ const filteredProducts = products
 
   // Debounce search term
   useEffect(() => {
-    console.log("currencies aceptados: ", defaultCurrency)
-    console.log("Productos cargados:", products)
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm)
-    }, 300)
-
+    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 300)
     return () => clearTimeout(timer)
   }, [searchTerm])
 
@@ -168,6 +199,12 @@ const filteredProducts = products
       if (filters.variants.Presentaciones && filters.variants.Presentaciones.length > 0) {
         const presentationsParam = filters.variants.Presentaciones.map((value) => value.replace(/\s/g, "+")).join(",")
         params.set("variant_Presentaciones", presentationsParam)
+      }
+
+      // Add selected sizes as variant filter (Talla), con equivalentes 2x/3x del mismo nivel.
+      if (filters.variants.Talla && filters.variants.Talla.length > 0) {
+        const expandedTallas = expandTallasForQuery(filters.variants.Talla)
+        params.set("variant_Talla", expandedTallas.join(","))
       }
 
       // Handle other filters

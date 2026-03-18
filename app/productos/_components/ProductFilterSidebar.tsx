@@ -23,7 +23,37 @@ interface ProductFilterSidebarProps {
   isMobile?: boolean
 }
 
-const SIZE_OPTIONS = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"]
+const SIZE_OPTIONS = ["XXXS", "XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"]
+
+// Mantiene la UI en tallas "base" y solo amplía el query con su equivalente 2x/3x del mismo nivel.
+const TALLA_TO_EQUIVALENT: Record<string, string> = {
+  XXS: "2XS",
+  XXL: "2XL",
+  XXXS: "3XS",
+  XXXL: "3XL",
+}
+
+const EQUIVALENT_TO_TALLA: Record<string, string> = {
+  "2XS": "XXS",
+  "2XL": "XXL",
+  "3XS": "XXXS",
+  "3XL": "XXXL",
+}
+
+function normalizeTallasFromUrl(tallas: string[]): string[] {
+  const out = new Set<string>()
+  for (const talla of tallas) out.add(EQUIVALENT_TO_TALLA[talla] ?? talla)
+  return Array.from(out)
+}
+
+function expandTallasForQuery(tallas: string[]): string[] {
+  const out = new Set<string>(tallas)
+  for (const talla of tallas) {
+    const eq = TALLA_TO_EQUIVALENT[talla]
+    if (eq) out.add(eq)
+  }
+  return Array.from(out)
+}
 
 // Helper: Máximo por defecto según código de moneda
 const getDefaultMaxPrice = (code: string): number => {
@@ -105,7 +135,10 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
   })
   const [selectedSizes, setSelectedSizes] = useState<string[]>(() => {
     const sizeParam = searchParams.get("variant_Talla")
-    return sizeParam ? sizeParam.split(",") : []
+    const raw = sizeParam ? sizeParam.split(",") : []
+    // Normaliza para que el estado solo contenga las tallas presentes en la UI,
+    // evitando que queden "equivalentes" (2XS/3XL/etc) seleccionados permanentemente al desmarcar.
+    return normalizeTallasFromUrl(raw)
   })
   const [showCategories, setShowCategories] = useState(true)
   const [showVendors, setShowVendors] = useState(true)
@@ -150,8 +183,10 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     }
 
     // Add selected sizes as variant filter (Talla)
+    // Expande SOLO el query (no el UI) con equivalentes 2x/3x del mismo nivel seleccionado.
     if (sizes.length > 0) {
-      params.set("variant_Talla", sizes.join(","))
+      const expandedSizes = expandTallasForQuery(sizes)
+      params.set("variant_Talla", expandedSizes.join(","))
     }
 
     // Add price range (only if different from default range)
