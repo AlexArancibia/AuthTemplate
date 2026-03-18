@@ -40,6 +40,20 @@ const EQUIVALENT_TO_TALLA: Record<string, string> = {
   "3XL": "XXXL",
 }
 
+// Mapeo SOLO visual (no afecta al query):
+// - XXXL -> 3XL
+// - XXL  -> 2XL
+// - XXXS -> 3XS
+// - XXS  -> 2XS
+const SIZE_VISUAL_LABEL: Record<string, string> = {
+  XXXL: "3XL",
+  XXL: "2XL",
+  XXXS: "3XS",
+  XXS: "2XS",
+}
+
+const getSizeVisualLabel = (size: string) => SIZE_VISUAL_LABEL[size] ?? size
+
 function normalizeTallasFromUrl(tallas: string[]): string[] {
   const out = new Set<string>()
   for (const talla of tallas) out.add(EQUIVALENT_TO_TALLA[talla] ?? talla)
@@ -64,6 +78,14 @@ const getDefaultMaxPrice = (code: string): number => {
 // Helper: Parsear número de URL con valor por defecto
 const parsePriceFromUrl = (urlValue: string | null, defaultValue: number): number => {
   return urlValue && !isNaN(Number(urlValue)) ? Number(urlValue) : defaultValue
+}
+
+const DEFAULT_FILTER_SECTION_VISIBILITY = {
+  showCategories: true,
+  showVendors: false,
+  showCollections: false,
+  showPriceFilter: true,
+  showSizes: false,
 }
 
 export default function ProductFilterSidebar({ isMobile = false }: ProductFilterSidebarProps) {
@@ -140,11 +162,12 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     // evitando que queden "equivalentes" (2XS/3XL/etc) seleccionados permanentemente al desmarcar.
     return normalizeTallasFromUrl(raw)
   })
-  const [showCategories, setShowCategories] = useState(true)
-  const [showVendors, setShowVendors] = useState(true)
-  const [showCollections, setShowCollections] = useState(true)
-  const [showPriceFilter, setShowPriceFilter] = useState(true)
-  const [showSizes, setShowSizes] = useState(true)
+  // Por defecto solo desplegado: Categorías + Rango de precio.
+  const [showCategories, setShowCategories] = useState(DEFAULT_FILTER_SECTION_VISIBILITY.showCategories)
+  const [showVendors, setShowVendors] = useState(DEFAULT_FILTER_SECTION_VISIBILITY.showVendors)
+  const [showCollections, setShowCollections] = useState(DEFAULT_FILTER_SECTION_VISIBILITY.showCollections)
+  const [showPriceFilter, setShowPriceFilter] = useState(DEFAULT_FILTER_SECTION_VISIBILITY.showPriceFilter)
+  const [showSizes, setShowSizes] = useState(DEFAULT_FILTER_SECTION_VISIBILITY.showSizes)
 
   // Estados locales para los inputs (para permitir escritura libre sin actualizar URL)
   const [minPriceInput, setMinPriceInput] = useState<string>(initialPriceRange[0].toString())
@@ -477,7 +500,7 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
           <CheckboxFilter
             key={size}
             id={`size-${size}`}
-            label={size}
+            label={getSizeVisualLabel(size)}
             checked={selectedSizes.includes(size)}
             onChange={() => handleSizeChange(size)}
           />
