@@ -26,6 +26,29 @@ interface ProductDetailsProps {
   slug: string
 }
 
+const sortVariantsByPosition = (variants?: ProductVariant[] | null): ProductVariant[] => {
+  if (!Array.isArray(variants)) return []
+
+  return variants
+    .map((variant, index) => {
+      const pos =
+        typeof variant.position === "number" && Number.isFinite(variant.position) ? variant.position : null
+      return { variant, index, pos }
+    })
+    .sort((a, b) => {
+      // Si ambos tienen position => ordenar por position
+      if (a.pos !== null && b.pos !== null) return a.pos - b.pos
+
+      // Si solo uno tiene position => primero el que sí tiene
+      if (a.pos !== null) return -1
+      if (b.pos !== null) return 1
+
+      // Si ninguno tiene position => conservar el orden del payload
+      return a.index - b.index
+    })
+    .map(({ variant }) => variant)
+}
+
 export default function ProductDetails({ slug }: ProductDetailsProps) {
   const { products, shopSettings, fetchProducts, getProductBySlug } = useMainStore()
   const { addItem } = useCartStore()
@@ -127,7 +150,8 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
       if (foundProduct) {
         setProduct(foundProduct)
         if (foundProduct.variants && foundProduct.variants.length > 0) {
-          setSelectedVariant(foundProduct.variants[0])
+          const orderedVariants = sortVariantsByPosition(foundProduct.variants)
+          setSelectedVariant(orderedVariants[0] ?? null)
         } else {
           setSelectedVariant(null)
         }
@@ -137,10 +161,14 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
     loadProduct()
   }, [slug, products, fetchProducts, getProductBySlug])
 
+  const orderedVariants = useMemo(() => {
+    return sortVariantsByPosition(product?.variants)
+  }, [product?.variants])
+
   const variantOptions = useMemo(() => {
     if (!product || !product.variants) return {}
     const options: Record<string, Set<string>> = {}
-    product.variants.forEach((variant) => {
+    orderedVariants.forEach((variant) => {
       if (variant.attributes) {
         Object.entries(variant.attributes).forEach(([key, value]) => {
           if (key !== "type" && !options[key]) options[key] = new Set()
@@ -149,7 +177,7 @@ export default function ProductDetails({ slug }: ProductDetailsProps) {
       }
     })
     return Object.fromEntries(Object.entries(options).map(([key, value]) => [key, Array.from(value)]))
-  }, [product])
+  }, [product, orderedVariants])
 
   // Modificado para mostrar solo las imágenes de la variante seleccionada
   const displayImages = useMemo(() => {
