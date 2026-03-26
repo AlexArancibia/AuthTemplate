@@ -399,7 +399,7 @@ export default function PoliticaDePrivacidadPage() {
                   nuestro sitio web. Te recomendamos revisar esta política periódicamente.
                 </p>
                 <p className="text-gray-700 leading-relaxed mt-4">
-                  Última actualización: 23 de marzo de 2026.
+                  Última actualización: 25 de marzo de 2026.
                 </p>
               </div>
             </section>
