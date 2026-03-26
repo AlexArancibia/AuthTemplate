@@ -68,7 +68,6 @@ export default function Navbar() {
   const [searchTerm, setSearchTerm] = useState("")
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [showInitialLoading, setShowInitialLoading] = useState(true)
-  const [isScrolled, setIsScrolled] = useState(false)
   const sessionFetchAttempted = useRef(false)
   const [isSessionLoading, setIsSessionLoading] = useState(!currentUser)
   const [logoStatus, setLogoStatus] = useState<"idle" | "loading" | "loaded" | "error">("idle")
@@ -162,20 +161,6 @@ export default function Navbar() {
     }
   }, [currentUser, fetchUserByEmail])
 
-  // Handle scroll effect for navbar background
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollTop = window.scrollY
-      setIsScrolled(scrollTop >= 100) // 100vh = 100px
-    }
-
-    window.addEventListener('scroll', handleScroll)
-    
-    // Cleanup
-    return () => {
-      window.removeEventListener('scroll', handleScroll)
-    }
-  }, [])
 
   // Show loading screen immediately and hide after 700ms
   useEffect(() => {
@@ -350,12 +335,7 @@ export default function Navbar() {
   return (
     <>
 
-    <nav className={cn(
-      "backdrop-blur-md border-b border-border sticky top-0 z-[180] font-adi-regular font-light uppercase h-16 -mb-16 transition-all duration-300",
-      isScrolled 
-        ? "bg-background/10" 
-        : "bg-background"
-    )}>
+    <nav className="bg-background border-b border-border sticky top-0 z-[180] font-adi-regular font-light uppercase h-16 -mb-16">
       <div className="container-section mx-auto ">
         <div className="flex items-center justify-between content-section h-16">
           {/* Logo */}

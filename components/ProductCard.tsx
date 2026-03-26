@@ -160,6 +160,28 @@ export function ProductCard({
   const image = product.imageUrls?.[0] || "/placeholder.png"
   const secondaryImage = product.imageUrls?.[1] || null
 
+  // --- Stock badge ---
+  // product.variants === undefined significa que el endpoint no incluyó variantes → no mostrar badge
+  const variantsLoaded = product.variants !== undefined
+  const activeVariants = variantsLoaded ? product.variants!.filter((v) => v.isActive) : []
+  const totalStock = activeVariants.reduce((sum, v) => sum + (v.inventoryQuantity ?? 0), 0)
+  const threshold = product.restockThreshold ?? 0
+
+  type StockStatus = "in_stock" | "low_stock" | "out_of_stock" | "backorder"
+  const stockStatus: StockStatus | null = !variantsLoaded ? null : (() => {
+    if (totalStock <= 0) return product.allowBackorder ? "backorder" : "out_of_stock"
+    if (threshold > 0 && totalStock <= threshold) return "low_stock"
+    return "in_stock"
+  })()
+
+  const stockBadgeConfig: Record<StockStatus & string, { label: string; dot: string }> = {
+    in_stock:     { label: `${totalStock} unidad${totalStock === 1 ? "" : "es"} disponible${totalStock === 1 ? "" : "s"}`, dot: "bg-green-500"  },
+    low_stock:    { label: `Últimas ${totalStock} unidad${totalStock === 1 ? "" : "es"}`,                                   dot: "bg-orange-400" },
+    out_of_stock: { label: "Sin stock",                                                                                      dot: "bg-red-500"    },
+    backorder:    { label: "Se puede reservar",                                                                              dot: "bg-yellow-400" },
+  }
+  const badge = stockStatus ? stockBadgeConfig[stockStatus] : null
+
   return (
     <div className="group relative bg-white rounded-none p-0 flex flex-col h-full">
       <Link href={`/productos/${product.slug}`} className="flex flex-col h-full">
@@ -224,6 +246,14 @@ export function ProductCard({
                 </span>
               </div>
             </motion.div>
+          )}
+
+          {/* Stock badge — bottom-right corner */}
+          {!hasUpcomingRelease && badge && (
+            <div className="absolute bottom-4 right-4 flex items-center gap-1.5 bg-gray-100/90 backdrop-blur-sm text-gray-800 px-2 py-1 rounded-full">
+              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${badge.dot}`} />
+              <span className="text-[11px] font-medium leading-none whitespace-nowrap">{badge.label}</span>
+            </div>
           )}
         </div>
 
