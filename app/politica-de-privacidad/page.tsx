@@ -224,8 +224,8 @@ export default function PoliticaDePrivacidadPage() {
                 <ul className="list-disc list-inside text-gray-700 space-y-2 mb-6">
                   <li>Procesadores de pagos para transacciones seguras</li>
                   <li>Servicios de envío y logística</li>
-                  <li>Proveedores de servicios de hosting y tecnología</li>
-                  <li>Servicios de análisis web y marketing</li>
+                  <li>Proveedores de servicios de hosting, gestión de clientes (CRM) y tecnología</li>
+                  <li>Servicios de análisis web, automatización y marketing</li>
                 </ul>
 
                 <h3 className="text-xl font-semibold text-gray-800 mb-4">5.2 Requisitos legales</h3>
@@ -345,7 +345,7 @@ export default function PoliticaDePrivacidadPage() {
               <h2 className="text-2xl font-bold text-gray-900 mb-6">9. Cookies y Tecnologías Similares</h2>
               <div className="prose prose-gray max-w-none">
                 <p className="text-gray-700 leading-relaxed mb-4">
-                  Utilizamos cookies y tecnologías similares para mejorar tu experiencia en nuestro sitio web:
+                  Utilizamos cookies y tecnologías similares (como píxeles y etiquetas) para mejorar tu experiencia en nuestro sitio web:
                 </p>
 
                 <h3 className="text-xl font-semibold text-gray-800 mb-4">Tipos de cookies que utilizamos:</h3>
@@ -397,6 +397,9 @@ export default function PoliticaDePrivacidadPage() {
                 <p className="text-gray-700 leading-relaxed">
                   Te notificaremos sobre cambios significativos por correo electrónico o mediante un aviso prominente en
                   nuestro sitio web. Te recomendamos revisar esta política periódicamente.
+                </p>
+                <p className="text-gray-700 leading-relaxed mt-4">
+                  Última actualización: 23 de marzo de 2026.
                 </p>
               </div>
             </section>
