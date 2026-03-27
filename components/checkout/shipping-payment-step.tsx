@@ -28,6 +28,7 @@ import { OrderFinancialStatus, PaymentStatus } from "@/types/common"
 import type { Order } from "@/types/order"
 import { useEmailStore } from "@/stores/emailStore"
 import { useCartStore } from "@/stores/cartStore"
+import { isCulqiWebProvider } from "@/lib/culqi-web-provider"
 
 export function watchCulqiClose(onClose: () => void) {
   const observer = new MutationObserver(() => {
@@ -98,7 +99,7 @@ export function ShippingPaymentStep({
   const selectedProvider = paymentProviders.find(
     (p) => p.id === formData.paymentMethod
   );
-  const isCulqui = selectedProvider?.name?.toLowerCase() === "culqui";
+  const isCulqui = isCulqiWebProvider(selectedProvider);
   const [isOpeningCulqi, setIsOpeningCulqi] = useState(false);
   const [isValidatingStock, setIsValidatingStock] = useState(false);
 
