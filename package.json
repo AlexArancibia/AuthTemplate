@@ -4,12 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "npx prisma generate && next build",
+    "build": "set PRISMA_CLIENT_ENGINE_TYPE=binary&& npx prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "npx prisma generate",
+    "postinstall": "set PRISMA_CLIENT_ENGINE_TYPE=binary&& npx prisma generate",
     "generate:favicons": "node scripts/generate-favicons.mjs",
-    "db:generate": "npx prisma generate",
+    "db:generate": "set PRISMA_CLIENT_ENGINE_TYPE=binary&& npx prisma generate",
     "db:studio": "npx prisma studio",
     "db:users": "node --env-file=.env scripts/check-users.mjs",
     "db:users:sql": "npx prisma db execute --file ./scripts/check-users.sql --schema ./prisma/schema.prisma"

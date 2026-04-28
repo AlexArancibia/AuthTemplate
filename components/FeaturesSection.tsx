@@ -2,51 +2,35 @@
 
 import { motion, useInView } from "framer-motion"
 import { useRef } from "react"
-import { Loader2, Users2, ShoppingBag, Shield, Truck } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import type { CardSection, Card, CardSectionMetadata } from "@/types/card"
 import { useMainStore } from "@/stores/mainStore"
+import { useIsMobile } from "@/hooks/useIsMobile"
 
 interface FeaturesSectionProps {
   id?: string
   metadata?: Partial<CardSectionMetadata>
 }
 
-// Default icons and colors in the order shown in the image
-const defaultFeatures = [
-  {
-    icon: Users2,
-    iconColor: "text-green-500",
-    iconBg: "bg-green-50",
-  },
-  {
-    icon: ShoppingBag,
-    iconColor: "text-blue-500",
-    iconBg: "bg-blue-50",
-  },
-  {
-    icon: Shield,
-    iconColor: "text-rose-500",
-    iconBg: "bg-rose-50",
-  },
-  {
-    icon: Truck,
-    iconColor: "text-amber-500",
-    iconBg: "bg-amber-50",
-  },
-]
-
 // Simple component to display card as feature card
-function FeatureCard({ card, index, isInView }: { card: Card; index: number; isInView: boolean }) {
+function FeatureCard({
+  card,
+  index,
+  shouldAnimateIn,
+}: {
+  card: Card
+  index: number
+  shouldAnimateIn: boolean
+}) {
   if (!card.isActive) return null
   
-  // Use default icons in order, cycling if there are more than 4 cards
-  const featureStyle = defaultFeatures[index % defaultFeatures.length]
-  const IconComponent = featureStyle.icon
+  const visibleAnim = { opacity: 1, y: 0 }
+  const hiddenAnim = { opacity: 0, y: 20 }
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+      initial={hiddenAnim}
+      animate={shouldAnimateIn ? visibleAnim : hiddenAnim}
       transition={{ duration: 0.5, delay: 0.2 + index * 0.1 }}
       className="bg-white rounded-lg overflow-hidden cursor-pointer"
       onClick={() => {
@@ -56,7 +40,7 @@ function FeatureCard({ card, index, isInView }: { card: Card; index: number; isI
       }}
     >
       {/* Imagen cuadrada */}
-      <div className="w-full aspect-square overflow-hidden transition-transform duration-300 hover:scale-95">
+      <div className="w-full aspect-square overflow-hidden transition-transform duration-300 active:scale-95 md:hover:scale-95">
         <img
           src={card.imageUrl || ""}
           alt={card.title || ""}
@@ -95,7 +79,11 @@ function FeatureCard({ card, index, isInView }: { card: Card; index: number; isI
 // Section renderer with features styling
 function CardSectionRenderer({ cardSection }: { cardSection: CardSection }) {
   const ref = useRef(null)
-  const isInView = useInView(ref, { once: true, amount: 0.3 })
+  const isMobile = useIsMobile()
+  const isInView = useInView(ref, { once: true, amount: isMobile ? 0.12 : 0.3 })
+  const shouldAnimateIn = isMobile || isInView
+  const visibleAnim = { opacity: 1, y: 0 }
+  const hiddenAnim = { opacity: 0, y: 20 }
 
   if (!cardSection.isActive) return null
 
@@ -112,8 +100,8 @@ function CardSectionRenderer({ cardSection }: { cardSection: CardSection }) {
         <div className="content-section">
           <div className="text-center space-y-4 mb-12 lg:mb-16">
             <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+              initial={hiddenAnim}
+              animate={shouldAnimateIn ? visibleAnim : hiddenAnim}
               transition={{ duration: 0.5 }}
               className="font-druk text-secondary tracking-tight font-bold  uppercase"
             >
@@ -121,8 +109,8 @@ function CardSectionRenderer({ cardSection }: { cardSection: CardSection }) {
             </motion.h2>
             {cardSection.subtitle && (
               <motion.p
-                initial={{ opacity: 0, y: 20 }}
-                animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+                initial={hiddenAnim}
+                animate={shouldAnimateIn ? visibleAnim : hiddenAnim}
                 transition={{ duration: 0.5, delay: 0.2 }}
                 className="text-muted-foreground text-sm lg:text-base max-w-2xl mx-auto"
               >
@@ -131,8 +119,8 @@ function CardSectionRenderer({ cardSection }: { cardSection: CardSection }) {
             )}
             {cardSection.description && (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+                initial={hiddenAnim}
+                animate={shouldAnimateIn ? visibleAnim : hiddenAnim}
                 transition={{ duration: 0.5, delay: 0.2 }}
                 className="text-muted-foreground text-sm lg:text-base max-w-2xl mx-auto"
                 dangerouslySetInnerHTML={{ __html: cardSection.description }}
@@ -142,7 +130,7 @@ function CardSectionRenderer({ cardSection }: { cardSection: CardSection }) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
             {activeCards.map((card, index) => (
-              <FeatureCard key={card.id} card={card} index={index} isInView={isInView} />
+              <FeatureCard key={card.id} card={card} index={index} shouldAnimateIn={shouldAnimateIn} />
             ))}
           </div>
         </div>
