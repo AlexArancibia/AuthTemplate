@@ -29,6 +29,7 @@ import type { Order } from "@/types/order"
 import { useEmailStore } from "@/stores/emailStore"
 import { useCartStore } from "@/stores/cartStore"
 import { isCulqiWebProvider } from "@/lib/culqi-web-provider"
+import { formatCulqiDescription } from "@/lib/culqi-description"
 
 export function watchCulqiClose(onClose: () => void) {
   const observer = new MutationObserver(() => {
@@ -262,6 +263,23 @@ export function ShippingPaymentStep({
       await loadCulqiScript();
       watchCulqiClose(() => setIsOpeningCulqi(false));
 
+      const itemCount = items.reduce((acc, it) => acc + (Number(it.quantity) || 0), 0) || items.length || 1;
+      const itemsPreview = items
+        .slice(0, 3)
+        .map((it) => {
+          const title = it.product?.title ?? "Producto";
+          const variant = it.variant?.title ? ` ${String(it.variant.title).trim()}` : "";
+          return `${title}${variant} x${it.quantity}`;
+        })
+        .join(", ");
+
+      const culqiDescription = formatCulqiDescription({
+        orderId: order.id,
+        total: Number(total),
+        itemCount,
+        itemsPreview,
+      });
+
       setCulqiCallback(
         async (token) => {
           setIsOpeningCulqi(false);
@@ -282,7 +300,7 @@ export function ShippingPaymentStep({
                 token,
                 amount,
                 currency: "PEN",
-                description: resumeItems,
+                description: culqiDescription,
                 email: formData.email,
                 firstName: formData.firstName,
                 lastName: formData.lastName,
@@ -468,7 +486,7 @@ export function ShippingPaymentStep({
         }
       );
 
-      await openCulqiCheckout(amount, "Pago de productos:\n" + resumeItems);
+      await openCulqiCheckout(amount, culqiDescription);
     } catch (err) {
       console.error("[CULQI] Error general:", err);
       setIsOpeningCulqi(false);

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getSecretKey } from "@/lib/culqui-pk";
 import { logger } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { formatCulqiDescription } from "@/lib/culqi-description";
 
 const sanitizePhone = (value?: string) => (value ?? "").replace(/\D/g, "");
 const CORS_ORIGIN = (process.env.CORS_ORIGIN || process.env.NEXTAUTH_URL || "https://anj.com").replace(/\/$/, "");
@@ -140,7 +141,10 @@ export async function POST(req: NextRequest) {
       return createErrorResponse("El monto debe ser un número positivo", 400, requestId);
     }
 
-    const chargeDescription = description || `Orden ${orderId}`;
+    const chargeDescription = formatCulqiDescription({
+      orderId: typeof orderId === "string" ? orderId : undefined,
+      itemsPreview: typeof description === "string" ? description : undefined,
+    });
     const antifraudPayload = {
       first_name: firstName,
       last_name: lastName,
