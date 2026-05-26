@@ -892,7 +892,6 @@ const applyCouponIfExists = () => {
       : undefined
 
     const orderData = {
-      storeId: process.env.NEXT_PUBLIC_STORE_ID || "store_default",
       temporalOrderId: temporalOrderId,
       orderNumber: orderNumber,
       currencyId: currencyId,
