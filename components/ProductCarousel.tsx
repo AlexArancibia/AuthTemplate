@@ -114,7 +114,7 @@ function CategorySection({
           >
             <ChevronLeft className="w-10 h-10 text-gray-700" />
           </button>
-          <div className="overflow-hidden flex-1" ref={emblaRef}>
+          <div className="overflow-hidden flex-1 touch-pan-y" ref={emblaRef}>
             <div className="flex gap-4 sm:gap-6">
               {filteredProducts.slice(0, 10).map((product) => (
                 <div key={product.id} className="flex-none w-[280px] sm:w-[320px] md:w-[380px] lg:w-[446px]">

@@ -212,7 +212,7 @@ export function CollectionCarousel({
           )}
 
           {/* Contenido del carrusel */}
-          <div className="overflow-hidden touch-pan-x" ref={emblaRef}>
+          <div className="overflow-hidden touch-pan-y" ref={emblaRef}>
             <div className="flex">
               {loading ? (
                 <div className="py-10 w-full text-center">

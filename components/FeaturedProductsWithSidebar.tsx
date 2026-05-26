@@ -129,7 +129,7 @@ function ProductsCarousel({
         </button>
       )}
 
-      <div className="overflow-hidden touch-pan-x" ref={emblaRef}>
+      <div className="overflow-hidden touch-pan-y" ref={emblaRef}>
         <div className="flex">
           {products.map((product) => (
             <div
