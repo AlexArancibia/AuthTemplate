@@ -3,11 +3,70 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAccessToken } from "@/lib/mercadopago-ac";
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 
-const localUrl = process.env.NEXT_PUBLIC_LOCAL_PUBLIC_URL
+const localUrl = process.env.NEXT_PUBLIC_LOCAL_PUBLIC_URL?.trim()
+
+const trimTrailingSlash = (value: string) => value.replace(/\/$/, "");
+
+const isAbsoluteHttpUrl = (value?: string | null): value is string =>
+  Boolean(value && /^https?:\/\//i.test(value));
+
+function isLocalUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return ["localhost", "127.0.0.1", "::1"].includes(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
+const isUsableReturnUrl = (value?: string | null): value is string =>
+  isAbsoluteHttpUrl(value) &&
+  !(process.env.NODE_ENV === "production" && isLocalUrl(value));
+
+function getRequestOrigin(req: NextRequest) {
+  const forwardedHost = req.headers.get("x-forwarded-host") || req.headers.get("host");
+
+  if (forwardedHost) {
+    const forwardedProto =
+      req.headers.get("x-forwarded-proto") ||
+      (forwardedHost.includes("localhost") ? "http" : "https");
+    return `${forwardedProto}://${forwardedHost}`;
+  }
+
+  return req.nextUrl.origin;
+}
+
+function resolvePublicBaseUrl(req: NextRequest) {
+  const vercelUrl = process.env.VERCEL_URL?.trim()
+    ? `https://${process.env.VERCEL_URL.trim()}`
+    : undefined;
+  const requestOrigin = getRequestOrigin(req);
+  const candidates = [
+    process.env.NEXT_PUBLIC_APP_URL,
+    process.env.NEXTAUTH_URL,
+    vercelUrl,
+    process.env.NODE_ENV === "production" && isLocalUrl(requestOrigin)
+      ? undefined
+      : requestOrigin,
+    "https://sporttperu.com",
+  ];
+
+  return candidates
+    .map((value) => value?.trim())
+    .find(isAbsoluteHttpUrl);
+}
+
+function getCorsOrigin(req: NextRequest) {
+  return (
+    process.env.CORS_ORIGIN?.trim() ||
+    resolvePublicBaseUrl(req) ||
+    "*"
+  );
+}
 
 
-export async function OPTIONS() {
-  const origin = process.env.NEXTAUTH_URL;
+export async function OPTIONS(req: NextRequest) {
+  const origin = getCorsOrigin(req);
   return NextResponse.json(
     {},
     {
@@ -47,17 +106,15 @@ export async function POST(req: NextRequest) {
       backUrls, // { success, pending, failure }
     } = await req.json();
 
-    let origin = process.env.NEXTAUTH_URL;
+    const origin = resolvePublicBaseUrl(req);
     if (!origin) {
       return NextResponse.json(
-        { error: "Falta NEXTAUTH_URL en variables de entorno" },
+        { error: "No se pudo determinar la URL pública para MercadoPago" },
         { status: 500, headers: { "Access-Control-Allow-Origin": "*" } }
       );
     }
-    // Si origin no es https, usar https://sporttperu.com/ como fallback temporal
-    if (!/^https:\/\//i.test(origin)) {
-      origin = "http://localhost:3000";
-    }
+
+    const baseUrl = trimTrailingSlash(origin);
 
     // Si no envías items detallados, crea uno con description+amount:
     const mpItems =
@@ -81,9 +138,9 @@ export async function POST(req: NextRequest) {
 
     // backUrls puede venir vacío o incompleto, aseguramos URLs absolutas válidas
     const safeBackUrls = {
-      success: backUrls?.success && /^https?:\/\//i.test(backUrls.success) ? backUrls.success : `${origin.replace(/\/$/, '')}/success`,
-      pending: backUrls?.pending && /^https?:\/\//i.test(backUrls.pending) ? backUrls.pending : `${origin.replace(/\/$/, '')}/pending`,
-      failure: backUrls?.failure && /^https?:\/\//i.test(backUrls.failure) ? backUrls.failure : `${origin.replace(/\/$/, '')}/failure`,
+      success: isUsableReturnUrl(backUrls?.success) ? backUrls.success : `${baseUrl}/success`,
+      pending: isUsableReturnUrl(backUrls?.pending) ? backUrls.pending : `${baseUrl}/pending`,
+      failure: isUsableReturnUrl(backUrls?.failure) ? backUrls.failure : `${baseUrl}/failure`,
     };
 
     const preference = {
@@ -145,10 +202,10 @@ export async function POST(req: NextRequest) {
       { headers: { "Access-Control-Allow-Origin": origin } }
     );
   } catch (err) {
-    const origin = process.env.NEXTAUTH_URL;
+    const origin = getCorsOrigin(req);
     return NextResponse.json(
       { error: "Error creando preferencia" },
-      { status: 500, headers: { "Access-Control-Allow-Origin": origin || "*" } }
+      { status: 500, headers: { "Access-Control-Allow-Origin": origin } }
     );
   }
 }

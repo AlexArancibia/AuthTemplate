@@ -237,6 +237,16 @@ export function UnifiedCheckoutForm({
   }, [isMercadoPago, total, resumeItems, formData, orderId, publicKey])
 
   const createPreferenceIdFromEndpoint = async () => {
+    const checkoutOrigin =
+      typeof window !== "undefined" ? window.location.origin : ""
+    const backUrls = checkoutOrigin
+      ? {
+          success: `${checkoutOrigin}/success`,
+          pending: `${checkoutOrigin}/pending`,
+          failure: `${checkoutOrigin}/failure`,
+        }
+      : undefined
+
     const res = await fetch("/api/payments/mercadopago", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -252,6 +262,7 @@ export function UnifiedCheckoutForm({
         city: formData.city,
         countryCode: "PE",
         temporalOrderId: temporalOrderId,
+        backUrls,
       }),
     })
     const data = await res.json()
