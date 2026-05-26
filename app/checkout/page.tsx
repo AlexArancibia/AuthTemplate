@@ -1242,12 +1242,14 @@ const applyCouponIfExists = () => {
           } else {
             toast.error("Error al procesar el pedido. Por favor, intenta nuevamente.")
             setIsSubmitting(false)
-            return
+            return false
           }
         }
       }
+      return true
     } catch (error) {
       toast.error("Error al procesar el pedido. Por favor, intenta nuevamente.")
+      return false
     } finally {
       setIsSubmitting(false)
     }

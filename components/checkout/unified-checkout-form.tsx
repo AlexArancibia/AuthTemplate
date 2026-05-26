@@ -31,8 +31,6 @@ import type { PaymentProvider } from "@/types/payments"
 
 import { loadCulqiScript, openCulqiCheckout, setCulqiCallback } from "@/components/checkout/cuqui-checkout"
 import { PayPalCheckoutButton, type PayPalPaymentResult } from "@/components/checkout/paypal-checkout-button"
-import { initMercadoPago, Wallet } from "@mercadopago/sdk-react"
-import { getPublicKey } from "@/lib/mercadopago-ac"
 
 const PAYPAL_MODE_LABEL =
   process.env.NEXT_PUBLIC_PAYPAL_ENV === "sandbox" ? "Sandbox" : "Pago seguro"
@@ -76,7 +74,7 @@ interface UnifiedCheckoutFormProps {
   shippingMethods: ShippingMethod[]
   paymentProviders: PaymentProvider[]
   submitOrder: () => void
-  submitOrderMP: () => void
+  submitOrderMP: () => Promise<boolean>
   submitOrderPayPal: (details: PayPalPaymentResult) => Promise<void>
   isSubmitting: boolean
   isLoading: boolean
@@ -131,8 +129,8 @@ export function UnifiedCheckoutForm({
   const [emailError, setEmailError] = useState(false)
   const [isOpeningCulqi, setIsOpeningCulqi] = useState(false)
   const [mpPreferenceId, setMpPreferenceId] = useState<string | null>(null)
+  const [mpInitPoint, setMpInitPoint] = useState<string | null>(null)
   const [mpLoading, setMpLoading] = useState(false)
-  const [publicKey, setPublicKey] = useState<string | null>(null)
 
   const {
     countries,
@@ -188,25 +186,6 @@ export function UnifiedCheckoutForm({
     }
   }, [formData.billingCountryId, formData.billingStateId, fetchCities])
 
-  // Initialize MercadoPago
-  useEffect(() => {
-    const initializeMercadoPago = async () => {
-      if (!publicKey) {
-        try {
-          const key = await getPublicKey()
-          setPublicKey(key)
-          if (!(window as any).MercadoPago) {
-            initMercadoPago(key, { locale: "es-PE" })
-          }
-        } catch (error) {
-          console.error("Error initializing MercadoPago:", error)
-          toast.error("Error al inicializar MercadoPago")
-        }
-      }
-    }
-    initializeMercadoPago()
-  }, [publicKey])
-
   const selectedProvider = paymentProviders.find(p => p.id === formData.paymentMethod)
   const isMercadoPago = selectedProvider?.name?.toLowerCase() === "mercadopago"
   const isCulqui = selectedProvider?.name?.toLowerCase() === "culqui"
@@ -218,13 +197,12 @@ export function UnifiedCheckoutForm({
   useEffect(() => {
     if (!isMercadoPago) {
       setMpPreferenceId(null)
+      setMpInitPoint(null)
     } else {
-      if (publicKey && !(window as any).MercadoPago) {
-        initMercadoPago(publicKey, { locale: "es-PE" })
-      }
       (async () => {
         setMpLoading(true)
         setMpPreferenceId(null)
+        setMpInitPoint(null)
         try {
           await createPreferenceIdFromEndpoint()
         } catch (err) {
@@ -234,7 +212,7 @@ export function UnifiedCheckoutForm({
         }
       })()
     }
-  }, [isMercadoPago, total, resumeItems, formData, orderId, publicKey])
+  }, [isMercadoPago, total, resumeItems, formData, orderId])
 
   const createPreferenceIdFromEndpoint = async () => {
     const checkoutOrigin =
@@ -267,10 +245,28 @@ export function UnifiedCheckoutForm({
     })
     const data = await res.json()
 
-    if (data.success && data.preference_id) {
+    if (data.success && data.preference_id && data.init_point) {
       setMpPreferenceId(data.preference_id)
+      setMpInitPoint(data.init_point)
     } else {
       toast.error(data.error || "No se pudo crear la preferencia de MercadoPago")
+    }
+  }
+
+  const handleMercadoPagoPay = async () => {
+    if (!isFormValid()) {
+      handleSubmit()
+      return
+    }
+
+    if (!mpPreferenceId || !mpInitPoint) {
+      toast.error("MercadoPago aun no esta listo. Intenta nuevamente.")
+      return
+    }
+
+    const orderCreated = await submitOrderMP()
+    if (orderCreated) {
+      window.location.href = mpInitPoint
     }
   }
 
@@ -578,7 +574,7 @@ export function UnifiedCheckoutForm({
     if (isCulqui) {
       handleCulqiPay()
     } else if (isMercadoPago) {
-      // MercadoPago se maneja con el botón de Wallet
+      // MercadoPago usa el mismo botón visual del checkout y redirige al init_point.
       return
     } else if (isPayPal) {
       // PayPal se maneja con los botones oficiales
@@ -1274,19 +1270,27 @@ export function UnifiedCheckoutForm({
           <div className="max-w-sm rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
             Completa el pago desde los botones de PayPal mostrados arriba.
           </div>
-        ) : isMercadoPago && mpPreferenceId ? (
-          <div>
+        ) : isMercadoPago ? (
+          <Button
+            onClick={handleMercadoPagoPay}
+            disabled={isSubmitting || mpLoading || !mpPreferenceId || !isFormValid()}
+            size="lg"
+            className="px-8"
+          >
             {mpLoading ? (
-              <Button disabled>
+              <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Cargando MercadoPago...
-              </Button>
+              </>
+            ) : isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Procesando...
+              </>
             ) : (
-              <div onClick={submitOrderMP} style={{ cursor: "pointer" }}>
-                <Wallet initialization={{ preferenceId: mpPreferenceId! }} />
-              </div>
+              "Completar pago"
             )}
-          </div>
+          </Button>
         ) : (
           <Button
             onClick={handleSubmit}
