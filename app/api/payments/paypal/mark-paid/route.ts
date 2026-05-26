@@ -35,6 +35,21 @@ type PayPalOrderResponse = {
   }>
 }
 
+const shouldUseLegacyFallback = (status: number, body: any) => {
+  if (status !== 404) {
+    return false
+  }
+
+  const message =
+    typeof body?.message === "string"
+      ? body.message
+      : typeof body?.error === "string"
+        ? body.error
+        : ""
+
+  return message.includes("Cannot POST") || message.includes("Cannot PUT")
+}
+
 async function getPayPalAccessToken() {
   const credentials = await getPayPalCredentials()
   const baseUrl = getPayPalApiBase(credentials.mode)
@@ -166,7 +181,7 @@ export async function POST(req: NextRequest) {
 
     let updateResult = await updateResponse.json().catch(() => ({}))
 
-    if (updateResponse.status === 404) {
+    if (shouldUseLegacyFallback(updateResponse.status, updateResult)) {
       console.warn(
         "[PayPal mark-paid] Dedicated backend endpoint unavailable, using transitional PUT fallback",
         { orderId, orderID }
@@ -220,6 +235,21 @@ export async function POST(req: NextRequest) {
           backend: updateResult,
         },
         { status: updateResponse.status, headers: { "Access-Control-Allow-Origin": CORS_ORIGIN } }
+      )
+    }
+
+    if (
+      updatedOrder?.financialStatus !== "PAID" ||
+      updatedOrder?.paymentStatus !== "COMPLETED"
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "El backend confirmó la actualización, pero la orden no quedó como pagada.",
+          backend: updatedOrder,
+        },
+        { status: 502, headers: { "Access-Control-Allow-Origin": CORS_ORIGIN } }
       )
     }
 

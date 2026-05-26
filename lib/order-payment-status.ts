@@ -2,6 +2,7 @@ import { OrderFinancialStatus } from "@/types/common"
 
 type OrderPaymentStatusSource = {
   financialStatus?: string | null
+  paymentStatus?: string | null
   paymentDetails?: Record<string, any> | null
   paymentProvider?: {
     type?: string | null
@@ -26,13 +27,13 @@ export const isPayPalPaymentSuccessful = (order: OrderPaymentStatusSource) => {
     return false
   }
 
-  return (
-    isCompletedValue(details.paypalStatus) ||
-    isCompletedValue(details.paymentStatus) ||
-    isCompletedValue(details.status) ||
-    isCompletedValue(details.captureStatus) ||
-    Boolean(details.paymentSuccessful)
-  )
+  const wasMarkedPaidByBackend =
+    details.markedPaidBy === "paypal-server" ||
+    typeof details.paypalVerifiedAt === "string" ||
+    isCompletedValue(order.paymentStatus) ||
+    isCompletedValue(details.paymentStatus)
+
+  return Boolean(details.paymentSuccessful) && wasMarkedPaidByBackend
 }
 
 export const isOrderPaymentSuccessful = (order: OrderPaymentStatusSource) =>
