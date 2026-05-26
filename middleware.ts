@@ -18,6 +18,7 @@ const publicRoutes = [
   "/api/email/send-verification", // Esta ya estaba, es para la verificación de email
   "/api/payments/culqui",
   "/api/payments/mercadopago",
+  "/api/payments/paypal",
   "/api/webhooks/mercadopago",
   "/terminos-y-condiciones",
   "/politica-de-privacidad",
@@ -31,7 +32,7 @@ const publicRoutes = [
   "/forgot-password", // Nueva ruta pública
   "/reset-password", // Nueva ruta pública
 ];
-const publicPrefixes = ["/productos/", "/blog/"];
+const publicPrefixes = ["/productos/", "/blog/", "/api/payments/paypal/"];
 const authRoutes = ["/login", "/register"]; // Estas son las páginas a las que se redirige si ya está logueado
 const apiAuthPrefix = "/api/auth";
 

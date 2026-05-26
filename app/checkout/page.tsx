@@ -11,11 +11,12 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
 import { toast } from "sonner"
-import { OrderFinancialStatus, OrderFulfillmentStatus, ShippingStatus } from "@/types/common"
+import { OrderFinancialStatus, OrderFulfillmentStatus, PaymentStatus, ShippingStatus } from "@/types/common"
 import { type AddressCreateData, useUserStore } from "@/stores/userStore"
 import { formatUserName } from "@/lib/user-utils"
 import type { Order } from "@/types/order"
 import { UnifiedCheckoutForm } from "@/components/checkout/unified-checkout-form"
+import type { PayPalPaymentResult } from "@/components/checkout/paypal-checkout-button"
 import { ConfirmationStep } from "@/components/checkout/confirmation-step"
 import { OrderSummary } from "@/components/checkout/order-summary"
 import { CreditCard } from "lucide-react"
@@ -886,6 +887,9 @@ const applyCouponIfExists = () => {
     const shippingCost = Number(getShippingCost())
     const currencyId = activeCurrency?.id || shopSettings?.[0]?.defaultCurrency?.id || "curr_0536edd0-2193"
     const orderNumber = Math.floor(Math.random() * 1000) + 1
+    const preferredDeliveryDate = formData.preferredDeliveryDate
+      ? new Date(formData.preferredDeliveryDate)
+      : undefined
 
     const orderData = {
       storeId: process.env.NEXT_PUBLIC_STORE_ID || "store_default",
@@ -950,7 +954,10 @@ const applyCouponIfExists = () => {
       customerNotes: formData.notes || "",
       internalNotes: "",
       source: "web",
-      preferredDeliveryDate: new Date(formData.preferredDeliveryDate),
+      preferredDeliveryDate:
+        preferredDeliveryDate && !Number.isNaN(preferredDeliveryDate.getTime())
+          ? preferredDeliveryDate
+          : undefined,
     }
     return orderData;
   }
@@ -1241,6 +1248,197 @@ const applyCouponIfExists = () => {
       }
     } catch (error) {
       toast.error("Error al procesar el pedido. Por favor, intenta nuevamente.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const createPayPalOrder = async (
+    rawOrderData: Record<string, any>,
+    details: PayPalPaymentResult
+  ): Promise<Order | null> => {
+    const storeId = process.env.NEXT_PUBLIC_STORE_ID
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_ENDPOINT
+    const apiKey = process.env.NEXT_PUBLIC_API_KEY
+
+    if (!storeId || !backendUrl || !apiKey) {
+      return null
+    }
+
+    const toNumber = (value: unknown, fallback = 0) => {
+      const parsed = Number(value)
+      return Number.isFinite(parsed) ? parsed : fallback
+    }
+    const toMoney = (value: unknown) => Math.round(toNumber(value) * 100) / 100
+    const sourceCurrency =
+      activeCurrency?.code || shopSettings?.[0]?.defaultCurrency?.code || "PEN"
+
+    const payload = {
+      temporalOrderId: rawOrderData.temporalOrderId,
+      orderNumber: toNumber(rawOrderData.orderNumber, Math.floor(Math.random() * 1000) + 1),
+      customerInfo: rawOrderData.customerInfo,
+      financialStatus: OrderFinancialStatus.PENDING,
+      fulfillmentStatus: rawOrderData.fulfillmentStatus,
+      currencyId: rawOrderData.currencyId,
+      totalPrice: toMoney(rawOrderData.totalPrice),
+      subtotalPrice: toMoney(rawOrderData.subtotalPrice),
+      totalTax: toMoney(rawOrderData.totalTax),
+      totalDiscounts: toMoney(rawOrderData.totalDiscounts),
+      lineItems: Array.isArray(rawOrderData.lineItems)
+        ? rawOrderData.lineItems.map((item: any) => ({
+            variantId: item.variantId,
+            title: item.title,
+            quantity: toNumber(item.quantity, 1),
+            price: toMoney(item.price),
+            totalDiscount: toMoney(item.totalDiscount),
+          }))
+        : [],
+      shippingAddress: rawOrderData.shippingAddress,
+      billingAddress: rawOrderData.billingAddress,
+      couponId: rawOrderData.couponId,
+      paymentProviderId: rawOrderData.paymentProviderId,
+      paymentStatus: PaymentStatus.PENDING,
+      paymentDetails: {
+        provider: "PAYPAL",
+        mode: process.env.NEXT_PUBLIC_PAYPAL_ENV === "live" ? "live" : "sandbox",
+        paypalStatus: details.status || "COMPLETED",
+        captureStatus: details.captureStatus || details.status || "COMPLETED",
+        paymentSuccessful: true,
+        paymentStatusLabel: "Pago exitoso",
+        orderID: details.orderID,
+        captureId: details.captureId,
+        payerEmail: details.payerEmail,
+        amount: details.amount,
+        sourceAmount: toMoney(rawOrderData.totalPrice),
+        sourceCurrency,
+        capturedAt: new Date().toISOString(),
+        paidAt: new Date().toISOString(),
+      },
+      shippingMethodId: rawOrderData.shippingMethodId,
+      shippingStatus: rawOrderData.shippingStatus,
+      customerNotes: rawOrderData.customerNotes,
+      internalNotes:
+        rawOrderData.internalNotes ||
+        "Pago PayPal capturado. La confirmación server-side actualizará el estado de pago.",
+      source: rawOrderData.source,
+      preferredDeliveryDate: rawOrderData.preferredDeliveryDate,
+    }
+
+    const response = await fetch(
+      `${backendUrl.replace(/\/$/, "")}/orders/${storeId}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(payload),
+      }
+    )
+
+    const result = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+      console.warn("No se pudo registrar la orden PayPal:", result)
+      return null
+    }
+
+    return result?.data ?? result
+  }
+
+  const markPayPalOrderPaid = async (
+    orderId: string,
+    details: PayPalPaymentResult
+  ): Promise<Order | null> => {
+    const response = await fetch("/api/payments/paypal/mark-paid", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        orderId,
+        status: details.status || "COMPLETED",
+        paypalStatus: details.status || "COMPLETED",
+        captureStatus: details.captureStatus || details.status || "COMPLETED",
+        paymentSuccessful: true,
+        orderID: details.orderID,
+        captureId: details.captureId,
+        payerEmail: details.payerEmail,
+        amount: details.amount,
+      }),
+    })
+
+    const result = await response.json().catch(() => ({}))
+
+    if (!response.ok || !result.success) {
+      console.warn("[PayPal checkout] No se pudo marcar la orden como pagada:", {
+        status: response.status,
+        result,
+      })
+      return null
+    }
+
+    return result.data
+  }
+
+  const submitOrderPayPal = async (details: PayPalPaymentResult) => {
+    setIsSubmitting(true)
+    setFormDataPersist(formData)
+
+    try {
+      const orderData = await buildOrderData()
+      let createdOrder: Order | null = null
+      let retryCount = 0
+      const maxRetries = 3
+
+      while (!createdOrder && retryCount < maxRetries) {
+        const orderAttemptData =
+          retryCount === 0
+            ? orderData
+            : {
+                ...orderData,
+                orderNumber: Math.floor(Math.random() * 1000) + 1,
+              }
+
+        createdOrder = await createPayPalOrder(orderAttemptData, details)
+        retryCount++
+      }
+
+      if (createdOrder?.id) {
+        let paidOrder: Order | null = null
+
+        for (let attempt = 1; attempt <= 3 && !paidOrder; attempt++) {
+          paidOrder = await markPayPalOrderPaid(createdOrder.id, details)
+
+          if (!paidOrder && attempt < 3) {
+            await new Promise((resolve) => setTimeout(resolve, attempt * 1000))
+          }
+        }
+
+        if (paidOrder) {
+          createdOrder = { ...createdOrder, ...paidOrder }
+        } else {
+          toast.warning("El pago fue confirmado, pero la orden aún no cambió a pagada.", {
+            description: "Revisa la conexión entre la API web y el backend de órdenes.",
+          })
+        }
+      }
+
+      const paymentReference =
+        createdOrder?.id || details.captureId || details.orderID || `PAYPAL-${Date.now()}`
+      setOrderId(paymentReference)
+      toast.success("¡Pago PayPal confirmado!", {
+        description:
+          createdOrder?.paymentStatus === PaymentStatus.COMPLETED
+            ? "El pago fue capturado y la orden quedó marcada como pago exitoso."
+            : createdOrder?.id
+              ? "El pago fue capturado y la orden quedó registrada."
+            : "El pago fue capturado. Usa el código de referencia para ubicar la transacción.",
+      })
+
+      clearCart()
+      setShowConfirmation(true)
+    } catch (error) {
+      console.error("Error creando pedido PayPal:", error)
+      toast.error("PayPal confirmó el pago, pero no se pudo mostrar la confirmación.")
     } finally {
       setIsSubmitting(false)
     }
@@ -1561,6 +1759,7 @@ if (taxesIncluded) {
               currency={currency}
               shopSettings={shopSettings}
               shippingMethods={shippingMethods}
+              paymentProviders={paymentProviders}
               selectedShippingAddressId={selectedShippingAddressId}
               selectedBillingAddressId={selectedBillingAddressId}
               selectedCurrencyId={selectedCurrencyId}
@@ -1596,9 +1795,10 @@ if (taxesIncluded) {
                 paymentProviders={paymentProviders}
                 submitOrder={submitOrder}
                 submitOrderMP={submitOrderMP}
+                submitOrderPayPal={submitOrderPayPal}
                 isSubmitting={isSubmitting}
                 isLoading={isLoading}
-                total={subtotalAfterDiscount}
+                total={total}
                 resumeItems={resumeItems}
                 orderId={orderId}
                 temporalOrderId={temporalOrderId}

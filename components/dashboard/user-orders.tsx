@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { formatDate } from "@/lib/utils"
 import { OrderFinancialStatus, OrderFulfillmentStatus, ShippingStatus } from "@/types/common"
+import { isOrderPaymentSuccessful } from "@/lib/order-payment-status"
 import { useMainStore } from "@/stores/mainStore"
 import { Package, Truck, CreditCard, Eye, ShoppingBag, AlertCircle } from "lucide-react"
 
@@ -58,6 +59,10 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
   const userOrders = Array.isArray(orders) ? orders : []
 
   const getStatusBadge = (order: any) => {
+    if (isOrderPaymentSuccessful(order)) {
+      return <Badge className="bg-green-500">Pago exitoso</Badge>
+    }
+
     // Financial status
     if (order.financialStatus === OrderFinancialStatus.PAID) {
       return <Badge className="bg-green-500">Pagado</Badge>
@@ -96,6 +101,10 @@ export function UserOrders({ userId, userEmail }: UserOrdersProps) {
   }
 
   const getStatusIcon = (order: any) => {
+    if (isOrderPaymentSuccessful(order)) {
+      return <CreditCard className="h-5 w-5 text-green-500" />
+    }
+
     // Shipping status
     if (order.shippingStatus === ShippingStatus.DELIVERED) {
       return <Package className="h-5 w-5 text-green-500" />

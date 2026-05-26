@@ -30,8 +30,12 @@ import type { ShippingMethod } from "@/types/shippingMethod"
 import type { PaymentProvider } from "@/types/payments"
 
 import { loadCulqiScript, openCulqiCheckout, setCulqiCallback } from "@/components/checkout/cuqui-checkout"
+import { PayPalCheckoutButton, type PayPalPaymentResult } from "@/components/checkout/paypal-checkout-button"
 import { initMercadoPago, Wallet } from "@mercadopago/sdk-react"
 import { getPublicKey } from "@/lib/mercadopago-ac"
+
+const PAYPAL_MODE_LABEL =
+  process.env.NEXT_PUBLIC_PAYPAL_ENV === "sandbox" ? "Sandbox" : "Pago seguro"
 
 // Helper function to watch for Culqi modal close
 function watchCulqiClose(onClose: () => void) {
@@ -73,6 +77,7 @@ interface UnifiedCheckoutFormProps {
   paymentProviders: PaymentProvider[]
   submitOrder: () => void
   submitOrderMP: () => void
+  submitOrderPayPal: (details: PayPalPaymentResult) => Promise<void>
   isSubmitting: boolean
   isLoading: boolean
   total: number
@@ -106,6 +111,7 @@ export function UnifiedCheckoutForm({
   paymentProviders,
   submitOrder,
   submitOrderMP,
+  submitOrderPayPal,
   isSubmitting,
   isLoading,
   total,
@@ -115,7 +121,11 @@ export function UnifiedCheckoutForm({
 }: UnifiedCheckoutFormProps) {
   const router = useRouter()
   const { updateAddress } = useUserStore()
-  const { selectedCurrencyId } = useCurrencyStore()
+  const { selectedCurrencyId, acceptedCurrencies } = useCurrencyStore()
+  const selectedCurrency = acceptedCurrencies.find(
+    (currency) => currency.id === selectedCurrencyId
+  )
+  const checkoutCurrencyCode = selectedCurrency?.code || "PEN"
 
   const [addressError, setAddressError] = useState(false)
   const [emailError, setEmailError] = useState(false)
@@ -200,6 +210,9 @@ export function UnifiedCheckoutForm({
   const selectedProvider = paymentProviders.find(p => p.id === formData.paymentMethod)
   const isMercadoPago = selectedProvider?.name?.toLowerCase() === "mercadopago"
   const isCulqui = selectedProvider?.name?.toLowerCase() === "culqui"
+  const isPayPal =
+    selectedProvider?.type === "PAYPAL" ||
+    selectedProvider?.name?.toLowerCase().includes("paypal")
 
   // Handle MercadoPago preference creation
   useEffect(() => {
@@ -555,6 +568,9 @@ export function UnifiedCheckoutForm({
       handleCulqiPay()
     } else if (isMercadoPago) {
       // MercadoPago se maneja con el botón de Wallet
+      return
+    } else if (isPayPal) {
+      // PayPal se maneja con los botones oficiales
       return
     } else {
       submitOrder()
@@ -1087,36 +1103,76 @@ export function UnifiedCheckoutForm({
             onValueChange={(value) => handleSelectChange("paymentMethod", value)}
             className="space-y-3"
           >
-            {paymentProviders.map((provider) => (
-              <div
-                key={provider.id}
-                className="flex items-center space-x-3 border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors"
-              >
-                <RadioGroupItem value={provider.id} id={provider.id} />
-                <Label htmlFor={provider.id} className="flex-1 cursor-pointer">
-                  <div className="flex items-center gap-3">
-                    {provider.imgUrl ? (
-                      <div className="relative h-10 w-10">
-                        <Image
-                          src={provider.imgUrl}
-                          alt={provider.name}
-                          fill
-                          className="object-contain"
-                        />
+            {paymentProviders.map((provider) => {
+              const providerIsPayPal =
+                provider.type === "PAYPAL" ||
+                provider.name.toLowerCase().includes("paypal")
+              const providerIsSelected = formData.paymentMethod === provider.id
+
+              return (
+                <div
+                  key={provider.id}
+                  className={`rounded-lg border transition-colors ${
+                    providerIsSelected
+                      ? "border-primary bg-primary/5 shadow-sm"
+                      : "hover:bg-gray-50"
+                  }`}
+                >
+                  <div className="flex items-center space-x-3 p-4">
+                    <RadioGroupItem value={provider.id} id={provider.id} />
+                    <Label htmlFor={provider.id} className="flex-1 cursor-pointer">
+                      <div className="flex items-center gap-3">
+                        {provider.imgUrl ? (
+                          <div className="relative h-10 w-10">
+                            <Image
+                              src={provider.imgUrl}
+                              alt={provider.name}
+                              fill
+                              className="object-contain"
+                            />
+                          </div>
+                        ) : (
+                          <CreditCard className="h-5 w-5 text-primary" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-medium">{provider.name}</p>
+                            {providerIsPayPal && (
+                              <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 text-xs">
+                                {PAYPAL_MODE_LABEL}
+                              </Badge>
+                            )}
+                          </div>
+                          {provider.description && (
+                            <p className="text-sm text-gray-500">{provider.description}</p>
+                          )}
+                          {providerIsPayPal && (
+                            <p className="text-sm text-gray-500">
+                              Paga de forma segura con PayPal. Disponible para pagos
+                              en USD.
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    ) : (
-                      <CreditCard className="h-5 w-5 text-primary" />
-                    )}
-                    <div>
-                      <p className="font-medium">{provider.name}</p>
-                      {provider.description && (
-                        <p className="text-sm text-gray-500">{provider.description}</p>
-                      )}
-                    </div>
+                    </Label>
                   </div>
-                </Label>
-              </div>
-            ))}
+
+                  {providerIsPayPal && providerIsSelected && (
+                    <div className="border-t bg-white/70 p-4 pt-5">
+                      <PayPalCheckoutButton
+                        amount={total}
+                        currency={checkoutCurrencyCode}
+                        description={resumeItems || "Compra Sportt"}
+                        email={formData.email || currentUser?.email || ""}
+                        temporalOrderId={temporalOrderId}
+                        disabled={!isFormValid() || isSubmitting}
+                        onSuccess={submitOrderPayPal}
+                      />
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </RadioGroup>
         )}
 
@@ -1203,7 +1259,11 @@ export function UnifiedCheckoutForm({
           Volver al carrito
         </Button>
 
-        {isMercadoPago && mpPreferenceId ? (
+        {isPayPal ? (
+          <div className="max-w-sm rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+            Completa el pago desde los botones de PayPal mostrados arriba.
+          </div>
+        ) : isMercadoPago && mpPreferenceId ? (
           <div>
             {mpLoading ? (
               <Button disabled>

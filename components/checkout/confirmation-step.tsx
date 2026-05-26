@@ -9,6 +9,7 @@ import { User } from "@/types/user"
 import { Address } from "@/stores/userStore"
 import { CartItem } from "@/stores/cartStore"
 import { ShippingMethod } from "@/types/shippingMethod"
+import type { PaymentProvider } from "@/types/payments"
 
 interface ConfirmationStepProps {
   orderId: string | null
@@ -23,6 +24,7 @@ interface ConfirmationStepProps {
   currency: string
   shopSettings: ShopSettings[]
   shippingMethods: ShippingMethod[]
+  paymentProviders?: PaymentProvider[]
   // Add new props for address handling
   selectedShippingAddressId?: string | null
   selectedBillingAddressId?: string | null
@@ -42,10 +44,20 @@ export function ConfirmationStep({
   currency,
   shopSettings,
   shippingMethods,
+  paymentProviders = [],
   selectedShippingAddressId = null,
   selectedBillingAddressId = null,
   selectedCurrencyId,
 }: ConfirmationStepProps) {
+  const selectedPaymentProvider = paymentProviders.find(
+    (provider) => provider.id === formData.paymentMethod
+  )
+  const isPayPalPayment =
+    selectedPaymentProvider?.type === "PAYPAL" ||
+    selectedPaymentProvider?.name?.toLowerCase().includes("paypal")
+  const isCulqiPayment = formData.paymentMethod === "pp_9c77d30e-6d2b"
+  const isOnlinePaidPayment = isCulqiPayment || isPayPalPayment
+
   // Helper function to get shipping address data
   const getShippingAddressData = () => {
     if (isAuthenticated && currentUser && selectedShippingAddressId) {
@@ -154,7 +166,7 @@ export function ConfirmationStep({
       </div>
 
       <div className="w-full max-w-md mb-8">
-        {formData.paymentMethod === "pp_9c77d30e-6d2b" ? (
+        {isOnlinePaidPayment ? (
           <div className="flex flex-col items-center justify-center gap-4 bg-emerald-50 border border-emerald-100 rounded-xl p-6 shadow-lg shadow-emerald-500/10">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -171,9 +183,15 @@ export function ConfirmationStep({
               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="#10b981" />
               <path d="M9 12l2 2 4-4" stroke="#fff" strokeWidth="2" fill="none" />
             </svg>
-            <h3 className="text-xl font-semibold text-emerald-700">¡Pago recibido!</h3>
+            <h3 className="text-xl font-semibold text-emerald-700">
+              {isPayPalPayment
+                ? "¡Pago recibido por PayPal!"
+                : "¡Pago recibido!"}
+            </h3>
             <p className="text-gray-700 text-center">
-              Hemos recibido tu pago y estamos esperando la verificación para procesar el envío de tu pedido.
+              {isPayPalPayment
+                ? "PayPal confirmó el pago correctamente. Conserva el código mostrado como referencia de la transacción."
+                : "Hemos recibido tu pago y estamos esperando la verificación para procesar el envío de tu pedido."}
             </p>
             <p className="text-gray-500 text-center text-sm">
               Si deseas más información sobre tu pedido, comunícate con nosotros al{" "}
@@ -252,7 +270,7 @@ export function ConfirmationStep({
             Contactar por WhatsApp para gestionar el pago
           </a>
         )}
-        {formData.paymentMethod !== "pp_9c77d30e-6d2b" && (
+        {!isOnlinePaidPayment && (
           <p className="text-sm text-gray-500 mt-2 text-center">
             Nuestro equipo te ayudará a completar el proceso de pago y responderá todas tus dudas.
           </p>

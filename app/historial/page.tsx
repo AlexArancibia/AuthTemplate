@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { getOrderPaymentStatusLabel } from "@/lib/order-payment-status"
 import type { Order } from "@/types/order"
 
 export default function HistorialPage() {
@@ -62,7 +63,9 @@ export default function HistorialPage() {
                       <span className="text-xs text-gray-400">{new Date(order.createdAt).toLocaleDateString()}</span>
                     </div>
                     <div className="text-gray-700 mb-2">Total: <span className="font-bold">S/ {order.totalPrice}</span></div>
-                    <div className="text-gray-500 text-sm">Estado: {order.financialStatus}</div>
+                    <div className="text-gray-500 text-sm">
+                      Estado: {getOrderPaymentStatusLabel(order)}
+                    </div>
                   </div>
                 </li>
               ))}
