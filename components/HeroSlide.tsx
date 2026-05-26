@@ -190,7 +190,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
 
       {/* Contenido */}
       <div className={contentContainerClasses}>
-        <div className="container mx-auto px-2 md:px-4 h-full flex items-center justify-center">
+        <div className="container mx-auto px-2 md:px-4 h-full flex items-center justify-center -translate-y-36 sm:-translate-y-32 md:translate-y-0">
           <div className={contentAlignClasses}>
             <motion.div
               className={contentDivClasses}
