@@ -374,13 +374,14 @@ export function FeaturedProductsSection({
                 })}
               </div>
 
-              {/* View Category Button - Centered */}
+              {/* View Products Button - Centered */}
               <div className="flex justify-center mt-8 sm:mt-10">
-                <a href={`/catalogo?category=${selectedCategory?.slug}`}>
-                  <button className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-gray-200 bg-white text-gray-700 font-medium hover:border-pink-600 hover:bg-pink-600 hover:text-white transition-all duration-200 shadow-sm hover:shadow-md group">
-                    Ver {selectedCategory?.name}
-                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                  </button>
+                <a
+                  href="/productos"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-gray-200 bg-white text-gray-700 font-medium hover:border-pink-600 hover:bg-pink-600 hover:text-white transition-all duration-200 shadow-sm hover:shadow-md group"
+                >
+                  Ver productos
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </a>
               </div>
             </>
