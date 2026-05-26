@@ -71,7 +71,7 @@ export function PromocionesSection() {
 
   return (
     <div className="w-full overflow-hidden">
-      <HeroCarouselBase heroSections={filteredSections} autoplayInterval={10000} containerHeight="calc(100vh - 6vh)" />
+      <HeroCarouselBase heroSections={filteredSections} autoplayInterval={10000} />
     </div>
   )
 }

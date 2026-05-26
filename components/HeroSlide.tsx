@@ -57,23 +57,29 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
 
   const youtubeId = backgroundVideo ? getYouTubeId(backgroundVideo) : null
   const mobileYoutubeId = mobileBackgroundVideo ? getYouTubeId(mobileBackgroundVideo) : null
-  const hasVideo = Boolean(youtubeId)
+  const desktopVideoId = youtubeId || mobileYoutubeId
+  const mobileVideoId = mobileYoutubeId || youtubeId
+  const hasVideo = Boolean(desktopVideoId || mobileVideoId)
+  const getVideoSrc = (videoId: string) =>
+    `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${videoId}&showinfo=0&rel=0&modestbranding=1&playsinline=1`
 
   // Clases para el contenedor principal
-  const containerClasses = `
-    relative w-full h-[800px] md:h-[600px]
-  `;
+  const containerClasses = "relative w-full h-full overflow-hidden bg-black"
 
   // Clases para la imagen de fondo
-  const backgroundImageClasses = `object-cover ${styles.backgroundSize || ""} object-center`
+  const backgroundImageClasses = cn(
+    "object-cover object-center",
+    styles.backgroundPosition?.replace("bg-", "object-"),
+    styles.backgroundSize?.replace("bg-", "object-"),
+  )
 
   // Clases para el iframe de video
-  const videoClasses = `absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] min-h-full min-w-full transition-opacity duration-300 ${
+  const videoClasses = `absolute top-1/2 left-1/2 h-[120%] w-[220%] -translate-x-1/2 -translate-y-1/2 sm:w-[180%] lg:w-[120%] transition-opacity duration-300 ${
     isVideoReady ? "opacity-100" : "opacity-0"
   }`
 
   // Clases para el contenedor de contenido
-  const contentContainerClasses = `absolute inset-0 flex w-full h-full items-center px-14`
+  const contentContainerClasses = `absolute inset-0 flex w-full h-full items-center px-6 sm:px-10 md:px-14`
 
   // Clases para la alineación del contenido
   const contentAlignClasses = `w-full flex h-full ${
@@ -105,61 +111,69 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
         ? "flex justify-end"
         : ""
   }`
+  const buttonClassName =
+    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground shadow h-9 px-4 py-2 mt-4 bg-pink-500 hover:bg-pink-600 transition-all duration-700"
+
+  const renderBackgroundImages = (className = backgroundImageClasses, quality?: number) => (
+    <>
+      <div className="absolute inset-0 block lg:hidden">
+        <Image
+          src={mobileBackgroundImage || backgroundImage || "/placeholder.png"}
+          alt={title || "Background"}
+          fill
+          className={className}
+          priority
+          sizes="100vw"
+          quality={quality}
+        />
+      </div>
+
+      <div className="absolute inset-0 hidden lg:block">
+        <Image
+          src={backgroundImage || mobileBackgroundImage || "/placeholder.png"}
+          alt={title || "Background"}
+          fill
+          className={className}
+          priority
+          sizes="100vw"
+          quality={quality}
+        />
+      </div>
+    </>
+  )
 
   return (
     <div className={containerClasses}>
       {/* Fondo: Video o Imagen */}
-      {hasVideo ? (
+      {hasVideo && !hasVideoError ? (
         <div className="absolute inset-0 overflow-hidden">
           {/* Fallback image mientras carga el video */}
-          {bgImage && !isVideoReady && (
-            <>
-            <div className="absolute inset-0 block lg:hidden">
-              <Image
-                src={mobileBackgroundImage || "/placeholder.png"}
-                  alt={title || "Background"}
-                  fill
-                  className={backgroundImageClasses}
-                  priority
-                  sizes="100vw"
-                />
-              </div>
-
-              <div className="absolute inset-0 hidden lg:block">
-                <Image
-                  src={backgroundImage || "/placeholder.png"}
-                  alt={title || "Background"}
-                  fill
-                  className={backgroundImageClasses}
-                  priority
-                  sizes="100vw"
-                />
-              </div>
-            </>
-          )}
+          {bgImage && !isVideoReady && renderBackgroundImages()}
 
           {/* Video de fondo */}
           <div className="absolute inset-0 w-full h-full">
-            <iframe
-              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${youtubeId}&showinfo=0&rel=0&modestbranding=1&playsinline=1&enablejsapi=1&origin=${encodeURIComponent(
-                window.location.origin,
-              )}`}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              className={`${videoClasses} hidden lg:block`}
-              onLoad={() => setIsVideoReady(true)}
-              onError={() => setHasVideoError(true)}
-              frameBorder="0"
-            />
-            <iframe
-              src={`https://www.youtube.com/embed/${mobileYoutubeId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${mobileYoutubeId}&showinfo=0&rel=0&modestbranding=1&playsinline=1&enablejsapi=1&origin=${encodeURIComponent(
-                window.location.origin,
-              )}`}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              className={`${videoClasses} block lg:hidden`}
-              onLoad={() => setIsVideoReady(true)}
-              onError={() => setHasVideoError(true)}
-              frameBorder="0"
-            />
+            {desktopVideoId && (
+              <iframe
+                title={`${title || "Hero"} video de fondo escritorio`}
+                src={getVideoSrc(desktopVideoId)}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                className={`${videoClasses} hidden lg:block`}
+                onLoad={() => setIsVideoReady(true)}
+                onError={() => setHasVideoError(true)}
+                frameBorder="0"
+              />
+            )}
+            {mobileVideoId && (
+              <iframe
+                title={`${title || "Hero"} video de fondo mobile`}
+                src={getVideoSrc(mobileVideoId)}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                className={`${videoClasses} block lg:hidden`}
+                onLoad={() => setIsVideoReady(true)}
+                onError={() => setHasVideoError(true)}
+                frameBorder="0"
+              />
+            )}
           </div>
 
           {/* Overlay - Solo el estilo de color es inline */}
@@ -167,31 +181,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
         </div>
       ) : bgImage ? (
         <div className="absolute inset-0">
-          <>
-            <div className="absolute inset-0 block lg:hidden">
-              <Image
-                src={mobileBackgroundImage || "/placeholder.png"}
-                alt={title || "Background"}
-                fill
-                className="w-full h-full object-cover object-center"
-                priority
-                sizes="100vw"
-                quality={100}
-              />
-            </div>
-
-            <div className="absolute inset-0 hidden lg:block">
-              <Image
-                src={backgroundImage || "/placeholder.png"}
-                alt={title || "Background"}
-                fill
-                className="w-full h-full object-cover object-center"
-                priority
-                sizes="100vw"
-                quality={100}
-              />
-            </div>
-          </>
+          {renderBackgroundImages("w-full h-full object-cover object-center", 100)}
           <div className="absolute inset-0" style={getOverlayStyle()} />
         </div>
       ) : (
@@ -247,7 +237,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
                       <Button
                         variant={(styles.buttonVariant || "default") as any}
                         size={(styles.buttonSize || "default") as any}
-                        className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground shadow h-9 px-4 py-2 mt-4 bg-pink-500 hover:bg-pink-600 transition-all duration-700"
+                        className={buttonClassName}
                       >
                         {buttonText}
                       </Button>
@@ -256,7 +246,7 @@ export function HeroSlide({ heroSection, animationDelay = 0 }: HeroSlideProps) {
                     <Button
                       variant={(styles.buttonVariant || "default") as any}
                       size={(styles.buttonSize || "default") as any}
-                      className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 text-primary-foreground shadow h-9 px-4 py-2 mt-4 bg-pink-500 hover:bg-pink-600 transition-all duration-700"
+                      className={buttonClassName}
                     >
                       {buttonText}
                     </Button>

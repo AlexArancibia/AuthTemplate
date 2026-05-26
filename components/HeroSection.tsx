@@ -1,32 +1,43 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Skeleton } from "@/components/ui/skeleton"
 import { useMainStore } from "@/stores/mainStore"
 import { HeroCarouselBase } from "./HeroCaruselBase"
+import { HERO_CONTAINER_CLASS } from "./hero-layout"
 
 export function HeroSection() {
-  const { heroSections, fetchHeroSections, loading, error: storeError } = useMainStore()
+  const { heroSections, fetchHeroSections, error: storeError } = useMainStore()
   const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(heroSections.length === 0)
   const fetchAttempted = useRef(false)
 
   // Fetch de las secciones de héroe
   useEffect(() => {
     // Evitar múltiples intentos de fetch
     if (fetchAttempted.current) return
+    let isMounted = true
 
     const loadHeroSections = async () => {
       try {
         fetchAttempted.current = true
+        setIsLoading(true)
         await fetchHeroSections({ limit: 50 })
-        setError(null)
+        if (isMounted) setError(null)
       } catch (err) {
         console.error("[HeroSection] Error al cargar las secciones de héroe:", err)
-        setError("No se pudieron cargar las secciones de héroe. Por favor, intenta de nuevo más tarde.")
+        if (isMounted) {
+          setError("No se pudieron cargar las secciones de héroe. Por favor, intenta de nuevo más tarde.")
+        }
+      } finally {
+        if (isMounted) setIsLoading(false)
       }
     }
 
     loadHeroSections()
+
+    return () => {
+      isMounted = false
+    }
   }, [fetchHeroSections])
 
   // Filtrar solo las secciones con metadata.section igual a "inicio"
@@ -42,11 +53,11 @@ export function HeroSection() {
       })
     : []
 
-  // Si está cargando, mostrar un skeleton
-  if (loading) {
+  // Reservar el espacio del hero durante el fetch evita saltos de layout en mobile.
+  if (isLoading) {
     return (
-      <div className="w-full h-[92vh] bg-gray-100/30">
-        <Skeleton className="w-full h-full" />
+      <div className={HERO_CONTAINER_CLASS} aria-busy="true" aria-label="Cargando contenido principal">
+        <div className="sr-only">Cargando contenido principal</div>
       </div>
     )
   }
@@ -55,10 +66,10 @@ export function HeroSection() {
   if (error || storeError) {
     console.error("[HeroSection] Error:", error || storeError)
     return (
-      <div className="w-full flex items-center justify-center">
+      <div className={`${HERO_CONTAINER_CLASS} flex items-center justify-center px-6`}>
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-700 mb-2">Error al cargar contenido</h2>
-          <p className="text-gray-500">Por favor, intenta recargar la página</p>
+          <h2 className="text-xl font-semibold text-white mb-2">Error al cargar contenido</h2>
+          <p className="text-white/70">Por favor, intenta recargar la página</p>
         </div>
       </div>
     )
@@ -69,9 +80,9 @@ export function HeroSection() {
     return null
   }
 
-    return (
-      <div className="w-full overflow-hidden bg-black">
-        <HeroCarouselBase heroSections={filteredSections} autoplayInterval={10000} containerHeight="600px" />
-      </div>
-    )
+  return (
+    <div className="w-full overflow-hidden bg-black">
+      <HeroCarouselBase heroSections={filteredSections} autoplayInterval={10000} />
+    </div>
+  )
 }

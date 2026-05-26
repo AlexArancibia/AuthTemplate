@@ -4,8 +4,9 @@ import { useState, useEffect, useRef, useMemo } from "react"
 import { motion, AnimatePresence, type PanInfo } from "framer-motion"
 import type { HeroSection as HeroSectionType } from "@/types/heroSection"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import { HeroSlide } from "./HeroSlide"
+import { HERO_CONTAINER_CLASS } from "./hero-layout"
 
 interface HeroCarouselBaseProps {
   heroSections: HeroSectionType[]
@@ -13,8 +14,6 @@ interface HeroCarouselBaseProps {
   transitionDuration?: number
   showControls?: boolean
   showIndicators?: boolean
-  showPauseButton?: boolean
-  containerHeight?: string
 }
 
 export function HeroCarouselBase({
@@ -23,8 +22,6 @@ export function HeroCarouselBase({
   transitionDuration = 700,
   showControls = true,
   showIndicators = true,
-  showPauseButton = true,
-  containerHeight = "calc(100vh)",
 }: HeroCarouselBaseProps) {
   // Ordenar heroSections por prioridad (0 es más importante)
   const sortedHeroSections = useMemo(() => {
@@ -267,17 +264,17 @@ export function HeroCarouselBase({
   // Si solo hay una sección, mostrarla sin controles
   if (sortedHeroSections.length === 1) {
     return (
-      <div className="w-full overflow-hidden">
+      <div className={HERO_CONTAINER_CLASS}>
         <HeroSlide heroSection={sortedHeroSections[0]} />
       </div>
     )
   }
 
   return (
-    <div className="w-full overflow-hidden relative" ref={carouselRef}>
+    <div className={`${HERO_CONTAINER_CLASS} relative`} ref={carouselRef}>
       {/* Carrusel principal */}
       <div
-        className="relative h-[800px] md:h-[600px] "
+        className="relative h-full"
         style={{
           willChange: "transform", // Optimización de rendimiento
         }}
@@ -321,11 +318,11 @@ export function HeroCarouselBase({
 
       {/* Botones de navegación */}
       {showControls && (
-        <div className="absolute inset-0 px-4 md:px-2 flex items-center justify-between pointer-events-none">
+        <div className="absolute inset-0 px-4 md:px-6 flex items-center justify-between pointer-events-none">
           <Button
             variant="ghost"
             size="icon"
-            className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-white/20 text-secondary shadow-md pointer-events-auto hover:bg-white/30 transition-all duration-200 z-20 hover:scale-110 backdrop-blur-sm"
+            className="h-10 w-10 md:h-12 md:w-12 rounded-full border border-white/10 bg-black/35 text-white shadow-md pointer-events-auto hover:bg-black/50 transition-all duration-200 z-20 backdrop-blur-sm"
             onClick={prevSlide}
             aria-label="Slide anterior"
             disabled={isTransitioning}
@@ -335,7 +332,7 @@ export function HeroCarouselBase({
           <Button
             variant="ghost"
             size="icon"
-            className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-white/20 text-secondary shadow-md pointer-events-auto hover:bg-white/30 transition-all duration-200 z-20 hover:scale-110 backdrop-blur-sm"
+            className="h-10 w-10 md:h-12 md:w-12 rounded-full border border-white/10 bg-black/35 text-white shadow-md pointer-events-auto hover:bg-black/50 transition-all duration-200 z-20 backdrop-blur-sm"
             onClick={nextSlide}
             aria-label="Siguiente slide"
             disabled={isTransitioning}
@@ -347,20 +344,30 @@ export function HeroCarouselBase({
 
       {/* Indicadores de puntos */}
       {showIndicators && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20">
-          {sortedHeroSections.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => goToSlide(index)}
-              className={`w-2 h-2 rounded-full transition-colors ${
-                index === currentIndex
-                  ? "bg-pink-500"
-                  : "bg-white/50"
-              }`}
-              aria-label={`Ir a la diapositiva ${index + 1}`}
-              disabled={isTransitioning}
-            />
-          ))}
+        <div className="absolute bottom-5 md:bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+          {sortedHeroSections.map((_, index) => {
+            const isActive = index === currentIndex
+
+            return (
+              <button
+                key={index}
+                onClick={() => goToSlide(index)}
+                className={`relative h-2 overflow-hidden rounded-full transition-all ${
+                  isActive ? "w-7 bg-white/35" : "w-2 bg-white/50 hover:bg-white/75"
+                }`}
+                aria-label={`Ir a la diapositiva ${index + 1}`}
+                aria-current={isActive ? "true" : undefined}
+                disabled={isTransitioning}
+              >
+                {isActive && (
+                  <span
+                    className="absolute inset-y-0 left-0 rounded-full bg-pink-500"
+                    style={{ width: `${progress}%` }}
+                  />
+                )}
+              </button>
+            )
+          })}
         </div>
       )}
     </div>
