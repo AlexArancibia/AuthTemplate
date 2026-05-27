@@ -57,6 +57,15 @@ export function ConfirmationStep({
     selectedPaymentProvider?.name?.toLowerCase().includes("paypal")
   const isCulqiPayment = formData.paymentMethod === "pp_9c77d30e-6d2b"
   const isOnlinePaidPayment = isCulqiPayment || isPayPalPayment
+  const selectedShippingMethod = shippingMethods.find(
+    (method) => method.id === formData.shippingMethod
+  )
+  const selectedShippingName = selectedShippingMethod?.name?.toLowerCase() || ""
+  const isPickupSelected =
+    !!selectedShippingMethod &&
+    (selectedShippingName.includes("recojo") ||
+      selectedShippingName.includes("pickup") ||
+      selectedShippingName.includes("tienda"))
 
   // Helper function to get shipping address data
   const getShippingAddressData = () => {
@@ -228,23 +237,29 @@ export function ConfirmationStep({
               *${getShippingMethodLabel()}:* ${currency}${Number(shipping).toFixed(2)}
               *Total:* ${currency}${Number(total).toFixed(2)}
 
-              *Dirección de envío:*
+              ${
+                isPickupSelected
+                  ? ""
+                  : `*Dirección de envío:*
               ${formData.firstName} ${formData.lastName}
               ${(() => {
                 const shippingData = getShippingAddressData()
                 return `${shippingData.address}${shippingData.apartment ? `, ${shippingData.apartment}` : ""}
               ${shippingData.city}, ${shippingData.state} ${shippingData.zipCode}`
-              })()}
+              })()}`
+              }
 
               ${
-                !formData.sameBillingAddress
-                  ? `*Dirección de facturación:*
+                isPickupSelected
+                  ? ""
+                  : !formData.sameBillingAddress
+                    ? `*Dirección de facturación:*
               ${(() => {
                 const billingData = getBillingAddressData()
                 return `${billingData.address}${billingData.apartment ? `, ${billingData.apartment}` : ""}
               ${billingData.city}, ${billingData.state} ${billingData.zipCode}`
               })()}`
-                  : "*Dirección de facturación:* Misma que la dirección de envío"
+                    : "*Dirección de facturación:* Misma que la dirección de envío"
               }
 
               Gracias.`,

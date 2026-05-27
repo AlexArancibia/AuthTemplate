@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { motion } from "framer-motion"
 import { useCartStore } from "@/stores/cartStore"
@@ -28,6 +28,8 @@ import { Address } from "@/stores/userStore"
 import { usePersistedMainStore } from '@/stores/persistedMainStore'
 import { usePersistedCheckoutFormDataStore } from '@/stores/persistedCheckoutFormDataStore'
 import { useEmailOrderDataStore } from '@/stores/emailOrderDataStore'
+import { getCheckoutOrderErrorMessage, isRetryableOrderError } from "@/lib/api-errors"
+import { cartNeedsRefresh, validateCartItems } from "@/lib/validate-cart"
 
 // Helper function to safely get price from variant with currency support
 const getSafePrice = (variant: { prices?: Array<{ price: number; currencyId?: string }> }, currencyId?: string): number => {
@@ -64,7 +66,9 @@ const getSafePrice = (variant: { prices?: Array<{ price: number; currencyId?: st
 }
 
 export default function CheckoutPage() {
-  const { items, clearCart, getTotal } = useCartStore()
+  const { items, clearCart, getTotal, setItems } = useCartStore()
+  const [cartValidated, setCartValidated] = useState(false)
+  const cartSyncDone = useRef(false)
   const { setFormDataPersist } = usePersistedCheckoutFormDataStore()
   const { shopSettings, shippingMethods, paymentProviders, coupons, couponCode, createOrder } = useMainStore()
   const { setShopSettings } = usePersistedMainStore()
@@ -310,6 +314,38 @@ export default function CheckoutPage() {
 
     return () => clearTimeout(timeout)
   }, [])
+
+  useEffect(() => {
+    if (cartSyncDone.current) return
+    cartSyncDone.current = true
+
+    const syncCartWithCatalog = async () => {
+      const currentItems = useCartStore.getState().items
+      if (currentItems.length === 0) {
+        setCartValidated(true)
+        return
+      }
+
+      const { validItems, removedTitles } = await validateCartItems(currentItems)
+
+      if (cartNeedsRefresh(currentItems, validItems)) {
+        setItems(validItems)
+      }
+
+      if (removedTitles.length > 0) {
+        toast.warning("Actualizamos tu carrito", {
+          description:
+            removedTitles.length === 1
+              ? `${removedTitles[0]} ya no está disponible y se quitó del carrito.`
+              : `${removedTitles.length} productos ya no están disponibles y se quitaron del carrito.`,
+        })
+      }
+
+      setCartValidated(true)
+    }
+
+    syncCartWithCatalog().catch(() => setCartValidated(true))
+  }, [setItems])
 
   // Fetch user session and data
   useEffect(() => {
@@ -822,6 +858,16 @@ const applyCouponIfExists = () => {
 };
   // Construcción reutilizable de orderData
   const buildOrderData = async () => {
+    const selectedShippingMethod = shippingMethods.find(
+      (method) => method.id === formData.shippingMethod
+    )
+    const selectedShippingName = selectedShippingMethod?.name?.toLowerCase() || ""
+    const isPickupSelected =
+      !!selectedShippingMethod &&
+      (selectedShippingName.includes("recojo") ||
+        selectedShippingName.includes("pickup") ||
+        selectedShippingName.includes("tienda"))
+
     // 1. Prepare customer and address data
     let calculatedShippingAddressId = shippingAddressId
     let calculatedBillingAddressId = billingAddressId
@@ -839,8 +885,8 @@ const applyCouponIfExists = () => {
         calculatedBillingAddressId = selectedBillingAddressId
       }
 
-      // Save any new addresses using the intelligent logic
-      if (showNewShippingAddress || showNewBillingAddress) {
+      // Save any new addresses using the intelligent logic (skip for pickup)
+      if (!isPickupSelected && (showNewShippingAddress || showNewBillingAddress)) {
         const addressResult = await saveNewAddresses()
         if (addressResult.shippingAddressId) {
           calculatedShippingAddressId = addressResult.shippingAddressId
@@ -854,7 +900,7 @@ const applyCouponIfExists = () => {
     }
 
     // 2. Verify we have the required address IDs for authenticated users
-    if (isAuthenticated && (!calculatedShippingAddressId || !calculatedBillingAddressId)) {
+    if (!isPickupSelected && isAuthenticated && (!calculatedShippingAddressId || !calculatedBillingAddressId)) {
       throw new Error("Please select or create shipping and billing addresses")
     }
 
@@ -916,8 +962,9 @@ const applyCouponIfExists = () => {
           userId: currentUser?.id || null,
         }
       })(),
-      shippingAddress:
-        isAuthenticated && calculatedShippingAddressId
+      shippingAddress: isPickupSelected
+        ? undefined
+        : isAuthenticated && calculatedShippingAddressId
           ? { id: calculatedShippingAddressId }
           : {
               address1: formData.address,
@@ -928,19 +975,21 @@ const applyCouponIfExists = () => {
               country: "PE",
               phone: formData.shippingPhone,
             },
-      billingAddress: formData.sameBillingAddress
+      billingAddress: isPickupSelected
         ? undefined
-        : isAuthenticated && calculatedBillingAddressId
-          ? { id: calculatedBillingAddressId }
-          : {
-              address1: formData.billingAddress,
-              address2: formData.billingApartment || undefined,
-              city: formData.billingCity,
-              province: formData.billingState,
-              zip: formData.billingZipCode,
-              country: "PE",
-              phone: formData.billingPhone,
-            },
+        : formData.sameBillingAddress
+          ? undefined
+          : isAuthenticated && calculatedBillingAddressId
+            ? { id: calculatedBillingAddressId }
+            : {
+                address1: formData.billingAddress,
+                address2: formData.billingApartment || undefined,
+                city: formData.billingCity,
+                province: formData.billingState,
+                zip: formData.billingZipCode,
+                country: "PE",
+                phone: formData.billingPhone,
+              },
       couponId: coupon?.id || undefined,
       paymentProviderId: formData.paymentMethod || undefined,
       shippingMethodId: formData.shippingMethod || undefined,
@@ -963,8 +1012,25 @@ const applyCouponIfExists = () => {
 
   // Submit the order
   const submitOrder = async () => {
+    if (!cartValidated) {
+      toast.info("Estamos validando tu carrito, espera un momento.")
+      return
+    }
+    if (items.length === 0) {
+      toast.error("Tu carrito está vacío. Agrega productos antes de pagar.")
+      return
+    }
+
     setIsSubmitting(true)
     try {
+      const selectedMethod = shippingMethods.find((m) => m.id === formData.shippingMethod)
+      const selectedName = selectedMethod?.name?.toLowerCase() || ""
+      const isPickupSelected =
+        !!selectedMethod &&
+        (selectedName.includes("recojo") ||
+          selectedName.includes("pickup") ||
+          selectedName.includes("tienda"))
+
       let orderData = await buildOrderData();
       let orderCreationSuccess = false
       let retryCount = 0
@@ -1014,29 +1080,33 @@ const applyCouponIfExists = () => {
                 isAuthenticated: isAuthenticated,
               },
               // shippingAddress as Record<string, any> to match schema
-              shippingAddress: {
-                name: `${formData.firstName || currentUser?.firstName || ""} ${formData.lastName || currentUser?.lastName || ""}`.trim(),
-                address1: formData.address,
-                address2: formData.apartment || "",
-                city: formData.city,
-                state: formData.state || "",
-                postalCode: formData.zipCode,
-                country: "PE",
-                phone: formData.shippingPhone || formData.phone || currentUser?.phone || "",
-              },
-              // billingAddress as Record<string, any> to match schema
-              billingAddress: formData.sameBillingAddress
+              shippingAddress: isPickupSelected
                 ? null
                 : {
                     name: `${formData.firstName || currentUser?.firstName || ""} ${formData.lastName || currentUser?.lastName || ""}`.trim(),
-                    address1: formData.billingAddress,
-                    address2: formData.billingApartment || "",
-                    city: formData.billingCity,
-                    state: formData.billingState || "",
-                    postalCode: formData.billingZipCode,
+                    address1: formData.address,
+                    address2: formData.apartment || "",
+                    city: formData.city,
+                    state: formData.state || "",
+                    postalCode: formData.zipCode,
                     country: "PE",
-                    phone: formData.billingPhone || formData.phone || currentUser?.phone || "",
+                    phone: formData.shippingPhone || formData.phone || currentUser?.phone || "",
                   },
+              // billingAddress as Record<string, any> to match schema
+              billingAddress: isPickupSelected
+                ? null
+                : formData.sameBillingAddress
+                  ? null
+                  : {
+                      name: `${formData.firstName || currentUser?.firstName || ""} ${formData.lastName || currentUser?.lastName || ""}`.trim(),
+                      address1: formData.billingAddress,
+                      address2: formData.billingApartment || "",
+                      city: formData.billingCity,
+                      state: formData.billingState || "",
+                      postalCode: formData.billingZipCode,
+                      country: "PE",
+                      phone: formData.billingPhone || formData.phone || currentUser?.phone || "",
+                    },
               lineItems: orderData.lineItems.map((item) => ({
                 id: `item_${Date.now()}_${Math.random()}`,
                 orderId: order.id,
@@ -1085,12 +1155,16 @@ const applyCouponIfExists = () => {
             // El pedido se creó exitosamente, el error de email no es crítico
           }
         } catch (error) {
+          if (!isRetryableOrderError(error)) {
+            toast.error(getCheckoutOrderErrorMessage(error))
+            setIsSubmitting(false)
+            return
+          }
           retryCount++
           if (retryCount < maxRetries) {
-            // Generate a new orderNumber for the retry
             orderData.orderNumber = Math.floor(Math.random() * 1000) + 1
           } else {
-            toast.error("Error al procesar el pedido. Por favor, intenta nuevamente.")
+            toast.error(getCheckoutOrderErrorMessage(error))
             setIsSubmitting(false)
             return
           }
@@ -1105,7 +1179,7 @@ const applyCouponIfExists = () => {
       clearCart()
       setShowConfirmation(true)
     } catch (error) {
-      toast.error("Error al procesar el pedido. Por favor, intenta nuevamente.")
+      toast.error(getCheckoutOrderErrorMessage(error))
     } finally {
       setIsSubmitting(false)
     }
@@ -1115,6 +1189,14 @@ const applyCouponIfExists = () => {
     setIsSubmitting(true)
     setFormData(formData);
     try {
+      const selectedMethod = shippingMethods.find((m) => m.id === formData.shippingMethod)
+      const selectedName = selectedMethod?.name?.toLowerCase() || ""
+      const isPickupSelected =
+        !!selectedMethod &&
+        (selectedName.includes("recojo") ||
+          selectedName.includes("pickup") ||
+          selectedName.includes("tienda"))
+
       let orderData = await buildOrderData();
       let orderCreationSuccess = false
       let retryCount = 0
@@ -1163,29 +1245,33 @@ const applyCouponIfExists = () => {
                 isAuthenticated: isAuthenticated,
               },
               // shippingAddress as Record<string, any> to match schema
-              shippingAddress: {
-                name: `${formData.firstName || currentUser?.firstName || ""} ${formData.lastName || currentUser?.lastName || ""}`.trim(),
-                address1: formData.address,
-                address2: formData.apartment || "",
-                city: formData.city,
-                state: formData.state || "",
-                postalCode: formData.zipCode,
-                country: "PE",
-                phone: formData.shippingPhone || formData.phone || currentUser?.phone || "",
-              },
-              // billingAddress as Record<string, any> to match schema
-              billingAddress: formData.sameBillingAddress
+              shippingAddress: isPickupSelected
                 ? null
                 : {
                     name: `${formData.firstName || currentUser?.firstName || ""} ${formData.lastName || currentUser?.lastName || ""}`.trim(),
-                    address1: formData.billingAddress,
-                    address2: formData.billingApartment || "",
-                    city: formData.billingCity,
-                    state: formData.billingState || "",
-                    postalCode: formData.billingZipCode,
+                    address1: formData.address,
+                    address2: formData.apartment || "",
+                    city: formData.city,
+                    state: formData.state || "",
+                    postalCode: formData.zipCode,
                     country: "PE",
-                    phone: formData.billingPhone || formData.phone || currentUser?.phone || "",
+                    phone: formData.shippingPhone || formData.phone || currentUser?.phone || "",
                   },
+              // billingAddress as Record<string, any> to match schema
+              billingAddress: isPickupSelected
+                ? null
+                : formData.sameBillingAddress
+                  ? null
+                  : {
+                      name: `${formData.firstName || currentUser?.firstName || ""} ${formData.lastName || currentUser?.lastName || ""}`.trim(),
+                      address1: formData.billingAddress,
+                      address2: formData.billingApartment || "",
+                      city: formData.billingCity,
+                      state: formData.billingState || "",
+                      postalCode: formData.billingZipCode,
+                      country: "PE",
+                      phone: formData.billingPhone || formData.phone || currentUser?.phone || "",
+                    },
               lineItems: orderData.lineItems.map((item) => ({
                 id: `item_${Date.now()}_${Math.random()}`,
                 orderId: order.id,
@@ -1234,12 +1320,16 @@ const applyCouponIfExists = () => {
             // El pedido se creó exitosamente, el error de email no es crítico
           }
         } catch (error) {
+          if (!isRetryableOrderError(error)) {
+            toast.error(getCheckoutOrderErrorMessage(error))
+            setIsSubmitting(false)
+            return false
+          }
           retryCount++
           if (retryCount < maxRetries) {
-            // Generate a new orderNumber for the retry
             orderData.orderNumber = Math.floor(Math.random() * 1000) + 1
           } else {
-            toast.error("Error al procesar el pedido. Por favor, intenta nuevamente.")
+            toast.error(getCheckoutOrderErrorMessage(error))
             setIsSubmitting(false)
             return false
           }
@@ -1247,7 +1337,7 @@ const applyCouponIfExists = () => {
       }
       return true
     } catch (error) {
-      toast.error("Error al procesar el pedido. Por favor, intenta nuevamente.")
+      toast.error(getCheckoutOrderErrorMessage(error))
       return false
     } finally {
       setIsSubmitting(false)
@@ -1621,7 +1711,7 @@ if (taxesIncluded) {
   const currency = activeCurrency?.symbol || shopSettings?.[0]?.defaultCurrency?.symbol || "S/"
 
   // Render skeleton loading state
-  if (pageLoading || userLoading) {
+  if (pageLoading || userLoading || (items.length > 0 && !cartValidated)) {
     return (
       <div className="bg-gray-50 n py-10">
         <div className="container mx-auto px-4">

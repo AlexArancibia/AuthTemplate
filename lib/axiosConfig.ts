@@ -1,4 +1,5 @@
 import axios, { type AxiosInstance, type InternalAxiosRequestConfig } from "axios"
+import { getApiErrorMessage } from "@/lib/api-errors"
 
 // Ensure environment variables are properly typed
 declare global {
@@ -11,8 +12,11 @@ declare global {
 }
 
 // Create Axios instance with the fixed baseURL from environment variable
+const normalizeApiBaseUrl = (rawBaseUrl: string | undefined) =>
+  (rawBaseUrl || "").trim().replace(/\/$/, "")
+
 const apiClient: AxiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_BACKEND_ENDPOINT,
+  baseURL: normalizeApiBaseUrl(process.env.NEXT_PUBLIC_BACKEND_ENDPOINT),
   headers: {
     "Content-Type": "application/json",
   },
@@ -23,7 +27,11 @@ apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
     // Always use the public API key for authentication
     if (process.env.NEXT_PUBLIC_API_KEY) {
-      config.headers["Authorization"] = `Bearer ${process.env.NEXT_PUBLIC_API_KEY}`
+      const apiKey = process.env.NEXT_PUBLIC_API_KEY
+      // PublicKeyGuard (frontend public) expects x-api-key.
+      // Keep Authorization as well for backward compatibility with older deployments.
+      config.headers["x-api-key"] = apiKey
+      config.headers["Authorization"] = `Bearer ${apiKey}`
     } else {
       console.warn("API key not found in environment variables")
     }
@@ -42,8 +50,13 @@ apiClient.interceptors.response.use(
   },
   (error) => {
     if (error.response) {
+      const url = error.config?.url
+      const method = error.config?.method?.toUpperCase()
       console.error("API Error:", {
+        method,
+        url,
         status: error.response.status,
+        message: getApiErrorMessage(error),
         data: error.response.data,
       })
     } else if (error.request) {

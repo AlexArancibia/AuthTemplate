@@ -14,6 +14,7 @@ interface CartStore {
   addItem: (product: Product, variant: ProductVariant, quantity: number) => void
   removeItem: (variantId: string) => void
   updateQuantity: (variantId: string, quantity: number) => void
+  setItems: (items: CartItem[]) => void
   clearCart: () => void
   getTotal: (currencyId?: string) => number
   getItemsCount: () => number
@@ -49,6 +50,10 @@ export const useCartStore = create<CartStore>()(
         set((state) => ({
           items: state.items.map((item) => (item.variant.id === variantId ? { ...item, quantity } : item)),
         }))
+      },
+
+      setItems: (items) => {
+        set({ items })
       },
 
       clearCart: () => {

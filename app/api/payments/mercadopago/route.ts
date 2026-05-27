@@ -143,6 +143,8 @@ export async function POST(req: NextRequest) {
       failure: isUsableReturnUrl(backUrls?.failure) ? backUrls.failure : `${baseUrl}/failure`,
     };
 
+    const canAutoReturn = !Object.values(safeBackUrls).some(isLocalUrl);
+
     const preference = {
       items: mpItems,
       payer: {
@@ -166,7 +168,7 @@ export async function POST(req: NextRequest) {
         city,
       },
       back_urls: safeBackUrls,
-      auto_return: "approved",
+      ...(canAutoReturn ? { auto_return: "approved" as const } : {}),
       payment_methods: {
         installments: 1
       },

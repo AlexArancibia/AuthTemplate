@@ -32,9 +32,6 @@ import type { PaymentProvider } from "@/types/payments"
 import { loadCulqiScript, openCulqiCheckout, setCulqiCallback } from "@/components/checkout/cuqui-checkout"
 import { PayPalCheckoutButton, type PayPalPaymentResult } from "@/components/checkout/paypal-checkout-button"
 
-const PAYPAL_MODE_LABEL =
-  process.env.NEXT_PUBLIC_PAYPAL_ENV === "sandbox" ? "Sandbox" : "Pago seguro"
-
 // Helper function to watch for Culqi modal close
 function watchCulqiClose(onClose: () => void) {
   const observer = new MutationObserver(() => {
@@ -146,22 +143,27 @@ export function UnifiedCheckoutForm({
     fetchCountries()
   }, [fetchCountries])
 
+  const allowedCountryCode3 = new Set(["PER", "ECU", "CHL"])
+  const allowedCountries =
+    countries && Array.isArray(countries)
+      ? countries.filter((c) => allowedCountryCode3.has(String(c.code3 || "").toUpperCase()))
+      : []
+
   // Initialize default country (Peru) if not set
   useEffect(() => {
-    if (countries && Array.isArray(countries) && countries.length > 0 && !formData.countryCode3) {
-      const peru = countries.find(c => 
-        c.name.toLowerCase() === "perú" || 
-        c.name.toLowerCase() === "peru" || 
-        c.code3 === "PER" ||
-        c.code3 === "PE"
-      )
+    if (allowedCountries.length > 0 && !formData.countryCode3) {
+      const peru = allowedCountries.find((c) => {
+        const code3 = String(c.code3 || "").toUpperCase()
+        const name = String(c.name || "").toLowerCase()
+        return code3 === "PER" || name === "perú" || name === "peru"
+      })
       if (peru) {
         handleInputChange({ target: { name: "country", value: peru.name } } as any)
         handleInputChange({ target: { name: "countryCode3", value: peru.code3 } } as any)
         handleInputChange({ target: { name: "countryId", value: peru.id } } as any)
       }
     }
-  }, [countries, formData.countryCode3])
+  }, [allowedCountries, formData.countryCode3])
 
   // Fetch states when country changes
   useEffect(() => {
@@ -236,8 +238,7 @@ export function UnifiedCheckoutForm({
         firstName: formData.firstName,
         lastName: formData.lastName,
         phone: formData.phone,
-        address: formData.address,
-        city: formData.city,
+        ...(isPickupSelected ? {} : { address: formData.address, city: formData.city }),
         countryCode: "PE",
         temporalOrderId: temporalOrderId,
         backUrls,
@@ -298,8 +299,7 @@ export function UnifiedCheckoutForm({
                   firstName: formData.firstName,
                   lastName: formData.lastName,
                   phone: formData.phone,
-                  address: formData.address,
-                  city: formData.city,
+                  ...(isPickupSelected ? {} : { address: formData.address, city: formData.city }),
                   countryCode: "PE",
                   orderNumber: orderId,
                 }),
@@ -335,9 +335,9 @@ export function UnifiedCheckoutForm({
 
   // Geography handlers
   const handleCountryChange = (value: string) => {
-    if (!countries || !Array.isArray(countries)) return
+    if (!allowedCountries || !Array.isArray(allowedCountries)) return
     
-    const country = countries.find(c => c.code3 === value)
+    const country = allowedCountries.find(c => String(c.code3 || "").toUpperCase() === String(value || "").toUpperCase())
     if (country) {
       handleInputChange({ target: { name: "country", value: country.name } } as any)
       handleInputChange({ target: { name: "countryCode3", value } } as any)
@@ -397,8 +397,6 @@ export function UnifiedCheckoutForm({
     method.name.toLowerCase().includes("envío solo hasta agencia")
   )
 
-  const isNotLimaProvincia = formData.state?.toLowerCase() !== "lima"
-
   // Si NO hay ciudad seleccionada, mostrar todos los métodos disponibles
   let methodsToShow = formData.city && formData.city.trim() !== "" 
     ? [...filteredShippingMethods] 
@@ -409,8 +407,8 @@ export function UnifiedCheckoutForm({
     methodsToShow.push(pickupMethod)
   }
 
-  // Agregar método de agencia solo si NO es Lima provincia
-  if (agencyMethod && isNotLimaProvincia && !methodsToShow.find(m => m.id === agencyMethod.id)) {
+  // Siempre agregar "agencia/coordinar" si existe y no está ya en la lista
+  if (agencyMethod && !methodsToShow.find(m => m.id === agencyMethod.id)) {
     methodsToShow.push(agencyMethod)
   }
 
@@ -422,6 +420,14 @@ export function UnifiedCheckoutForm({
     if (!aIsPickup && bIsPickup) return 1
     return 0
   })
+
+  const selectedShippingMethod = shippingMethods.find((m) => m.id === formData.shippingMethod)
+  const selectedShippingName = selectedShippingMethod?.name?.toLowerCase() || ""
+  const isPickupSelected =
+    !!selectedShippingMethod &&
+    (selectedShippingName.includes("recojo") ||
+      selectedShippingName.includes("pickup") ||
+      selectedShippingName.includes("tienda"))
 
   // Delivery date helpers
   const getDayType = (availableDays: string[]) => {
@@ -507,41 +513,55 @@ export function UnifiedCheckoutForm({
       formData.email &&
       formData.phone
 
-    let shippingValid = false
-    if (isAuthenticated && currentUser?.addresses && currentUser.addresses.length > 0) {
-      if (selectedShippingAddressId) {
-        shippingValid = true
-      } else if (showNewShippingAddress) {
-        shippingValid = formData.address &&
-          formData.shippingPhone &&
-          formData.city &&
-          formData.state
-      }
-    } else {
-      shippingValid = formData.address &&
-        formData.shippingPhone &&
-        formData.city &&
-        formData.state
-    }
+    const shippingValid = isPickupSelected
+      ? true
+      : (() => {
+          if (isAuthenticated && currentUser?.addresses && currentUser.addresses.length > 0) {
+            if (selectedShippingAddressId) return true
+            if (showNewShippingAddress) {
+              return (
+                formData.address &&
+                formData.shippingPhone &&
+                formData.city &&
+                formData.state
+              )
+            }
+            return false
+          }
 
-    let billingValid = true
-    if (!formData.sameBillingAddress) {
-      if (isAuthenticated && currentUser?.addresses && currentUser.addresses.length > 0) {
-        if (selectedBillingAddressId) {
-          billingValid = true
-        } else if (showNewBillingAddress) {
-          billingValid = formData.billingAddress &&
+          return (
+            formData.address &&
+            formData.shippingPhone &&
+            formData.city &&
+            formData.state
+          )
+        })()
+
+    const billingValid = isPickupSelected
+      ? true
+      : (() => {
+          if (formData.sameBillingAddress) return true
+
+          if (isAuthenticated && currentUser?.addresses && currentUser.addresses.length > 0) {
+            if (selectedBillingAddressId) return true
+            if (showNewBillingAddress) {
+              return (
+                formData.billingAddress &&
+                formData.billingPhone &&
+                formData.billingCity &&
+                formData.billingState
+              )
+            }
+            return false
+          }
+
+          return (
+            formData.billingAddress &&
             formData.billingPhone &&
             formData.billingCity &&
             formData.billingState
-        }
-      } else {
-        billingValid = formData.billingAddress &&
-          formData.billingPhone &&
-          formData.billingCity &&
-          formData.billingState
-      }
-    }
+          )
+        })()
 
     const shippingMethodValid = !!formData.shippingMethod
     const paymentMethodValid = !!formData.paymentMethod
@@ -555,7 +575,7 @@ export function UnifiedCheckoutForm({
         toast.error("Por favor ingresa tu correo electrónico")
         return
       }
-      if (!formData.address) {
+      if (!isPickupSelected && !formData.address) {
         toast.error("Por favor ingresa tu dirección de envío")
         return
       }
@@ -632,6 +652,32 @@ export function UnifiedCheckoutForm({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
+            <Label htmlFor="firstName">
+              Nombre <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="firstName"
+              name="firstName"
+              value={formData.firstName}
+              onChange={handleInputChange}
+              placeholder="Juan"
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="lastName">
+              Apellido <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="lastName"
+              name="lastName"
+              value={formData.lastName}
+              onChange={handleInputChange}
+              placeholder="Pérez"
+              required
+            />
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="email">
               Correo electrónico <span className="text-destructive">*</span>
             </Label>
@@ -666,358 +712,9 @@ export function UnifiedCheckoutForm({
         </div>
       </Card>
 
-      {/* Delivery Information */}
-      <Card className="p-6 space-y-4">
-        <h2 className="text-lg font-semibold">Dirección de envío</h2>
-
-        {/* Contact Name */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="firstName">
-              Nombre <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="firstName"
-              name="firstName"
-              value={formData.firstName}
-              onChange={handleInputChange}
-              placeholder="Juan"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="lastName">
-              Apellido <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="lastName"
-              name="lastName"
-              value={formData.lastName}
-              onChange={handleInputChange}
-              placeholder="Pérez"
-              required
-            />
-          </div>
-        </div>
-
-        {/* Saved Addresses for Authenticated Users */}
-        {isAuthenticated && currentUser && currentUser.addresses && currentUser.addresses.length > 0 && (
-          <div className="space-y-3">
-            <Label>Direcciones guardadas</Label>
-            <RadioGroup
-              value={selectedShippingAddressId || ""}
-              onValueChange={(value) => handleSelectShippingAddress(value)}
-              className="space-y-2"
-            >
-              {currentUser.addresses
-                .filter((addr) => addr.addressType === AddressType.SHIPPING || addr.addressType === AddressType.BOTH)
-                .map((address) =>
-                  renderAddressCard(
-                    address,
-                    selectedShippingAddressId === address.id,
-                    () => handleSelectShippingAddress(address.id)
-                  )
-                )}
-            </RadioGroup>
-
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-              onClick={() => {
-                if (showNewShippingAddress) {
-                  setShowNewShippingAddress(false)
-                } else {
-                  setShowNewShippingAddress(true)
-                  handleDeselectShippingAddress()
-                }
-              }}
-            >
-              {showNewShippingAddress ? (
-                <>
-                  <Minus className="h-4 w-4" />
-                  Cancelar
-                </>
-              ) : (
-                <>
-                  <Plus className="h-4 w-4" />
-                  Usar nueva dirección
-                </>
-              )}
-            </Button>
-          </div>
-        )}
-
-        {/* New Shipping Address Form */}
-        {(showNewShippingAddress || !isAuthenticated || !currentUser?.addresses?.length) && (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="address">
-                Dirección <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="address"
-                name="address"
-                value={formData.address}
-                onChange={(e) => {
-                  handleInputChange(e)
-                  if (e.target.value.trim() !== "") setAddressError(false)
-                }}
-                placeholder="Av. Principal 123"
-                className={addressError ? "border-destructive" : ""}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="apartment">Apartamento, suite, etc. (opcional)</Label>
-              <Input
-                id="apartment"
-                name="apartment"
-                value={formData.apartment}
-                onChange={handleInputChange}
-                placeholder="Apt. 4B"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="country">
-                  País <span className="text-destructive">*</span>
-                </Label>
-                <Select
-                  value={formData.countryCode3 || ""}
-                  onValueChange={handleCountryChange}
-                  disabled={!countries || countries.length === 0}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={countries && countries.length > 0 ? "Seleccionar país" : "Cargando países..."} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {countries && Array.isArray(countries) && countries.length > 0 ? (
-                      countries.map(c => (
-                        <SelectItem key={c.id} value={c.code3}>{c.name}</SelectItem>
-                      ))
-                    ) : (
-                      <div className="px-2 py-1.5 text-sm text-muted-foreground">Cargando países...</div>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="state">
-                  Departamento <span className="text-destructive">*</span>
-                </Label>
-                <Select
-                  value={formData.stateId || ""}
-                  onValueChange={handleStateChange}
-                  disabled={!formData.countryCode3}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={formData.countryCode3 ? "Seleccionar departamento" : "Selecciona país primero"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(states[formData.countryId] || []).map(s => (
-                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="city">
-                  Ciudad <span className="text-destructive">*</span>
-                </Label>
-                <Select
-                  value={formData.cityId || ""}
-                  onValueChange={handleCityChange}
-                  disabled={!formData.stateId}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={formData.stateId ? "Seleccionar ciudad" : "Selecciona departamento primero"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(cities[formData.stateId] || []).map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="zipCode">
-                  Código postal <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="zipCode"
-                  name="zipCode"
-                  value={formData.zipCode}
-                  onChange={handleInputChange}
-                  placeholder="15001"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="shippingPhone">
-                Teléfono <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="shippingPhone"
-                name="shippingPhone"
-                value={formData.shippingPhone}
-                onChange={handleInputChange}
-                placeholder="+51 999 999 999"
-                required
-              />
-            </div>
-          </div>
-        )}
-      </Card>
-
-      {/* Billing Address Toggle */}
-      <div className="flex items-center space-x-2 p-4 bg-muted/20 rounded-lg">
-        <Checkbox
-          id="sameBillingAddress"
-          checked={formData.sameBillingAddress}
-          onCheckedChange={handleBillingAddressToggle}
-        />
-        <Label htmlFor="sameBillingAddress" className="text-sm cursor-pointer">
-          Usar la misma dirección para facturación
-        </Label>
-      </div>
-
-      {/* Billing Address */}
-      {!formData.sameBillingAddress && (
-        <Card className="p-6 space-y-4">
-          <h2 className="text-lg font-semibold">Dirección de facturación</h2>
-
-          {/* Similar structure as shipping address */}
-          {isAuthenticated && currentUser && currentUser.addresses && currentUser.addresses.length > 0 && (
-            <div className="space-y-3">
-              <Label>Direcciones guardadas</Label>
-              <RadioGroup
-                value={selectedBillingAddressId || ""}
-                onValueChange={(value) => handleSelectBillingAddress(value)}
-                className="space-y-2"
-              >
-                {currentUser.addresses
-                  .filter((addr) => addr.addressType === AddressType.BILLING || addr.addressType === AddressType.BOTH)
-                  .map((address) =>
-                    renderAddressCard(
-                      address,
-                      selectedBillingAddressId === address.id,
-                      () => handleSelectBillingAddress(address.id)
-                    )
-                  )}
-              </RadioGroup>
-
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
-                onClick={() => {
-                  if (showNewBillingAddress) {
-                    setShowNewBillingAddress(false)
-                  } else {
-                    setShowNewBillingAddress(true)
-                    handleDeselectBillingAddress()
-                  }
-                }}
-              >
-                {showNewBillingAddress ? (
-                  <>
-                    <Minus className="h-4 w-4" />
-                    Cancelar
-                  </>
-                ) : (
-                  <>
-                    <Plus className="h-4 w-4" />
-                    Usar nueva dirección
-                  </>
-                )}
-              </Button>
-            </div>
-          )}
-
-          {/* Billing Address Form */}
-          {(showNewBillingAddress || !isAuthenticated || !currentUser?.addresses?.length) && (
-            <div className="space-y-4">
-              {showNewBillingAddress && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={copyShippingToBilling}
-                >
-                  Copiar dirección de envío
-                </Button>
-              )}
-
-              <Input
-                value={formData.billingAddress}
-                onChange={(e) =>
-                  handleInputChange({ target: { name: "billingAddress", value: e.target.value } } as any)
-                }
-                placeholder="Dirección"
-                required={!formData.sameBillingAddress}
-              />
-              <Input
-                value={formData.billingApartment}
-                onChange={(e) =>
-                  handleInputChange({ target: { name: "billingApartment", value: e.target.value } } as any)
-                }
-                placeholder="Apartamento (opcional)"
-              />
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Input
-                  value={formData.billingCity}
-                  onChange={(e) =>
-                    handleInputChange({ target: { name: "billingCity", value: e.target.value } } as any)
-                  }
-                  placeholder="Ciudad"
-                />
-                <Input
-                  value={formData.billingState}
-                  onChange={(e) =>
-                    handleInputChange({ target: { name: "billingState", value: e.target.value } } as any)
-                  }
-                  placeholder="Provincia"
-                />
-                <Input
-                  value={formData.billingZipCode}
-                  onChange={(e) =>
-                    handleInputChange({ target: { name: "billingZipCode", value: e.target.value } } as any)
-                  }
-                  placeholder="Código postal"
-                />
-              </div>
-              <Input
-                value={formData.billingPhone}
-                onChange={(e) =>
-                  handleInputChange({ target: { name: "billingPhone", value: e.target.value } } as any)
-                }
-                placeholder="Teléfono"
-                required={!formData.sameBillingAddress}
-              />
-            </div>
-          )}
-        </Card>
-      )}
-
       {/* Shipping Method */}
       <Card className="p-6 space-y-4">
         <h2 className="text-lg font-semibold">Método de envío</h2>
-
-        {!formData.city && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
-            <p className="font-medium mb-1">💡 Selecciona tu ciudad primero</p>
-            <p>Para ver los costos de envío específicos, completa tu dirección de envío arriba.</p>
-          </div>
-        )}
 
         {isLoading ? (
           <div className="py-8 flex justify-center">
@@ -1045,6 +742,11 @@ export function UnifiedCheckoutForm({
 
               const methodName = method.name.toLowerCase()
               const isPickup = methodName.includes("recojo") || methodName.includes("pickup") || methodName.includes("tienda")
+              const isCoordinateDelivery =
+                methodName.includes("coordinar") ||
+                methodName.includes("agencia") ||
+                methodName.includes("envio solo hasta agencia") ||
+                methodName.includes("envío solo hasta agencia")
 
               return (
                 <div
@@ -1062,7 +764,7 @@ export function UnifiedCheckoutForm({
                         )}
                         <div>
                           <p className="font-medium">{method.name}</p>
-                          {!isPickup && method.minDeliveryDays && method.maxDeliveryDays && method.availableDays && (
+                          {!isPickup && !isCoordinateDelivery && method.minDeliveryDays && method.maxDeliveryDays && method.availableDays && (
                             <p className="text-sm text-gray-600">
                               {method.minDeliveryDays === method.maxDeliveryDays
                                 ? `${method.minDeliveryDays} ${getDayType(method.availableDays)}`
@@ -1072,7 +774,7 @@ export function UnifiedCheckoutForm({
                           )}
                         </div>
                       </div>
-                      {isPickup ? (
+                      {isCoordinateDelivery ? null : isPickup ? (
                         <Badge variant="outline" className="bg-pink-50 text-pink-600 border-pink-200">
                           Gratis
                         </Badge>
@@ -1094,6 +796,325 @@ export function UnifiedCheckoutForm({
           </RadioGroup>
         )}
       </Card>
+
+      {/* Delivery Information */}
+      {!isPickupSelected && (
+        <Card className="p-6 space-y-4">
+          <h2 className="text-lg font-semibold">Dirección de envío</h2>
+
+          {/* Saved Addresses for Authenticated Users */}
+          {isAuthenticated && currentUser && currentUser.addresses && currentUser.addresses.length > 0 && (
+            <div className="space-y-3">
+              <Label>Direcciones guardadas</Label>
+              <RadioGroup
+                value={selectedShippingAddressId || ""}
+                onValueChange={(value) => handleSelectShippingAddress(value)}
+                className="space-y-2"
+              >
+                {currentUser.addresses
+                  .filter((addr) => addr.addressType === AddressType.SHIPPING || addr.addressType === AddressType.BOTH)
+                  .map((address) =>
+                    renderAddressCard(
+                      address,
+                      selectedShippingAddressId === address.id,
+                      () => handleSelectShippingAddress(address.id)
+                    )
+                  )}
+              </RadioGroup>
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+                onClick={() => {
+                  if (showNewShippingAddress) {
+                    setShowNewShippingAddress(false)
+                  } else {
+                    setShowNewShippingAddress(true)
+                    handleDeselectShippingAddress()
+                  }
+                }}
+              >
+                {showNewShippingAddress ? (
+                  <>
+                    <Minus className="h-4 w-4" />
+                    Cancelar
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4" />
+                    Usar nueva dirección
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+
+          {/* New Shipping Address Form */}
+          {(showNewShippingAddress || !isAuthenticated || !currentUser?.addresses?.length) && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="address">
+                  Dirección <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="address"
+                  name="address"
+                  value={formData.address}
+                  onChange={(e) => {
+                    handleInputChange(e)
+                    if (e.target.value.trim() !== "") setAddressError(false)
+                  }}
+                  placeholder="Av. Principal 123"
+                  className={addressError ? "border-destructive" : ""}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="apartment">Apartamento, suite, etc. (opcional)</Label>
+                <Input
+                  id="apartment"
+                  name="apartment"
+                  value={formData.apartment}
+                  onChange={handleInputChange}
+                  placeholder="Apt. 4B"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="country">
+                    País <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={formData.countryCode3 || ""}
+                    onValueChange={handleCountryChange}
+                  disabled={allowedCountries.length === 0}
+                  >
+                    <SelectTrigger>
+                    <SelectValue placeholder={allowedCountries.length > 0 ? "Seleccionar país" : "Cargando países..."} />
+                    </SelectTrigger>
+                    <SelectContent>
+                    {allowedCountries.length > 0 ? (
+                      allowedCountries.map(c => (
+                          <SelectItem key={c.id} value={c.code3}>{c.name}</SelectItem>
+                        ))
+                      ) : (
+                        <div className="px-2 py-1.5 text-sm text-muted-foreground">Cargando países...</div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="state">
+                    Departamento <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={formData.stateId || ""}
+                    onValueChange={handleStateChange}
+                    disabled={!formData.countryCode3}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={formData.countryCode3 ? "Seleccionar departamento" : "Selecciona país primero"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(states[formData.countryId] || []).map(s => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="city">
+                    Ciudad <span className="text-destructive">*</span>
+                  </Label>
+                  <Select
+                    value={formData.cityId || ""}
+                    onValueChange={handleCityChange}
+                    disabled={!formData.stateId}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={formData.stateId ? "Seleccionar ciudad" : "Selecciona departamento primero"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(cities[formData.stateId] || []).map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="zipCode">
+                    Código postal <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="zipCode"
+                    name="zipCode"
+                    value={formData.zipCode}
+                    onChange={handleInputChange}
+                    placeholder="15001"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="shippingPhone">
+                  Teléfono <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="shippingPhone"
+                  name="shippingPhone"
+                  value={formData.shippingPhone}
+                  onChange={handleInputChange}
+                  placeholder="+51 999 999 999"
+                  required
+                />
+              </div>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Billing (hidden for pickup) */}
+      {!isPickupSelected && (
+        <>
+          {/* Billing Address Toggle */}
+          <div className="flex items-center space-x-2 p-4 bg-muted/20 rounded-lg">
+            <Checkbox
+              id="sameBillingAddress"
+              checked={formData.sameBillingAddress}
+              onCheckedChange={handleBillingAddressToggle}
+            />
+            <Label htmlFor="sameBillingAddress" className="text-sm cursor-pointer">
+              Usar la misma dirección para facturación
+            </Label>
+          </div>
+
+          {/* Billing Address */}
+          {!formData.sameBillingAddress && (
+            <Card className="p-6 space-y-4">
+              <h2 className="text-lg font-semibold">Dirección de facturación</h2>
+
+              {/* Similar structure as shipping address */}
+              {isAuthenticated && currentUser && currentUser.addresses && currentUser.addresses.length > 0 && (
+                <div className="space-y-3">
+                  <Label>Direcciones guardadas</Label>
+                  <RadioGroup
+                    value={selectedBillingAddressId || ""}
+                    onValueChange={(value) => handleSelectBillingAddress(value)}
+                    className="space-y-2"
+                  >
+                    {currentUser.addresses
+                      .filter((addr) => addr.addressType === AddressType.BILLING || addr.addressType === AddressType.BOTH)
+                      .map((address) =>
+                        renderAddressCard(
+                          address,
+                          selectedBillingAddressId === address.id,
+                          () => handleSelectBillingAddress(address.id)
+                        )
+                      )}
+                  </RadioGroup>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                    onClick={() => {
+                      if (showNewBillingAddress) {
+                        setShowNewBillingAddress(false)
+                      } else {
+                        setShowNewBillingAddress(true)
+                        handleDeselectBillingAddress()
+                      }
+                    }}
+                  >
+                    {showNewBillingAddress ? (
+                      <>
+                        <Minus className="h-4 w-4" />
+                        Cancelar
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4" />
+                        Usar nueva dirección
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+
+              {/* Billing Address Form */}
+              {(showNewBillingAddress || !isAuthenticated || !currentUser?.addresses?.length) && (
+                <div className="space-y-4">
+                  {showNewBillingAddress && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={copyShippingToBilling}
+                    >
+                      Copiar dirección de envío
+                    </Button>
+                  )}
+
+                  <Input
+                    value={formData.billingAddress}
+                    onChange={(e) =>
+                      handleInputChange({ target: { name: "billingAddress", value: e.target.value } } as any)
+                    }
+                    placeholder="Dirección"
+                    required={!formData.sameBillingAddress}
+                  />
+                  <Input
+                    value={formData.billingApartment}
+                    onChange={(e) =>
+                      handleInputChange({ target: { name: "billingApartment", value: e.target.value } } as any)
+                    }
+                    placeholder="Apartamento (opcional)"
+                  />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Input
+                      value={formData.billingCity}
+                      onChange={(e) =>
+                        handleInputChange({ target: { name: "billingCity", value: e.target.value } } as any)
+                      }
+                      placeholder="Ciudad"
+                    />
+                    <Input
+                      value={formData.billingState}
+                      onChange={(e) =>
+                        handleInputChange({ target: { name: "billingState", value: e.target.value } } as any)
+                      }
+                      placeholder="Provincia"
+                    />
+                    <Input
+                      value={formData.billingZipCode}
+                      onChange={(e) =>
+                        handleInputChange({ target: { name: "billingZipCode", value: e.target.value } } as any)
+                      }
+                      placeholder="Código postal"
+                    />
+                  </div>
+                  <Input
+                    value={formData.billingPhone}
+                    onChange={(e) =>
+                      handleInputChange({ target: { name: "billingPhone", value: e.target.value } } as any)
+                    }
+                    placeholder="Teléfono"
+                    required={!formData.sameBillingAddress}
+                  />
+                </div>
+              )}
+            </Card>
+          )}
+        </>
+      )}
 
       {/* Payment Method */}
       <Card className="p-6 space-y-4">
@@ -1144,20 +1165,9 @@ export function UnifiedCheckoutForm({
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="font-medium">{provider.name}</p>
-                            {providerIsPayPal && (
-                              <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 text-xs">
-                                {PAYPAL_MODE_LABEL}
-                              </Badge>
-                            )}
                           </div>
-                          {provider.description && (
+                          {provider.description && !providerIsPayPal && (
                             <p className="text-sm text-gray-500">{provider.description}</p>
-                          )}
-                          {providerIsPayPal && (
-                            <p className="text-sm text-gray-500">
-                              Paga de forma segura con PayPal. Disponible para pagos
-                              en USD.
-                            </p>
                           )}
                         </div>
                       </div>

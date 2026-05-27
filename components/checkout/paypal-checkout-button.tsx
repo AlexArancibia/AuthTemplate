@@ -1,7 +1,9 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
-import { CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useCurrencyStore } from "@/stores/currency";
+import { Loader2, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -123,6 +125,7 @@ export function PayPalCheckoutButton({
   const [isLoaded, setIsLoaded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { acceptedCurrencies, setSelectedCurrencyId } = useCurrencyStore();
 
   const sourceCurrency = currency?.toUpperCase() || "PEN";
   const paypalCurrency = PAYPAL_CURRENCY;
@@ -135,11 +138,26 @@ export function PayPalCheckoutButton({
     : "bg-amber-100 text-amber-700";
   const statusBadgeLabel = hasSupportedCurrencyFlow
     ? PAYPAL_BADGE_LABEL
-    : `${sourceCurrency} no disponible`;
+    : "USD requerido";
   const safeAmount = Number.isFinite(amountNumber)
     ? Math.max(amountNumber, 0).toFixed(2)
     : "0.00";
   const sourceAmountLabel = getCurrencyLabel(sourceCurrency, amountNumber);
+  const isSwitchingDisabled = disabled || isProcessing;
+
+  const switchToUsd = () => {
+    const usdOption = acceptedCurrencies.find(
+      (opt) => opt.code?.toUpperCase() === "USD"
+    );
+
+    if (!usdOption) {
+      toast.error("No se encontró USD en tus monedas configuradas.");
+      return;
+    }
+
+    setSelectedCurrencyId(usdOption.id);
+    toast.success("Moneda cambiada a USD.");
+  };
 
   useEffect(() => {
     if (!PAYPAL_CLIENT_ID) {
@@ -391,14 +409,7 @@ export function PayPalCheckoutButton({
                   hasSupportedCurrencyFlow ? "text-blue-600" : "text-amber-600"
                 }`}
               />
-              {hasSupportedCurrencyFlow
-                ? "Confirmar pago con PayPal"
-                : "PayPal no disponible para esta moneda"}
-            </p>
-            <p className="text-xs text-slate-500">
-              {hasSupportedCurrencyFlow
-                ? "Pago protegido por PayPal. Puedes pagar con tu cuenta o tarjeta habilitada por PayPal."
-                : "PayPal solo puede procesar pagos en USD para esta integración."}
+              PayPal
             </p>
           </div>
           <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${statusBadgeClassName}`}>
@@ -408,40 +419,22 @@ export function PayPalCheckoutButton({
       </div>
 
       <div className="p-4">
-        <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-              Total del pedido
-            </p>
-            <p className="text-xl font-semibold text-slate-950">
-              {sourceAmountLabel}
-            </p>
-            <p className="mt-1 text-xs text-slate-500">
-              {hasSupportedCurrencyFlow
-                ? `${PAYPAL_MODE_LABEL} procesará el cargo en ${paypalCurrency}.`
-                : "Para pagar con PayPal, cambia la moneda del checkout a USD."}
-            </p>
+        {!hasSupportedCurrencyFlow ? (
+          <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <div className="min-w-0">
+              <p className="font-medium">PayPal requiere USD</p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="shrink-0 bg-white"
+              onClick={switchToUsd}
+              disabled={isSwitchingDisabled}
+            >
+              Cambiar a USD
+            </Button>
           </div>
-        </div>
-
-        {hasSupportedCurrencyFlow ? (
-          <div className="mb-4 flex items-start gap-2 rounded-lg border border-emerald-100 bg-emerald-50 p-3 text-xs text-emerald-800">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-            <p>
-              Después de aprobar el pago, validaremos la transacción con PayPal
-              y marcaremos tu orden como pago exitoso automáticamente.
-            </p>
-          </div>
-        ) : (
-          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            <p className="font-medium">Cambia a USD para usar PayPal</p>
-            <p className="mt-1 text-xs leading-relaxed">
-              Puedes seleccionar USD en el selector de moneda de la tienda. Si
-              prefieres mantener el pedido en {sourceCurrency}, elige otro
-              método de pago disponible.
-            </p>
-          </div>
-        )}
+        ) : null}
 
       {error && hasSupportedCurrencyFlow && (
         <div className="mb-3 rounded-md border border-amber-200 bg-white p-3 text-sm text-amber-800">

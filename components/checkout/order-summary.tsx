@@ -407,6 +407,20 @@ function OrderSummaryContent({
   getShippingAddressData: () => AddressData
   getBillingAddressData: () => AddressData
 }) {
+  const selectedMethod = shippingMethods.find((m) => m.id === formData.shippingMethod)
+  const selectedMethodName = selectedMethod?.name?.toLowerCase() || ""
+  const isPickupSelected =
+    !!selectedMethod &&
+    (selectedMethodName.includes("recojo") ||
+      selectedMethodName.includes("pickup") ||
+      selectedMethodName.includes("tienda"))
+  const isCoordinateDelivery =
+    !!selectedMethod &&
+    (selectedMethodName.includes("coordinar") ||
+      selectedMethodName.includes("agencia") ||
+      selectedMethodName.includes("envio solo hasta agencia") ||
+      selectedMethodName.includes("envío solo hasta agencia"))
+
   return (
     <div className="space-y-4">
       <div className="space-y-4 mb-6">
@@ -459,8 +473,8 @@ function OrderSummaryContent({
       {showCouponMessage && (
         <p className={`mt-1 text-sm ${couponMessageStyle}`}>
           {totalDiscounts > 0 
-            ? `Cupón aplicado: ${couponCode}` 
-            : "Cupón no válido o no aplicable"}
+            ? `Cupón aplicado (${couponCode})` 
+            : "Cupón no aplicable"}
         </p>
       )}
     </div>
@@ -493,16 +507,9 @@ function OrderSummaryContent({
       <div className="flex justify-between">
         <span>
           {(() => {
-            const selectedMethod = shippingMethods.find(m => m.id === formData.shippingMethod)
             if (!selectedMethod) return "Envío"
-            
-            const methodName = selectedMethod.name.toLowerCase()
-            if (methodName.includes("recojo") || methodName.includes("pickup") || methodName.includes("tienda")) {
-              return "Recojo en tienda"
-            }
-            if (methodName.includes("envio solo hasta agencia") || methodName.includes("envío solo hasta agencia")) {
-              return "Envío solo hasta agencia"
-            }
+            if (isPickupSelected) return "Recojo en tienda"
+            if (isCoordinateDelivery) return "Coordinar entrega"
             return "Envío"
           })()}
         </span>
@@ -510,16 +517,16 @@ function OrderSummaryContent({
           if (!formData.shippingMethod) {
             return <span className="text-gray-400 italic">--</span>
           }
-          
-          const selectedMethod = shippingMethods.find(m => m.id === formData.shippingMethod)
+
           if (!selectedMethod) {
             return <span className="text-gray-400 italic">--</span>
           }
-          
-          const methodName = selectedMethod.name.toLowerCase()
-          const isPickup = methodName.includes("recojo") || methodName.includes("pickup") || methodName.includes("tienda")
-          
-          if (isPickup) {
+
+          if (isCoordinateDelivery) {
+            return <span className="text-gray-600 font-medium">A coordinar</span>
+          }
+
+          if (isPickupSelected) {
             return <span className="text-pink-600 font-semibold">Gratis</span>
           }
           
@@ -530,49 +537,10 @@ function OrderSummaryContent({
           return <span>{currency}{(typeof shipping === "number" && !isNaN(shipping) ? shipping : 0).toFixed(2)}</span>
         })()}
       </div>
-      {formData.shippingMethod && (() => {
-        const selectedMethod = shippingMethods.find(m => m.id === formData.shippingMethod)
-        if (!selectedMethod) return null
-        
-        const methodName = selectedMethod.name.toLowerCase()
-        const isPickup = methodName.includes("recojo") || methodName.includes("pickup") || methodName.includes("tienda")
-        if (isPickup) return null
-        
-        const priceData = selectedMethod.prices[0]
-        const freeThreshold = Number(priceData?.freeShippingThreshold || 100)
-        const subtotalAfterDiscount = subtotal - totalDiscounts
-        
-        if (shipping === 0 && subtotalAfterDiscount >= freeThreshold) {
-          return (
-            <div className="text-xs text-green-600 mt-1 font-medium">
-              ✓ ¡Calificaste para envío gratis!
-            </div>
-          )
-        } else if (freeThreshold && subtotalAfterDiscount < freeThreshold) {
-          const remaining = freeThreshold - subtotalAfterDiscount
-          return (
-            <div className="text-xs text-pink-600 mt-1">
-              Envío gratis desde {currency}{freeThreshold.toFixed(2)} (Te faltan {currency}{remaining.toFixed(2)})
-            </div>
-          )
-        }
-        return null
-      })()}
       
       {formData.shippingMethod && (() => {
-        const selectedMethod = shippingMethods.find(m => m.id === formData.shippingMethod)
         if (!selectedMethod) return null
-        
-        const methodName = selectedMethod.name.toLowerCase()
-        const isPickup = methodName.includes("recojo") || methodName.includes("pickup") || methodName.includes("tienda")
-        
-        if (isPickup) {
-          return (
-            <div className="text-xs text-gray-600 mt-1">
-              Disponible para recoger inmediatamente
-            </div>
-          )
-        }
+        if (isPickupSelected || isCoordinateDelivery) return null
         
         if (selectedMethod.minDeliveryDays && selectedMethod.maxDeliveryDays && selectedMethod.availableDays) {
           const dayTypeText = getDayType(selectedMethod.availableDays)
@@ -607,8 +575,8 @@ function OrderSummaryContent({
       </span>
     </div>
 
-    {/* Address Summary - Always show if addresses are filled */}
-    {formData.address && (
+    {/* Address Summary - Only for non-pickup */}
+    {!isPickupSelected && formData.address && (
       <div className="mt-6 pt-6 border-t">
         <div className="mb-4">
           <h3 className="font-medium text-base mb-2">Dirección de envío</h3>
