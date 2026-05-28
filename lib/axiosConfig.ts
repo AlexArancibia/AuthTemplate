@@ -1,5 +1,4 @@
 import axios, { type AxiosInstance, type InternalAxiosRequestConfig } from "axios"
-import { getApiErrorMessage } from "@/lib/api-errors"
 
 // Ensure environment variables are properly typed
 declare global {
@@ -52,11 +51,20 @@ apiClient.interceptors.response.use(
     if (error.response) {
       const url = error.config?.url
       const method = error.config?.method?.toUpperCase()
+      const data = error.response.data as { message?: string | string[] } | string | undefined
+      const message =
+        typeof data === "string"
+          ? data
+          : Array.isArray(data?.message)
+            ? data.message.join(". ")
+            : typeof data?.message === "string"
+              ? data.message
+              : error.message
       console.error("API Error:", {
         method,
         url,
         status: error.response.status,
-        message: getApiErrorMessage(error),
+        message,
         data: error.response.data,
       })
     } else if (error.request) {

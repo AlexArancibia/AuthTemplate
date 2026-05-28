@@ -8,17 +8,21 @@ type ApiErrorBody = {
 export function getApiErrorMessage(error: unknown, fallback = "Error inesperado"): string {
   if (!error || typeof error !== "object") return fallback
 
-  const axiosError = error as AxiosError<ApiErrorBody>
+  const axiosError = error as AxiosError<unknown>
   const data = axiosError.response?.data
 
-  if (typeof data === "string" && data.trim()) return data
+  if (typeof data === "string") {
+    const text = data.trim()
+    if (text) return text
+  }
 
-  if (data && typeof data === "object" && data.message) {
-    if (Array.isArray(data.message)) {
-      return data.message.filter(Boolean).join(". ")
+  if (data && typeof data === "object" && "message" in data) {
+    const body = data as ApiErrorBody
+    if (Array.isArray(body.message)) {
+      return body.message.filter(Boolean).join(". ")
     }
-    if (typeof data.message === "string" && data.message.trim()) {
-      return data.message
+    if (typeof body.message === "string" && body.message.trim()) {
+      return body.message
     }
   }
 

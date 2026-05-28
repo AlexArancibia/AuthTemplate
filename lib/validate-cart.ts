@@ -1,4 +1,4 @@
-import axios from "axios"
+import axios, { type AxiosResponse } from "axios"
 import apiClient from "@/lib/axiosConfig"
 import { extractApiData } from "@/lib/apiHelpers"
 import type { CartItem } from "@/stores/cartStore"
@@ -31,10 +31,10 @@ export async function validateCartItems(items: CartItem[]): Promise<CartValidati
   for (const item of items) {
     const label = `${item.product.title} - ${item.variant.title}`
     try {
-      const response = await apiClient.get(
+      const response: AxiosResponse = await apiClient.get(
         `/products/${STORE_ID}/variants/${item.variant.id}`,
       )
-      const variant = extractApiData<ProductVariant>(response)
+      const variant: ProductVariant = extractApiData<ProductVariant>(response)
 
       if (
         !variant?.id ||
