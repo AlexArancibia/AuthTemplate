@@ -1723,16 +1723,16 @@ const {
   // Render skeleton loading state
   if (pageLoading || userLoading) {
     return (
-      <div className="bg-gray-50 min-h-screen py-10">
+      <div className="bg-background min-h-screen py-10">
         <div className="container mx-auto px-4">
           {/* Skeleton Header */}
           <div className="max-w-4xl mx-auto mb-8">
-            <Skeleton className="h-10 w-40 mx-auto mb-6" />
+            <Skeleton className="h-10 w-40 mx-auto mb-6 rounded-none" />
             <div className="hidden md:flex justify-between items-center max-w-2xl mx-auto mb-8">
               {[1, 2, 3, 4].map((item) => (
                 <div key={item} className="flex flex-col items-center">
-                  <Skeleton className="w-10 h-10 rounded-full mb-2" />
-                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="w-10 h-10 rounded-none mb-2" />
+                  <Skeleton className="h-4 w-16 rounded-none" />
                 </div>
               ))}
             </div>
@@ -1742,13 +1742,13 @@ const {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Main Content Skeleton */}
               <div className="lg:col-span-2">
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                  <Skeleton className="h-8 w-48 mb-6" />
+                <div className="bg-background border border-border p-6">
+                  <Skeleton className="h-8 w-48 mb-6 rounded-none" />
 
                   {/* Cart Items Skeleton */}
                   {[1, 2, 3].map((item) => (
-                    <div key={item} className="flex items-center gap-4 py-4 border-b">
-                      <Skeleton className="w-20 h-20 rounded-md" />
+                    <div key={item} className="flex items-center gap-4 py-4 border-b border-border">
+                      <Skeleton className="w-20 h-20 rounded-none" />
                       <div className="flex-1">
                         <Skeleton className="h-5 w-3/4 mb-2" />
                         <Skeleton className="h-4 w-1/2 mb-1" />
@@ -1770,8 +1770,8 @@ const {
 
               {/* Order Summary Skeleton */}
               <div className="lg:col-span-1">
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                  <Skeleton className="h-7 w-40 mb-6" />
+                <div className="bg-background border border-border p-6">
+                  <Skeleton className="h-7 w-40 mb-6 rounded-none" />
 
                   {/* Cart Items Summary Skeleton */}
                   <div className="space-y-4 mb-6">
@@ -1819,11 +1819,12 @@ const {
   // If cart is empty and not in confirmation step, redirect to cart
   if (items.length === 0 && currentStep !== STEPS.CONFIRMATION) {
     return (
-      <div className="container mx-auto px-4 py-16 text-center">
-        <div className="max-w-md mx-auto">
-          <h1 className="text-2xl font-bold mb-4">Tu carrito está vacío</h1>
+      <div className="container-section py-16 md:py-32 text-center">
+        <div className="content-section max-w-md mx-auto">
+          <p className="eyebrow text-muted-foreground mb-3">Checkout</p>
+          <h1 className="font-display text-3xl mb-4">Tu carrito está vacío</h1>
           <p className="text-muted-foreground mb-8">Agrega productos a tu carrito para continuar con la compra.</p>
-          <Button asChild>
+          <Button asChild className="rounded-none">
             <Link href="/productos">Ver productos</Link>
           </Button>
         </div>
@@ -1840,12 +1841,15 @@ const {
   ]
 
   return (
-    <div className="bg-gradient-to-b from-slate-50 to-white min-h-screen py-12">
+    <div className="bg-background min-h-screen py-12 md:py-20">
       <div className="container max-w-6xl mx-auto px-4 sm:px-6">
         {/* Checkout Header */}
-        <div className="max-w-4xl mx-auto mb-12 pt-16">
-          <h1 className="text-2xl md:text-4xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700">
-            Checkout
+        <div className="max-w-4xl mx-auto mb-12 pt-8 md:pt-12">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logos/logo1.png" alt="Scentra" className="mx-auto mb-5 h-9 w-auto" />
+          <p className="eyebrow text-brand text-center mb-3">Compra segura</p>
+          <h1 className="font-display text-3xl md:text-5xl text-center mb-10 text-foreground">
+            Finaliza tu compra
           </h1>
 
           {/* Progress Steps */}
@@ -1860,7 +1864,7 @@ const {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
-                className="bg-white rounded-xl shadow-md border border-slate-100 p-6 sm:p-8"
+                className="bg-background border border-border p-6 sm:p-8"
               >
                 {/* Step 1: Cart Review */}
                 {currentStep === STEPS.CART_REVIEW && (

@@ -239,8 +239,8 @@ export function OrderSummary({
   const discountLabel = baseDiscountLabel
 
   return (
-    <div className="bg-white rounded-xl shadow-md border border-slate-100 p-6 sticky top-24">
-      <h2 className="text-xl font-semibold mb-4">Resumen del pedido</h2>
+    <div className="bg-secondary border border-border p-6 sticky top-24">
+      <h2 className="font-display text-xl mb-4">Resumen del pedido</h2>
 
       <div className="space-y-4 mb-6">
         {validItems.length > 0 ? (
@@ -260,7 +260,7 @@ export function OrderSummary({
             )
           })
         ) : (
-          <div className="text-sm text-gray-500 italic">No hay productos en el carrito</div>
+          <div className="text-sm text-muted-foreground italic">No hay productos en el carrito</div>
         )}
       </div>
 
@@ -268,7 +268,7 @@ export function OrderSummary({
 
       {/* Coupon Code Section */}
       <div className="mb-4">
-        <label htmlFor="coupon" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="coupon" className="block text-sm font-medium text-foreground mb-1">
           Código de descuento
         </label>
         <div className="flex">
@@ -277,13 +277,13 @@ export function OrderSummary({
             id="coupon"
             value={inputValue}
             onChange={handleCouponChange}
-            className="flex-1 border border-gray-300 rounded-l-md px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="flex-1 min-w-0 border border-border rounded-none bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand"
             placeholder="Ingresa tu código"
           />
           <button
             type="button"
             onClick={handleApplyCoupon}
-            className="bg-primary cursor-pointer text-white px-4 py-2 rounded-r-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="bg-foreground cursor-pointer text-background px-4 py-2 rounded-none text-sm hover:bg-foreground/90 focus:outline-none focus:ring-1 focus:ring-brand"
           >
             Aplicar
           </button>
@@ -331,12 +331,12 @@ export function OrderSummary({
           </span>
           {(() => {
             if (!formData.shippingMethod) {
-              return <span className="text-gray-400 italic">--</span>
+              return <span className="text-muted-foreground italic">--</span>
             }
-            
+
             const selectedMethod = shippingMethods.find(m => m.id === formData.shippingMethod)
             if (!selectedMethod) {
-              return <span className="text-gray-400 italic">--</span>
+              return <span className="text-muted-foreground italic">--</span>
             }
             
             const methodName = selectedMethod.name.toLowerCase()
@@ -344,7 +344,7 @@ export function OrderSummary({
             
             // Si es recojo, mostrar "Gratis" en azul
             if (isPickup) {
-              return <span className="text-blue-600 font-semibold">Gratis</span>
+              return <span className="text-foreground font-semibold">Gratis</span>
             }
             
             // Si el shipping es 0, mostrar "Gratis" en verde
@@ -378,7 +378,7 @@ export function OrderSummary({
           } else if (freeThreshold && subtotalForThreshold < freeThreshold) {
             const remaining = freeThreshold - subtotalForThreshold
             return (
-              <div className="text-xs text-blue-600 mt-1">
+              <div className="text-xs text-muted-foreground mt-1">
                 Envío gratis desde {currency}{freeThreshold.toFixed(2)} (Te faltan {currency}{remaining.toFixed(2)})
               </div>
             )
@@ -397,7 +397,7 @@ export function OrderSummary({
           // Si es recojo, mostrar mensaje diferente
           if (isPickup) {
             return (
-              <div className="text-xs text-gray-600 mt-1">
+              <div className="text-xs text-muted-foreground mt-1">
                 Disponible para recoger inmediatamente
               </div>
             )
@@ -413,7 +413,7 @@ export function OrderSummary({
             )
             
             return (
-              <div className="text-xs text-gray-600 mt-1">
+              <div className="text-xs text-muted-foreground mt-1">
                 <span className="font-medium">Llegada estimada:</span> {dateRange}
                 {selectedMethod.minDeliveryDays === selectedMethod.maxDeliveryDays 
                   ? ` (${selectedMethod.minDeliveryDays} ${dayTypeText})`
@@ -429,7 +429,7 @@ export function OrderSummary({
 
       <Separator className="my-4" />
 
-      <div className="flex justify-between font-bold text-lg">
+      <div className="flex justify-between font-display text-lg">
         <span>Total</span>
         <span>
           {currency}
@@ -439,21 +439,21 @@ export function OrderSummary({
 
       {/* Shipping Address Summary (only show in payment step) */}
       {currentStep === 2 && formData && (
-        <div className="mt-6 pt-6 border-t">
+        <div className="mt-6 pt-6 border-t border-border">
           <div className="mb-4">
-            <h3 className="font-medium text-base mb-2">Dirección de envío</h3>
+            <h3 className="font-display text-base mb-2">Dirección de envío</h3>
             {(() => {
               const shippingData = getShippingAddressData()
               return (
                 <>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     {shippingData.address || "No especificada"}
                     {shippingData.apartment && `, ${shippingData.apartment}`}
                     {shippingData.city && `, ${shippingData.city}`}
                     {shippingData.state && `, ${shippingData.state}`}
                     {shippingData.zipCode && ` ${shippingData.zipCode}`}
                   </p>
-                  {shippingData.shippingPhone && <p className="text-sm text-gray-600">Tel: {shippingData.shippingPhone}</p>}
+                  {shippingData.shippingPhone && <p className="text-sm text-muted-foreground">Tel: {shippingData.shippingPhone}</p>}
                 </>
               )
             })()}
@@ -461,22 +461,22 @@ export function OrderSummary({
 
           {/* Billing Address */}
           <div>
-            <h3 className="font-medium mb-2 text-base">Dirección de facturación</h3>
+            <h3 className="font-display mb-2 text-base">Dirección de facturación</h3>
             {formData.sameBillingAddress ? (
-              <p className="text-sm text-gray-600 italic">Misma que la dirección de envío</p>
+              <p className="text-sm text-muted-foreground italic">Misma que la dirección de envío</p>
             ) : (
               (() => {
                 const billingData = getBillingAddressData()
                 return (
                   <>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                       {billingData.address || "No especificada"}
                       {billingData.apartment && `, ${billingData.apartment}`}
                       {billingData.city && `, ${billingData.city}`}
                       {billingData.state && `, ${billingData.state}`}
                       {billingData.zipCode && ` ${billingData.zipCode}`}
                     </p>
-                    {billingData.billingPhone && <p className="text-sm text-gray-600">Tel: {billingData.billingPhone}</p>}
+                    {billingData.billingPhone && <p className="text-sm text-muted-foreground">Tel: {billingData.billingPhone}</p>}
                   </>
                 )
               })()

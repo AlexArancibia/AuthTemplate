@@ -10,6 +10,30 @@ import ProductFilterSidebar from "./_components/ProductFilterSidebar"
 import MobileFilterButton from "./_components/MobileFilterButton"
 import Link from "next/link"
 
+function CatalogHeader() {
+  return (
+    <header className="border-b border-border bg-background">
+      <div className="container-section pt-16 pb-10 md:pt-24 md:pb-14">
+        <div className="content-section">
+          <nav aria-label="Migas" className="eyebrow mb-5 flex items-center gap-2 text-muted-foreground">
+            <Link href="/" className="transition-colors hover:text-foreground">
+              Inicio
+            </Link>
+            <span aria-hidden className="text-border">/</span>
+            <span className="text-foreground">Catálogo</span>
+          </nav>
+          <p className="eyebrow text-brand">La colección Scentra</p>
+          <h1 className="mt-3 max-w-3xl">Todas las fragancias</h1>
+          <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground">
+            Perfumes de nicho, de diseñador y árabes, 100% originales. Filtra por marca,
+            familia olfativa o precio para encontrar tu próxima firma.
+          </p>
+        </div>
+      </div>
+    </header>
+  )
+}
+
 function ProductsContent() {
   const searchParams = useSearchParams()
   const [isClient, setIsClient] = useState(false)
@@ -21,14 +45,9 @@ function ProductsContent() {
 
   if (!isClient) {
     return (
-      <main className="min-h-screen bg-white">
-        <div className="container-section py-16 md:py-16 bg-[url('/fondoproduct.jpg')] bg-cover">
-          <div className="content-section text-center">
-            <h2 className="text-white mb-2">Nuestros Productos</h2>
-            <p className="text-white/90 text-lg">Descubre nuestra línea completa de productos de tenis de mesa: raquetas, gomas, mesas, robots, accesorios y más</p>
-          </div>
-        </div>
-        <div className="container-section py-8 md:py-16">
+      <main className="min-h-screen bg-background">
+        <CatalogHeader />
+        <div className="container-section py-10 md:py-16">
           <div className="content-section">
             <ProductListSkeleton />
           </div>
@@ -65,62 +84,43 @@ function ProductsContent() {
   })
 
   return (
-    <main className=" bg-white">
-      {/* Sección de encabezado con efecto de fade-in */}
-      <motion.section
-        className="relative h-[500px] md:h-[500px] sm:py-24 md:py-32 px-4 text-center bg-[url('/productsBanner.jpg')] bg-cover bg-center md:bg-top bg-no-repeat"
-
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.6 }}
+    <main className="bg-background">
+      {/* Cabecera editorial del catálogo */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
       >
-        <div className="absolute inset-0 z-0 bg-blue-600/20"></div>
-        <div className="absolute inset-0 z-0 bg-gradient-to-t from-black/100 via-black/40 to-black/30"></div>
-
-        <div className="relative z-10 w-full max-w-[1600px] mx-auto flex flex-col items-center justify-center h-full gap-6">
-          <h1 className="font-druk font-bold text-white text-center mb-6 pt-8">
-            Descubre Nuestras Ofertas
-          </h1>
-
-          {/* Botón */}
-
-          {/* Logos */}
-          <div className="mt-6 grid grid-cols-2 md:flex md:flex-wrap justify-center items-center gap-8 md:gap-24 px-4">
-            <img src="/xiom.png" alt="Xiom" className="h-5 md:h-8 w-auto" />
-            <img src="/sanwei.png" alt="Sanwei" className="h-5 md:h-8 w-auto" />
-            <img src="/butter2.png" alt="Butterfly" className="h-5 md:h-8 w-auto" />
-            <img src="/victas_logo2.png" alt="Victas" className="h-5 md:h-8 w-auto" />
-          </div>
-        </div>
-      </motion.section>
+        <CatalogHeader />
+      </motion.div>
 
       {/* Sección de productos con efecto de fade-in */}
       <motion.div
-        className="container-section py-8 md:py-16"
+        className="container-section py-10 md:py-16"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 1, delay: 0.5 }}
+        transition={{ duration: 0.6, delay: 0.15 }}
       >
         <div className="content-section">
           {/* Botón de filtros para móviles */}
           <MobileFilterButton />
-          
+
           {/* Layout de dos columnas: Sidebar + Productos */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            {/* Sidebar de Filtros - Ocupa 1 columna - Oculto en móviles */}
-            <motion.div
-              className="hidden lg:block lg:col-span-1"
-              initial={{ x: -20, opacity: 0 }}
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-[260px_1fr] lg:gap-10 xl:gap-12">
+            {/* Sidebar de Filtros - Oculto en móviles */}
+            <motion.aside
+              className="hidden lg:block"
+              initial={{ x: -16, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.1 }}
             >
               <ProductFilterSidebar />
-            </motion.div>
+            </motion.aside>
 
-            {/* Lista de Productos - Ocupa 3 columnas */}
+            {/* Lista de Productos */}
             <motion.div
-              className="lg:col-span-3"
-              initial={{ y: 20, opacity: 0 }}
+              className="min-w-0"
+              initial={{ y: 16, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
@@ -149,14 +149,9 @@ function ProductsContent() {
 export default function ProductsPage() {
   return (
     <Suspense fallback={
-      <main className="min-h-screen bg-white">
-        <div className="container-section py-16 md:py-16 bg-[url('/fondoproduct.jpg')] bg-cover">
-          <div className="content-section text-center">
-            <h2 className="text-white mb-2">Nuestros Productos</h2>
-            <p className="text-white/90 text-lg">Descubre nuestra línea completa de productos de tenis de mesa: raquetas, gomas, mesas, robots, accesorios y más</p>
-          </div>
-        </div>
-        <div className="container-section py-8 md:py-16">
+      <main className="min-h-screen bg-background">
+        <CatalogHeader />
+        <div className="container-section py-10 md:py-16">
           <div className="content-section">
             <ProductListSkeleton />
           </div>

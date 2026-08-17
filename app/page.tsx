@@ -1,125 +1,74 @@
 "use client"
 
-import { Loader2, Store, Mail, Phone, MapPin, Globe, Facebook, Instagram, Twitter, Youtube } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { useEffect, useState } from "react"
 import Link from "next/link"
-import { useMainStore } from "@/stores/mainStore"
-import { HeroSection } from "@/components/HeroSection"
-import { ProductCarousel } from "@/components/ProductCarousel"
-import { useEffect, Suspense, useState } from "react"
-import { usePathname } from "next/navigation"
-import CardSectionsContainer from "@/components/card-sections-container"
-import { BlogSection } from "@/components/BlogSection"
-import FeaturesSection from "@/components/FeaturesSection"
-import { AboutSection } from "@/components/AboutSection"
-import { DeliveryHeroSection } from "@/components/DeliverySection"
-import { useCurrencyStore, CurrencyOption } from "@/stores/currency"
-import { PublishBanner } from "@/components/PublishBanner"
-import { BrandsCarousel } from "@/components/BrandsCarousel"
-import { CollectionCarousel } from "@/components/CollectionCarousel"
-import { FeatureCollection } from "@/components/FeatureCollection"
-import { Testimonials } from "@/components/Testimonials"
-import { DeportistasCarousel } from "@/components/DeportistasCarousel"
-import { DeportistasCarouselMobile } from "@/components/DeportistasCarouselMobile"
-import { useIsMobile } from "@/hooks/useIsMobile"
+import { getPublishedPage } from "@/lib/pageBuilderV2"
+import { PageRenderer } from "@/components/page-builder/PageRenderer"
+import { ProductRail } from "@/components/page-builder/sections/ProductRail"
+import type { PageBuilderV2Page } from "@/types/pageBuilderV2"
 
 export default function HomePage() {
-  const pathname = usePathname()
-  const selectedCurrencyId = useCurrencyStore((state) => state.selectedCurrencyId);
-  const acceptedCurrencies = useCurrencyStore((state) => state.acceptedCurrencies);
-  const isMobile = useIsMobile()
-  const [isClient, setIsClient] = useState(false)
+  const [page, setPage] = useState<PageBuilderV2Page | null>(null)
+  const [status, setStatus] = useState<"loading" | "ready" | "empty">("loading")
 
   useEffect(() => {
-    setIsClient(true)
+    let active = true
+    getPublishedPage("inicio").then((p) => {
+      if (!active) return
+      if (p) {
+        setPage(p)
+        setStatus("ready")
+      } else {
+        setStatus("empty")
+      }
+    })
+    return () => {
+      active = false
+    }
   }, [])
 
-  useEffect(() => {
-    const tryScrollToHash = (hash: string, retries = 10) => {
-      if (!hash || hash === "#") return
-      const id = hash.replace("#", "")
-      const el = document.getElementById(id)
-      if (el) {
-        // espera un frame para asegurar layout listo
-        requestAnimationFrame(() => {
-          const headerHeight = 90 // h-18 from navbar (4.5rem = 72px) + extra spacing
-          const elementPosition = el.getBoundingClientRect().top
-          const offsetPosition = elementPosition + window.scrollY - headerHeight
+  if (status === "loading") {
+    return (
+      <div>
+        <div className="h-[82vh] min-h-[520px] w-full animate-pulse bg-secondary" />
+        <div className="container-section py-16">
+          <div className="content-section grid grid-cols-2 gap-5 sm:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="aspect-[3/4] animate-pulse bg-secondary" />
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
-          window.scrollTo({
-            top: offsetPosition,
-            behavior: "smooth"
-          })
-        })
-      } else if (retries > 0) {
-        // reintenta (por si el componente monta tarde)
-        setTimeout(() => tryScrollToHash(hash, retries - 1), 120)
-      }
-    }
+  if (status === "empty" || !page) {
+    // Graceful fallback if the CMS page is unavailable
+    return (
+      <div>
+        <section className="relative flex h-[70vh] min-h-[460px] items-center justify-center bg-foreground text-center">
+          <div className="container-section">
+            <span className="eyebrow text-white/70">Perfumería de autor en el Perú</span>
+            <h1 className="mt-4 text-white">Tu firma olfativa</h1>
+            <p className="mx-auto mt-5 max-w-xl text-white/70">
+              Árabes, diseñador y nicho — 100% originales.
+            </p>
+            <Link
+              href="/productos"
+              className="mt-8 inline-flex bg-brand px-8 py-4 text-xs font-semibold uppercase tracking-[0.16em] text-brand-foreground hover:bg-brand-dark"
+            >
+              Explorar perfumes
+            </Link>
+          </div>
+        </section>
+        <ProductRail
+          title="Los más pedidos en Perú"
+          eyebrow="Bestsellers"
+          source={{ type: "collection", collectionId: "col_09ded608-0ab9", limit: 8 }}
+        />
+      </div>
+    )
+  }
 
-    // 1) al montar / o navegar a /#algo
-    if (typeof window !== "undefined") {
-      tryScrollToHash(window.location.hash)
-    }
-
-    // 2) si cambia el hash estando en la misma página
-    const onHashChange = () => tryScrollToHash(window.location.hash)
-    window.addEventListener("hashchange", onHashChange)
-    return () => window.removeEventListener("hashchange", onHashChange)
-  }, [pathname])
-  
-  return (
-    <>
-    
-    <HeroSection />
-
-    <Suspense fallback={<div className="h-96 bg-muted animate-pulse" />}>
-        <FeaturesSection id="cs_5c596d6f-a27c" />
-      </Suspense>
-
-      <FeatureCollection
-        collectionId="col_306ba7b1-08a8"
-        selectedCurrencyId={selectedCurrencyId}
-        acceptedCurrencies={acceptedCurrencies}
-      />
-      <PublishBanner />
-
-      <CollectionCarousel
-        collectionId="col_6e93d324-65cd"
-        selectedCurrencyId={selectedCurrencyId}
-        acceptedCurrencies={acceptedCurrencies}
-        showExploreButton={false}
-        fallbackTitle="PRODUCTOS DESTACADOS"
-        emptyMessage="No hay productos destacados para mostrar."
-        className="bg-white"
-      />
-      <CollectionCarousel
-        collectionId="col_952bd8f7-4633"
-        selectedCurrencyId={selectedCurrencyId}
-        acceptedCurrencies={acceptedCurrencies}
-        showExploreButton={false}
-        fallbackTitle="ÚLTIMOS PRODUCTOS"
-        emptyMessage="Aún no hay productos recientes para mostrar."
-        className="pt-4 sm:pt-6 lg:pt-8 "
-      />
-      {/* <DeliveryHeroSection /> */}
-      {isClient && (
-        <>
-          {isMobile ? (
-            <DeportistasCarouselMobile />
-          ) : (
-            <DeportistasCarousel />
-          )}
-        </>
-      )}
-      <BrandsCarousel />
-      
-      
-
-      {/* <BlogSection /> */}
-      <Testimonials />
-      
-    </>
-  )
+  return <PageRenderer page={page} />
 }

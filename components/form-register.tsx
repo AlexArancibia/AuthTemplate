@@ -17,6 +17,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Separator } from "@/components/ui/separator"
 import ButtonSocial from "./button-social"
 import { Check, Eye, EyeOff, Loader2 } from "lucide-react"
+import Image from "next/image"
 
 const FormRegister = () => {
   const [isPending, startTransition] = useTransition()
@@ -93,145 +94,133 @@ const FormRegister = () => {
 
   // Obtener el color del texto de requisitos según el estado
   const getPasswordRequirementsColor = () => {
-    if (passwordValid === null) return "text-slate-500"
-    return passwordValid ? "text-teal-600" : "text-rose-500"
+    if (passwordValid === null) return "text-muted-foreground"
+    return passwordValid ? "text-green-600" : "text-red-500"
   }
 
   if (showConfirmation) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gradient-to-br from-slate-50 to-slate-100">
-        {/* Decorative elements */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-[30%] -left-[10%] w-[70%] h-[70%] rounded-full bg-rose-100/10 blur-3xl" />
-          <div className="absolute -bottom-[30%] -right-[10%] w-[70%] h-[70%] rounded-full bg-teal-100/10 blur-3xl" />
-          <div className="absolute top-[20%] right-[10%] w-[40%] h-[40%] rounded-full bg-sky-100/10 blur-3xl" />
+      <div className="w-full max-w-md">
+        <div className="flex justify-center mb-8">
+          <Image src="/logos/logo.png" alt="Scentra" width={120} height={20} className="h-5 w-auto" priority />
         </div>
 
-        <div className="w-full max-w-md relative z-10">
-          <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-md">
-            <CardHeader className="space-y-1 pb-2">
-              <div className="mx-auto rounded-full bg-teal-50 p-3 w-16 h-16 flex items-center justify-center shadow-sm">
-                <Check className="h-8 w-8 text-teal-600" />
-              </div>
-              <CardTitle className="text-2xl font-bold text-center mt-4 text-slate-700">
-                ¡Revisa tu bandeja de entrada!
-              </CardTitle>
-              <CardDescription className="text-center text-base text-slate-500">
-                Hemos enviado un enlace de verificación a <span className="font-medium">{form.getValues("email")}</span>
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 text-center">
-              <p className="text-slate-500">
-                Por favor, revisa tu correo electrónico y haz clic en el enlace de verificación para completar tu
-                registro. El enlace caducará en 24 horas.
-              </p>
-            </CardContent>
-            <CardFooter className="flex flex-col space-y-3 pb-8">
-              <Button
-                className="w-full h-11 border border-slate-200 hover:bg-slate-100 text-slate-700"
-                variant="outline"
-                onClick={() => router.push("/login")}
-              >
-                Volver al inicio de sesión
+        <Card className="border border-border rounded-none shadow-none bg-background">
+          <CardHeader className="space-y-1 pb-2 text-center">
+            <div className="mx-auto bg-brand p-3 w-14 h-14 flex items-center justify-center">
+              <Check className="h-7 w-7 text-brand-foreground" />
+            </div>
+            <CardTitle className="font-display text-2xl font-normal mt-4 text-foreground">
+              ¡Revisa tu bandeja de entrada!
+            </CardTitle>
+            <CardDescription className="text-base text-muted-foreground">
+              Hemos enviado un enlace de verificación a <span className="font-medium text-foreground">{form.getValues("email")}</span>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 text-center">
+            <p className="text-muted-foreground text-sm">
+              Por favor, revisa tu correo electrónico y haz clic en el enlace de verificación para completar tu
+              registro. El enlace caducará en 24 horas.
+            </p>
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-3 pb-8">
+            <Button
+              className="w-full h-11 rounded-none border-border"
+              variant="outline"
+              onClick={() => router.push("/login")}
+            >
+              Volver al inicio de sesión
+            </Button>
+            <p className="text-sm text-muted-foreground text-center">
+              ¿No recibiste el correo?{" "}
+              <Button variant="link" className="p-0 h-auto font-medium text-brand hover:text-brand-dark">
+                Reenviar correo de verificación
               </Button>
-              <p className="text-sm text-slate-500 text-center">
-                ¿No recibiste el correo?{" "}
-                <Button variant="link" className="p-0 h-auto font-medium text-slate-600 hover:text-slate-800">
-                  Reenviar correo de verificación
-                </Button>
-              </p>
-            </CardFooter>
-          </Card>
+            </p>
+          </CardFooter>
+        </Card>
 
-          <div className="mt-8 text-center text-xs text-slate-400">
-            © {new Date().getFullYear()} ANJ. Todos los derechos reservados.
-          </div>
+        <div className="mt-8 text-center text-xs text-muted-foreground">
+          © {new Date().getFullYear()} Scentra. Todos los derechos reservados.
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 pt-16 bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Decorative elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[30%] -left-[10%] w-[70%] h-[70%] rounded-full bg-rose-100/10 blur-3xl" />
-        <div className="absolute -bottom-[30%] -right-[10%] w-[70%] h-[70%] rounded-full bg-teal-100/10 blur-3xl" />
-        <div className="absolute top-[20%] right-[10%] w-[40%] h-[40%] rounded-full bg-sky-100/10 blur-3xl" />
+    <div className="w-full max-w-md">
+      <div className="flex justify-center mb-8">
+        <Image src="/logos/logo.png" alt="Scentra" width={120} height={20} className="h-5 w-auto" priority />
       </div>
 
-      <div className="w-full max-w-md relative z-10">
-        {/* Logo or brand element */}
- 
+      <Card className="border border-border rounded-none shadow-none bg-background">
+        <CardHeader className="space-y-2 pb-6 text-center">
+          <CardTitle className="font-display text-3xl font-normal text-foreground">Crear una cuenta</CardTitle>
+          <CardDescription className="text-muted-foreground">
+            Ingresa tus datos para crear tu cuenta
+          </CardDescription>
+        </CardHeader>
 
-        <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-md">
-          <CardHeader className="space-y-1 pb-6">
-            <CardTitle className="text-2xl font-bold text-center text-slate-700">Crear una cuenta</CardTitle>
-            <CardDescription className="text-center text-slate-500">
-              Ingresa tus datos para crear tu cuenta
-            </CardDescription>
-          </CardHeader>
+        <CardContent className="space-y-6">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem className="space-y-1.5">
+                    <FormLabel className="text-sm font-medium text-foreground">Nombre completo</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Juan Pérez"
+                        type="text"
+                        className="h-11 rounded-none border-border bg-background"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
 
-          <CardContent className="space-y-6">
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1.5">
-                      <FormLabel className="text-sm font-medium text-slate-700">Nombre completo</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Juan Pérez"
-                          type="text"
-                          className="h-11 bg-white border-slate-200 focus:border-slate-400 focus:ring-slate-400/20 transition-all duration-200"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem className="space-y-1.5">
-                      <FormLabel className="text-sm font-medium text-slate-700">Correo electrónico</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="nombre@ejemplo.com"
-                          type="email"
-                          className="h-11 bg-white border-slate-200 focus:border-slate-400 focus:ring-slate-400/20 transition-all duration-200"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
-                />
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem className="space-y-1.5">
+                    <FormLabel className="text-sm font-medium text-foreground">Correo electrónico</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="nombre@ejemplo.com"
+                        type="email"
+                        className="h-11 rounded-none border-border bg-background"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage className="text-xs" />
+                  </FormItem>
+                )}
+              />
 
                 <FormField
                   control={form.control}
                   name="password"
                   render={({ field }) => (
                     <FormItem className="space-y-1.5">
-                      <FormLabel className="text-sm font-medium text-slate-700">Contraseña</FormLabel>
+                      <FormLabel className="text-sm font-medium text-foreground">Contraseña</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Input
                             placeholder="••••••••"
                             type={showPassword ? "text" : "password"}
-                            className="h-11 pr-10 bg-white border-slate-200 focus:border-slate-400 focus:ring-slate-400/20 transition-all duration-200"
+                            className="h-11 pr-10 rounded-none border-border bg-background"
                             {...field}
                           />
                           <Button
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="absolute right-0 top-0 h-full px-3 py-2 text-slate-400 hover:text-slate-600"
+                            className="absolute right-0 top-0 h-full px-3 py-2 text-muted-foreground hover:text-foreground"
                             onClick={() => setShowPassword(!showPassword)}
                           >
                             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -252,34 +241,34 @@ const FormRegister = () => {
                 />
 
                 {formError && (
-                  <div className="p-3 text-sm rounded-md text-red-700 bg-red-100 border border-red-300">
+                  <div className="p-3 text-sm text-red-700 bg-red-50 border border-red-200">
                     {formError}
                   </div>
                 )}
 
-                <div className="flex flex-row items-start space-x-3 space-y-0 rounded-md border border-slate-200 p-4 bg-white">
-                  <div className="flex h-4 w-4 items-center justify-center rounded-sm border border-slate-400">
+                <div className="flex flex-row items-start space-x-3 space-y-0 border border-border p-4 bg-background">
+                  <div className="flex h-4 w-4 items-center justify-center border border-foreground">
                     <input
                       type="checkbox"
-                      className="h-3 w-3 cursor-pointer"
+                      className="h-3 w-3 cursor-pointer accent-brand"
                       checked={acceptedTerms}
                       onChange={(e) => setAcceptedTerms(e.target.checked)}
                       id="terms"
                     />
                   </div>
                   <div className="space-y-1 leading-none">
-                    <label htmlFor="terms" className="text-sm text-slate-600 leading-none cursor-pointer">
+                    <label htmlFor="terms" className="text-sm text-muted-foreground leading-none cursor-pointer">
                       Acepto los{" "}
                       <Link
                         href="/terms"
-                        className="text-slate-700 hover:text-slate-900 hover:underline transition-colors"
+                        className="text-brand hover:text-brand-dark hover:underline transition-colors"
                       >
                         Términos de Servicio
                       </Link>{" "}
                       y la{" "}
                       <Link
                         href="/privacy"
-                        className="text-slate-700 hover:text-slate-900 hover:underline transition-colors"
+                        className="text-brand hover:text-brand-dark hover:underline transition-colors"
                       >
                         Política de Privacidad
                       </Link>
@@ -289,7 +278,7 @@ const FormRegister = () => {
 
                 <Button
                   type="submit"
-                  className="w-full h-11 mt-2 bg-slate-700 hover:bg-slate-800 transition-all duration-300 shadow-md hover:shadow-lg"
+                  className="w-full h-11 mt-2 rounded-none"
                   disabled={isPending}
                 >
                   {isPending ? (
@@ -308,8 +297,8 @@ const FormRegister = () => {
               <div className="absolute inset-0 flex items-center">
                 <Separator className="w-full" />
               </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-3 text-slate-400">O continuar con</span>
+              <div className="relative flex justify-center text-xs uppercase tracking-widest">
+                <span className="bg-background px-3 text-muted-foreground">O continuar con</span>
               </div>
             </div>
 
@@ -339,11 +328,11 @@ const FormRegister = () => {
           </CardContent>
 
           <CardFooter className="flex justify-center pb-8 pt-2">
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
               ¿Ya tienes una cuenta?{" "}
               <Link
                 href="/login"
-                className="font-medium text-slate-600 hover:text-slate-800 hover:underline transition-colors"
+                className="font-medium text-brand hover:text-brand-dark transition-colors"
               >
                 Iniciar sesión
               </Link>
@@ -351,9 +340,8 @@ const FormRegister = () => {
           </CardFooter>
         </Card>
 
-        <div className="mt-8 text-center text-xs text-slate-400">
-          © {new Date().getFullYear()} ANJ. Todos los derechos reservados.
-        </div>
+      <div className="mt-8 text-center text-xs text-muted-foreground">
+        © {new Date().getFullYear()} Scentra. Todos los derechos reservados.
       </div>
     </div>
   )

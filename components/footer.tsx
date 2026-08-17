@@ -1,367 +1,212 @@
 "use client"
 
-import type React from "react"
-import { motion } from "framer-motion"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Separator } from "@/components/ui/separator"
-import { toast } from "sonner"
-import {
-  Facebook,
-  Instagram,
-  Twitter,
-  Youtube,
-  Mail,
-  Phone,
-  MapPin,
-  Clock,
-  Send,
-  Heart,
-  Shield,
-  FileText,
-  BookOpen,
-  LogIn,
-  User,
-  Tag,
-  History,
-  HelpCircle,
-  CreditCard,
-  RotateCcw,
-  Megaphone,
-  Star,
-  UserCog,
-} from "lucide-react"
 import { useMainStore } from "@/stores/mainStore"
+import { Facebook, Instagram, Youtube, Mail, Phone, MapPin } from "lucide-react"
+import { toast } from "sonner"
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      delayChildren: 0.1,
-      staggerChildren: 0.1,
-    },
-  },
-}
+const shopLinks = [
+  { name: "Perfumes de Nicho", href: "/productos?category=perfumes-de-nicho" },
+  { name: "Perfumes de Diseñador", href: "/productos?category=perfumes-de-disenador" },
+  { name: "Perfumes Árabes", href: "/productos?category=perfumes-arabes" },
+  { name: "Sets y Estuches", href: "/productos?category=sets-y-estuches" },
+  { name: "Todas las fragancias", href: "/productos" },
+  { name: "Diario", href: "/blog" },
+]
 
-const itemVariants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: {
-    y: 0,
-    opacity: 1,
-    transition: {
-      duration: 0.5,
-    },
-  },
-}
+const helpLinks = [
+  { name: "Preguntas frecuentes", href: "/preguntas-frecuentes" },
+  { name: "Formas de pago", href: "/formas-pago" },
+  { name: "Cambios y devoluciones", href: "/cambios-devoluciones" },
+  { name: "Contáctanos", href: "/contactenos" },
+  { name: "Libro de reclamaciones", href: "/libro-de-reclamaciones" },
+]
+
+const legalLinks = [
+  { name: "Términos y condiciones", href: "/terminos-y-condiciones" },
+  { name: "Política de privacidad", href: "/politica-de-privacidad" },
+  { name: "Política de cookies", href: "/politica-de-cookies" },
+  { name: "Política de envíos", href: "/politica-de-envios" },
+]
 
 export function Footer() {
-  const [email, setEmail] = useState("")
-  const [isSubscribing, setIsSubscribing] = useState(false)
   const { shopSettings } = useMainStore()
-  const pathname = usePathname()
+  const settings = shopSettings?.[0]
+  const [email, setEmail] = useState("")
 
-  const onClickTestimonios: React.MouseEventHandler<HTMLAnchorElement> = (e) => {
-    if (pathname === "/") {
-      e.preventDefault()
-      const el = document.getElementById("testimonios")
-      if (el) {
-        const headerHeight = 90 // h-18 from navbar (4.5rem = 72px) + extra spacing
-        const elementPosition = el.getBoundingClientRect().top
-        const offsetPosition = elementPosition + window.scrollY - headerHeight
-
-        window.scrollTo({
-          top: offsetPosition,
-          behavior: "smooth"
-        })
-        // actualiza el hash sin navegar
-        history.replaceState(null, "", "/#testimonios")
-      }
-    }
-  }
-
-  const shopInfo = shopSettings?.[0]
-
-  const handleNewsletterSubmit = async (e: React.FormEvent) => {
+  const onSubscribe = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email) return
-
-    setIsSubscribing(true)
-    try {
-      // Simular suscripción al newsletter
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      toast.success("¡Suscripción exitosa!", {
-        description: "Te has suscrito correctamente a nuestro newsletter.",
-      })
-      setEmail("")
-    } catch (error) {
-      toast.error("Error al suscribirse", {
-        description: "Por favor, inténtalo de nuevo más tarde.",
-      })
-    } finally {
-      setIsSubscribing(false)
-    }
+    if (!email.includes("@")) return
+    toast.success("¡Gracias por suscribirte!", {
+      description: "Recibirás novedades y lanzamientos de Scentra.",
+    })
+    setEmail("")
   }
 
-  const navigationLinks = [
-    { name: "Login", href: "/login", icon: LogIn },
-    { name: "Tu cuenta", href: "/login", icon: User },
-    { name: "Ofertas", href: "/ofertas", icon: Tag },
-    { name: "Hstorial de pedidos", href: "/historial", icon: History },
-  ]
-
-  const serviceClientLinks = [
-    { name: "Preguntas Frecuentes", href: "/preguntas-frecuentes", icon: HelpCircle },
-    { name: "Formas de Pago", href: "/formas-pago", icon: CreditCard },
-    { name: "Cambios y Devoluciones", href: "/cambios-devoluciones", icon: RotateCcw },
-  ]
-
-  const legalLinksVisible = [
-    { name: "Términos y Condiciones", href: "/terminos-y-condiciones", icon: FileText },
-    { name: "Política de Privacidad", href: "/politica-de-privacidad", icon: Shield },
-    { name: "Libro de Reclamaciones", href: "/libro-de-reclamaciones", icon: BookOpen },
-  ]
-
-  const aboutAJN = [
-    { name: "Nosotros", href: "/nosotros", icon: FileText },
-    { name: "Nuestros Productos", href: "/productos", icon: Star },
-    { name: "Testimonios", href: "/#testimonios", icon: Megaphone },
-    { name: "Noticias", href: "/nosotros", icon: BookOpen },
-  ]
-
-  const socialLinks = [
-    { name: "Facebook", icon: Facebook, href: shopInfo?.facebookUrl || "#" },
-    { name: "Instagram", icon: Instagram, href: shopInfo?.instagramUrl || "#" },
-    { name: "Twitter", icon: Twitter, href: shopInfo?.twitterUrl || "#" },
-    { name: "YouTube", icon: Youtube, href: shopInfo?.youtubeUrl || "#" },
-  ]
-
-  // Construir dirección desde shopSettings
-  const getAddress = () => {
-    if (!shopInfo) return "Dirección no disponible"
-
-    const addressParts = [
-      shopInfo.address1,
-      shopInfo.address2,
-      shopInfo.city,
-      shopInfo.province,
-      shopInfo.zip,
-      shopInfo.country,
-    ].filter(Boolean)
-
-    return addressParts.length > 0 ? addressParts.join(", ") : "Dirección no disponible"
-  }
+  const year = 2026
 
   return (
-    <footer className="bg-black text-white">
-      <div className="container mx-auto px-4 py-12">
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
-        >
-          {/* Información de la empresa */}
-          <motion.div variants={itemVariants} className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Mi cuenta</h3>
-              {/* <img src={shopSettings[0]?.logo3} className="h-32 w-32 object-contain" alt="Logo" /> */}
-              {/* <p className="text-gray-300 text-sm leading-relaxed">
-                {shopInfo?.description ||
-                  "Comprometidos con la excelencia y la satisfacción de nuestros clientes. Ofrecemos productos y servicios de la más alta calidad."}
-              </p> */}
-              <ul className="space-y-2">
-                {navigationLinks.map((link) => {
-                  const IconComponent = link.icon
-                  return (
-                    <li key={link.name}>
-                      <Link
-                        href={link.href}
-                        className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors text-sm group"
-                      >
-                        {IconComponent && (
-                          <IconComponent className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                        )}
-                        <span>{link.name}</span>
-                      </Link>
-                    </li>
-                  )
-                })}
-              </ul>
+    <footer className="bg-foreground text-background/80">
+      {/* Newsletter band */}
+      <div className="border-b border-white/10">
+        <div className="container-section">
+          <div className="content-section flex flex-col items-center gap-6 py-14 text-center md:flex-row md:justify-between md:text-left">
+            <div className="max-w-md">
+              <h3 className="font-display text-2xl text-background md:text-3xl">
+                Encuentra tu firma olfativa
+              </h3>
+              <p className="mt-2 text-sm text-background/60">
+                Suscríbete y recibe novedades, lanzamientos y asesoría olfativa.
+              </p>
             </div>
+            <form onSubmit={onSubscribe} className="flex w-full max-w-md items-center gap-0">
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Tu correo electrónico"
+                className="h-12 flex-1 border border-white/20 bg-transparent px-4 text-sm text-background placeholder:text-background/40 focus:border-brand focus:outline-none"
+              />
+              <button
+                type="submit"
+                className="h-12 bg-brand px-6 text-xs font-semibold uppercase tracking-[0.14em] text-brand-foreground transition-colors hover:bg-brand-dark"
+              >
+                Suscribir
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
 
-            {/* Newsletter */}
-           
-          </motion.div>
-
-          {/* Enlaces de servicio al cliente */}
-          <motion.div variants={itemVariants}>
-            <h3 className="text-lg font-semibold mb-4">Servicio al Cliente</h3>
-            <ul className="space-y-2">
-              {serviceClientLinks.map((link) => {
-                const IconComponent = link.icon
-                return (
-                  <li key={link.name}>
-                    <Link
-                      href={link.href}
-                      className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors text-sm group"
-                    >
-                      {IconComponent && (
-                        <IconComponent className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                      )}
-                      <span>{link.name}</span>
-                    </Link>
-                  </li>
-                )
-              })}
-            </ul>
-
-            {/* Enlaces legales importantes */}
-            <h3 className="text-lg font-semibold mb-4 mt-8">Legal</h3>
-            <ul className="space-y-2">
-              {legalLinksVisible.map((link) => {
-                const IconComponent = link.icon
-                return (
-                  <li key={link.name}>
-                    <Link
-                      href={link.href}
-                      className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors text-sm group"
-                    >
-                      {IconComponent && (
-                        <IconComponent className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                      )}
-                      <span>{link.name}</span>
-                    </Link>
-                  </li>
-                )
-              })}
-            </ul>
-          </motion.div>
-
-          {/* Enlaces legales */}
-          <motion.div variants={itemVariants}>
-            <h3 className="text-lg font-semibold mb-4">Sobre ANJ</h3>
-            <ul className="space-y-2">
-              {aboutAJN.map((link) => {
-                const IconComponent = link.icon
-                return (
-                  <li key={link.name}>
-                    <Link
-                      href={link.href}
-                      className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors text-sm group"
-                    >
-                      {IconComponent && (
-                        <IconComponent className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                      )}
-                      <span>{link.name}</span>
-                    </Link>
-                  </li>
-                )
-              })}
-            </ul>
-          </motion.div>
-
-          {/* Información de contacto */}
-          <motion.div variants={itemVariants}>
-            <h3 className="text-lg font-semibold mb-4">Contacto</h3>
-            <div className="space-y-3">
-              {(shopInfo?.shopOwner || shopInfo?.city) && (
-                <a
-                  href="https://api.whatsapp.com/send/?phone=51986607951&text&type=phone_number&app_absent=0"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-start space-x-3"
-                >
-                  <UserCog className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-gray-300 text-sm">{shopInfo?.shopOwner}</p>
+      {/* Main */}
+      <div className="container-section">
+        <div className="content-section grid grid-cols-2 gap-10 py-14 md:grid-cols-4 lg:grid-cols-5">
+          {/* Brand */}
+          <div className="col-span-2 lg:col-span-2">
+            <Link href="/" aria-label="Scentra inicio">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logos/logo.png" alt="Scentra" className="h-5 w-auto brightness-0 invert" />
+            </Link>
+            <p className="mt-5 max-w-xs text-sm leading-relaxed text-background/60">
+              {settings?.description ||
+                "Perfumería de autor en el Perú. Fragancias árabes, de diseñador y de nicho, 100% originales."}
+            </p>
+            <div className="mt-6 space-y-2 text-sm text-background/60">
+              {(settings?.address1 || settings?.city) && (
+                <p className="flex items-start gap-2">
+                  <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-brand" />
+                  <span>
+                    {[settings?.address1, settings?.address2, settings?.city, settings?.country]
+                      .filter(Boolean)
+                      .join(", ")}
+                  </span>
+                </p>
+              )}
+              {settings?.phone && (
+                <a href={`tel:${settings.phone}`} className="flex items-center gap-2 hover:text-background">
+                  <Phone className="h-4 w-4 flex-shrink-0 text-brand" />
+                  {settings.phone}
                 </a>
               )}
-
-              {(shopInfo?.address1 || shopInfo?.city) && (
-                <div className="flex items-start space-x-3">
-                  <MapPin className="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-gray-300 text-sm">{getAddress()}</p>
-                </div>
-              )}
-
-              {(shopInfo?.phone || shopInfo?.supportPhone) && (
-                <div className="flex items-center space-x-3">
-                  <Phone className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                  <div>
-                    <p className="text-gray-300 text-sm">{shopInfo?.phone || shopInfo?.supportPhone}</p>
-                    {shopInfo?.supportPhone && shopInfo.supportPhone !== shopInfo.phone && (
-                      <p className="text-gray-300 text-sm">{shopInfo.supportPhone}</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {(shopInfo?.email || shopInfo?.supportEmail) && (
-                <div className="flex items-center space-x-3">
-                  <Mail className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                  <div>
-                    <p className="text-gray-300 text-sm">{shopInfo?.email || shopInfo?.supportEmail}</p>
-                    {shopInfo?.supportEmail && shopInfo.supportEmail !== shopInfo.email && (
-                      <p className="text-gray-300 text-sm">{shopInfo.supportEmail}</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center space-x-3">
-                <Clock className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                <p className="text-gray-300 text-sm">Lun - Vie: 9:00 AM - 6:00 PM</p>
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
-
-        <Separator className="my-8 bg-gray-700" />
-
-        {/* Copyright y Redes Sociales */}
-        <motion.div
-          variants={itemVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0"
-        >
-          {/* Copyright */}
-          <div className="text-center md:text-left">
-            <p className="text-gray-400 text-sm flex items-center justify-center md:justify-start space-x-1">
-              <span>© {new Date().getFullYear()}</span>
-              <span>{shopInfo?.name || "Nuestra Empresa"}.</span>
-              <span>Todos los derechos reservados.</span>
-            </p>
-            <p className="text-gray-400 text-sm flex items-center justify-center md:justify-start space-x-1 mt-1">
-              <span>Desarrollado por Emet Studio</span>
-            </p>
-          </div>
-
-          {/* Redes sociales */}
-          <div className="flex space-x-4">
-            {socialLinks.map((social) => {
-              const IconComponent = social.icon
-              return (
+              {(settings?.email || settings?.supportEmail) && (
                 <a
-                  key={social.name}
-                  href={social.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-400 hover:text-white transition-colors p-2 hover:bg-gray-800 rounded-full"
-                  aria-label={social.name}
+                  href={`mailto:${settings?.supportEmail || settings?.email}`}
+                  className="flex items-center gap-2 hover:text-background"
                 >
-                  <IconComponent className="w-5 h-5" />
+                  <Mail className="h-4 w-4 flex-shrink-0 text-brand" />
+                  {settings?.supportEmail || settings?.email}
                 </a>
-              )
-            })}
+              )}
+            </div>
           </div>
-        </motion.div>
+
+          <FooterColumn title="Tienda" links={shopLinks} />
+          <FooterColumn title="Ayuda" links={helpLinks} />
+          <FooterColumn title="Legal" links={legalLinks} />
+        </div>
+      </div>
+
+      {/* Bottom */}
+      <div className="border-t border-white/10">
+        <div className="container-section">
+          <div className="content-section flex flex-col items-center justify-between gap-4 py-6 text-xs text-background/50 sm:flex-row">
+            <p>© {year} Scentra. Todos los derechos reservados.</p>
+            <div className="flex items-center gap-3">
+              {settings?.instagramUrl && (
+                <SocialIcon href={settings.instagramUrl} label="Instagram">
+                  <Instagram className="h-4 w-4" />
+                </SocialIcon>
+              )}
+              {settings?.facebookUrl && (
+                <SocialIcon href={settings.facebookUrl} label="Facebook">
+                  <Facebook className="h-4 w-4" />
+                </SocialIcon>
+              )}
+              {settings?.youtubeUrl && (
+                <SocialIcon href={settings.youtubeUrl} label="YouTube">
+                  <Youtube className="h-4 w-4" />
+                </SocialIcon>
+              )}
+              {settings?.tiktokUrl && (
+                <SocialIcon href={settings.tiktokUrl} label="TikTok">
+                  <span className="text-[11px] font-semibold">TikTok</span>
+                </SocialIcon>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </footer>
   )
 }
+
+function FooterColumn({
+  title,
+  links,
+}: {
+  title: string
+  links: { name: string; href: string }[]
+}) {
+  return (
+    <div>
+      <h4 className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-background">
+        {title}
+      </h4>
+      <ul className="space-y-2.5">
+        {links.map((link) => (
+          <li key={link.href}>
+            <Link href={link.href} className="text-sm text-background/60 transition-colors hover:text-background">
+              {link.name}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function SocialIcon({
+  href,
+  label,
+  children,
+}: {
+  href: string
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={label}
+      className="flex h-9 items-center justify-center rounded-full border border-white/15 px-3 text-background/70 transition-colors hover:border-brand hover:text-brand"
+    >
+      {children}
+    </a>
+  )
+}
+
+export default Footer

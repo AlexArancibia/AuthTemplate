@@ -58,7 +58,7 @@ export default function MobileMenu({
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 lg:hidden text-secondary hover:text-primary hover:bg-secondary/10"
+          className="h-9 w-9 lg:hidden text-foreground hover:bg-secondary"
           aria-label="Abrir menú"
         >
           <Menu className="h-5 w-5" aria-hidden="true" />
@@ -70,10 +70,10 @@ export default function MobileMenu({
         <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-3">
           <div className="flex items-start justify-start">
             {shopLogo ? (
-              <img 
-                src={shopLogo} 
-                alt={shopName} 
-                className="h-8 w-auto object-contain"
+              <img
+                src={shopLogo}
+                alt={shopName}
+                className="h-12 w-auto object-contain"
               />
             ) : (
               <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
@@ -104,33 +104,48 @@ export default function MobileMenu({
             </div>
           </div>
 
+          {/* Shop by scent (collections) */}
+          {collections.filter((c) => c.isFeatured).length > 0 && (
+            <div>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-gray-600 mb-2">Comprar por aroma</h2>
+              <div className="space-y-1">
+                {collections.filter((c) => c.isFeatured).map((collection) => (
+                  <SheetClose asChild key={collection.id}>
+                    <Link
+                      href={`/productos?collections=${collection.id}`}
+                      className="block px-2 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                    >
+                      {collection.title}
+                    </Link>
+                  </SheetClose>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Separator */}
           <div className="border-t border-gray-200 my-4"></div>
 
           {/* Main Navigation */}
           <div className="space-y-1">
-            <SheetClose asChild>
-              <Link
-                href="/productos"
-                className={cn(
-                  "block px-2 py-2 text-sm font-medium text-gray-900 hover:bg-gray-100 rounded-md transition-colors",
-                  pathname.startsWith("/productos") && "bg-primary/10 text-primary"
-                )}
-              >
-                Todos los Productos
-              </Link>
-            </SheetClose>
-            <SheetClose asChild>
-              <Link
-                href="/contactenos"
-                className={cn(
-                  "block px-2 py-2 text-sm font-medium text-gray-900 hover:bg-gray-100 rounded-md transition-colors",
-                  pathname === "/contactenos" && "bg-primary/10 text-primary"
-                )}
-              >
-                Contacto
-              </Link>
-            </SheetClose>
+            {[
+              { name: "Todos los productos", href: "/productos" },
+              { name: "Nosotros", href: "/nosotros" },
+              { name: "Contacto", href: "/contactenos" },
+            ].map((item) => (
+              <SheetClose asChild key={item.href}>
+                <Link
+                  href={item.href}
+                  className={cn(
+                    "block px-2 py-2 text-sm font-medium text-gray-900 hover:bg-gray-100 rounded-md transition-colors",
+                    (item.href === "/productos" ? pathname.startsWith("/productos") : pathname === item.href) &&
+                      "bg-secondary text-foreground"
+                  )}
+                >
+                  {item.name}
+                </Link>
+              </SheetClose>
+            ))}
           </div>
 
           {/* User Section */}

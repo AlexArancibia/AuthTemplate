@@ -2,25 +2,37 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export default function ProductListSkeleton() {
   return (
-    <div className="flex flex-col lg:flex-row gap-8">
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-[260px_1fr] lg:gap-10 xl:gap-12">
       {/* Sidebar skeleton */}
-      <aside className="hidden lg:block w-64 flex-shrink-0">
-        <Skeleton className="h-[600px] w-full" />
+      <aside className="hidden space-y-8 lg:block">
+        {[...Array(4)].map((_, section) => (
+          <div key={section} className="space-y-3">
+            <Skeleton className="h-3 w-28 rounded-none" />
+            <div className="space-y-2.5">
+              {[...Array(4)].map((_, row) => (
+                <Skeleton key={row} className="h-3.5 w-full rounded-none" />
+              ))}
+            </div>
+          </div>
+        ))}
       </aside>
 
       {/* Products skeleton */}
-      <div className="flex-1">
-        <div className="flex justify-between items-center mb-6">
-          <Skeleton className="h-10 w-[100px]" />
-          <Skeleton className="h-10 w-[180px]" />
+      <div className="min-w-0">
+        {/* Top bar */}
+        <div className="flex items-center justify-between border-b border-border pb-5">
+          <Skeleton className="h-4 w-32 rounded-none" />
+          <Skeleton className="h-9 w-44 rounded-none" />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(9)].map((_, index) => (
-            <div key={index} className="space-y-4">
-              <Skeleton className="h-[200px] w-full" />
-              <Skeleton className="h-4 w-2/3" />
-              <Skeleton className="h-4 w-1/2" />
+        {/* Grid: 2 / 3 / 4 cols, 3:4 cards */}
+        <div className="mt-8 grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 xl:grid-cols-4">
+          {[...Array(8)].map((_, index) => (
+            <div key={index} className="space-y-3.5">
+              <Skeleton className="aspect-[3/4] w-full rounded-none" />
+              <Skeleton className="h-2.5 w-1/3 rounded-none" />
+              <Skeleton className="h-3.5 w-3/4 rounded-none" />
+              <Skeleton className="h-3.5 w-1/4 rounded-none" />
             </div>
           ))}
         </div>
@@ -28,4 +40,3 @@ export default function ProductListSkeleton() {
     </div>
   )
 }
-

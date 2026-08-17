@@ -3,70 +3,14 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { useMainStore } from "@/stores/mainStore"
-import type { Collection } from "@/types/collection"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
-import { X, Filter, ChevronDown, ChevronUp, ChevronRight } from "lucide-react"
+import { X, ChevronDown, ChevronRight, Check } from "lucide-react"
 import { useCurrencyStore } from "@/stores/currency"
 import { getCategoriesTree } from "@/lib/categoryUtils"
 
 interface ProductFilterSidebarProps {
   isMobile?: boolean
-}
-
-const SIZE_OPTIONS = ["XXXS", "XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"]
-
-// Mantiene la UI en tallas "base" y solo amplía el query con su equivalente 2x/3x del mismo nivel.
-const TALLA_TO_EQUIVALENT: Record<string, string> = {
-  XXS: "2XS",
-  XXL: "2XL",
-  XXXS: "3XS",
-  XXXL: "3XL",
-}
-
-const EQUIVALENT_TO_TALLA: Record<string, string> = {
-  "2XS": "XXS",
-  "2XL": "XXL",
-  "3XS": "XXXS",
-  "3XL": "XXXL",
-}
-
-// Mapeo SOLO visual (no afecta al query):
-// - XXXL -> 3XL
-// - XXL  -> 2XL
-// - XXXS -> 3XS
-// - XXS  -> 2XS
-const SIZE_VISUAL_LABEL: Record<string, string> = {
-  XXXL: "3XL",
-  XXL: "2XL",
-  XXXS: "3XS",
-  XXS: "2XS",
-}
-
-const getSizeVisualLabel = (size: string) => SIZE_VISUAL_LABEL[size] ?? size
-
-function normalizeTallasFromUrl(tallas: string[]): string[] {
-  const out = new Set<string>()
-  for (const talla of tallas) out.add(EQUIVALENT_TO_TALLA[talla] ?? talla)
-  return Array.from(out)
-}
-
-function expandTallasForQuery(tallas: string[]): string[] {
-  const out = new Set<string>(tallas)
-  for (const talla of tallas) {
-    const eq = TALLA_TO_EQUIVALENT[talla]
-    if (eq) out.add(eq)
-  }
-  return Array.from(out)
 }
 
 // Helper: Máximo por defecto según código de moneda
@@ -81,11 +25,10 @@ const parsePriceFromUrl = (urlValue: string | null, defaultValue: number): numbe
 }
 
 const DEFAULT_FILTER_SECTION_VISIBILITY = {
+  showAroma: true,
   showCategories: true,
   showVendors: false,
-  showCollections: false,
   showPriceFilter: true,
-  showSizes: false,
 }
 
 export default function ProductFilterSidebar({ isMobile = false }: ProductFilterSidebarProps) {
@@ -96,15 +39,15 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
   const { selectedCurrencyId, acceptedCurrencies } = useCurrencyStore()
   const isInitialMount = useRef(true)
   const previousCurrencyId = useRef(selectedCurrencyId)
-  
+
   // Obtener información de moneda (memoizado)
   const currencyOption = useMemo(() => {
     const defaultCurrency = shopSettings?.[0]?.defaultCurrency
     return acceptedCurrencies.find((c) => c.id === selectedCurrencyId) || defaultCurrency
   }, [selectedCurrencyId, acceptedCurrencies, shopSettings])
 
-  const currencySymbol = currencyOption?.symbol || "$"
-  const currencyCode = currencyOption?.code || "USD"
+  const currencySymbol = currencyOption?.symbol || "S/"
+  const currencyCode = currencyOption?.code || "PEN"
 
   // Rango de precios dinámico según moneda (memoizado)
   const productPriceRange = useMemo(() => ({
@@ -124,19 +67,19 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
   const [selectedCategories, setSelectedCategories] = useState<string[]>(() => {
     const categoryParam = searchParams.get("category")
     if (!categoryParam) return []
-    
+
     const categoryValues = categoryParam.split(",")
-    
+
     // If values look like IDs (start with "cat_"), ignore them and start fresh
-    // This handles migration from old ID-based URLs to new slug-based URLs
     const hasOldIds = categoryValues.some(val => val.startsWith("cat_"))
     if (hasOldIds) {
       console.warn("⚠️ Old category IDs detected in URL. Clearing filters to use slugs.")
       return []
     }
-    
+
     return categoryValues
   })
+
   // Inicializar rango de precios desde URL
   const initialPriceRange = useMemo(() => {
     const defaultMax = getDefaultMaxPrice(currencyCode)
@@ -155,21 +98,14 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     const collectionParam = searchParams.get("collections")
     return collectionParam ? collectionParam.split(",") : []
   })
-  const [selectedSizes, setSelectedSizes] = useState<string[]>(() => {
-    const sizeParam = searchParams.get("variant_Talla")
-    const raw = sizeParam ? sizeParam.split(",") : []
-    // Normaliza para que el estado solo contenga las tallas presentes en la UI,
-    // evitando que queden "equivalentes" (2XS/3XL/etc) seleccionados permanentemente al desmarcar.
-    return normalizeTallasFromUrl(raw)
-  })
-  // Por defecto solo desplegado: Categorías + Rango de precio.
+
+  // Secciones desplegadas por defecto: Aroma + Categorías + Precio.
+  const [showAroma, setShowAroma] = useState(DEFAULT_FILTER_SECTION_VISIBILITY.showAroma)
   const [showCategories, setShowCategories] = useState(DEFAULT_FILTER_SECTION_VISIBILITY.showCategories)
   const [showVendors, setShowVendors] = useState(DEFAULT_FILTER_SECTION_VISIBILITY.showVendors)
-  const [showCollections, setShowCollections] = useState(DEFAULT_FILTER_SECTION_VISIBILITY.showCollections)
   const [showPriceFilter, setShowPriceFilter] = useState(DEFAULT_FILTER_SECTION_VISIBILITY.showPriceFilter)
-  const [showSizes, setShowSizes] = useState(DEFAULT_FILTER_SECTION_VISIBILITY.showSizes)
 
-  // Estados locales para los inputs (para permitir escritura libre sin actualizar URL)
+  // Estados locales para los inputs de precio
   const [minPriceInput, setMinPriceInput] = useState<string>(initialPriceRange[0].toString())
   const [maxPriceInput, setMaxPriceInput] = useState<string>(initialPriceRange[1].toString())
 
@@ -184,39 +120,19 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     categories: string[],
     vendors: string[],
     collections: string[],
-    sizes: string[],
     price: [number, number],
     search: string
   ) => {
     const params = new URLSearchParams()
 
-    // Add selected categories (comma-separated format)
-    if (categories.length > 0) {
-      params.set("category", categories.join(","))
-    }
-
-    // Add selected vendors (comma-separated format)
-    if (vendors.length > 0) {
-      params.set("vendor", vendors.join(","))
-    }
-
-    // Add selected collections (comma-separated format)
-    if (collections.length > 0) {
-      params.set("collections", collections.join(","))
-    }
-
-    // Add selected sizes as variant filter (Talla)
-    // Expande SOLO el query (no el UI) con equivalentes 2x/3x del mismo nivel seleccionado.
-    if (sizes.length > 0) {
-      const expandedSizes = expandTallasForQuery(sizes)
-      params.set("variant_Talla", expandedSizes.join(","))
-    }
+    if (categories.length > 0) params.set("category", categories.join(","))
+    if (vendors.length > 0) params.set("vendor", vendors.join(","))
+    if (collections.length > 0) params.set("collections", collections.join(","))
 
     // Add price range (only if different from default range)
     if (price[0] > productPriceRange.min) params.set("minPrice", price[0].toString())
     if (price[1] < productPriceRange.max) params.set("maxPrice", price[1].toString())
 
-    // Add search term
     if (search) params.set("search", search)
 
     // Reset to page 1 when applying filters
@@ -228,11 +144,11 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
   // Sync price range ONLY when URL params actually change
   const urlMinPrice = searchParams.get("minPrice")
   const urlMaxPrice = searchParams.get("maxPrice")
-  
+
   useEffect(() => {
     const newMin = parsePriceFromUrl(urlMinPrice, 0)
     const newMax = parsePriceFromUrl(urlMaxPrice, productPriceRange.max)
-    
+
     setPriceRange(prev => {
       if (prev[0] !== newMin || prev[1] !== newMax) {
         return [newMin, newMax]
@@ -271,21 +187,19 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
         selectedCategories,
         selectedVendors,
         selectedCollections,
-        selectedSizes,
         priceRange,
         searchTerm,
       )
     }, searchTerm ? 500 : 0) // Debounce only for search term
 
     return () => clearTimeout(timeoutId)
-  }, [selectedCategories, selectedVendors, selectedCollections, selectedSizes, priceRange, searchTerm, updateURL])
+  }, [selectedCategories, selectedVendors, selectedCollections, priceRange, searchTerm, updateURL])
 
   // Clear all filters
   const clearFilters = () => {
     setSelectedCategories([])
     setSelectedVendors([])
     setSelectedCollections([])
-    setSelectedSizes([])
     setPriceRange([productPriceRange.min, productPriceRange.max])
     setSearchTerm("")
     router.push(pathname, { scroll: false })
@@ -296,8 +210,8 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     setter: React.Dispatch<React.SetStateAction<T[]>>,
     value: T
   ) => {
-    setter(prev => 
-      prev.includes(value) 
+    setter(prev =>
+      prev.includes(value)
         ? prev.filter(item => item !== value)
         : [...prev, value]
     )
@@ -318,11 +232,6 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     [createToggleHandler]
   )
 
-  const handleSizeChange = useCallback(
-    (size: string) => createToggleHandler(setSelectedSizes, size),
-    [createToggleHandler]
-  )
-
   // Helper: Validar y ajustar valor de precio
   const validateAndClampPrice = useCallback((value: number, min: number, max: number, compareValue?: number): number => {
     if (isNaN(value) || value < min) return min
@@ -336,18 +245,16 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     setPriceRange(value as [number, number])
   }, [])
 
-  // Handle manual input change (solo números)
   const sanitizeNumericInput = (value: string) => value.replace(/[^0-9]/g, "")
-  
+
   const handleMinPriceInputChange = useCallback((value: string) => {
     setMinPriceInput(sanitizeNumericInput(value))
   }, [])
-  
+
   const handleMaxPriceInputChange = useCallback((value: string) => {
     setMaxPriceInput(sanitizeNumericInput(value))
   }, [])
 
-  // Handle manual input blur (min price)
   const handleMinPriceBlur = useCallback(() => {
     const numValue = Number.parseInt(minPriceInput, 10)
     const validatedValue = validateAndClampPrice(numValue, productPriceRange.min, productPriceRange.max, priceRange[1])
@@ -356,7 +263,6 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
     setMinPriceInput(validatedValue.toString())
   }, [minPriceInput, productPriceRange, priceRange, validateAndClampPrice])
 
-  // Handle manual input blur (max price)
   const handleMaxPriceBlur = useCallback(() => {
     const numValue = Number.parseInt(maxPriceInput, 10)
     const validatedValue = validateAndClampPrice(numValue, productPriceRange.min, productPriceRange.max)
@@ -367,95 +273,101 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
   }, [maxPriceInput, productPriceRange, priceRange, validateAndClampPrice])
 
   // Check if any filter is active (memoized)
-  const hasActiveFilters = useMemo(() => 
+  const hasActiveFilters = useMemo(() =>
     selectedCategories.length > 0 ||
     selectedVendors.length > 0 ||
     selectedCollections.length > 0 ||
-    selectedSizes.length > 0 ||
     priceRange[0] > productPriceRange.min ||
     priceRange[1] < productPriceRange.max ||
     searchTerm !== "",
-    [selectedCategories.length, selectedVendors.length, selectedCollections.length, selectedSizes.length, priceRange, productPriceRange.min, productPriceRange.max, searchTerm]
+    [selectedCategories.length, selectedVendors.length, selectedCollections.length, priceRange, productPriceRange.min, productPriceRange.max, searchTerm]
   )
 
-  const containerClasses = isMobile
-    ? "bg-white p-6 space-y-6 h-full"
-    : "bg-gray-50 rounded-lg shadow-[0_2px_8px_rgba(0,0,0,0.08)] border border-gray-200 p-6 space-y-6 sticky top-24"
+  const activeCount =
+    selectedCategories.length +
+    selectedVendors.length +
+    selectedCollections.length +
+    (priceRange[0] > productPriceRange.min || priceRange[1] < productPriceRange.max ? 1 : 0)
+
+  const containerClasses = isMobile ? "space-y-8" : "space-y-8 lg:sticky lg:top-24"
 
   return (
     <div className={containerClasses}>
-      {/* Header - Solo mostrar en desktop */}
-      {!isMobile && (
-        <div className="flex items-center justify-between pb-2.5 mb-4.5 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2 py-1.5">
-          <Filter className="w-5 h-5" />
-            Filtros
-          </h3>
-          {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearFilters}
-              className="text-xs text-gray-500 hover:text-gray-700"
-            >
-              <X className="w-4 h-4 mr-1" />
-              Limpiar
-            </Button>
-          )}
+      {/* Header */}
+      <div className="flex items-end justify-between border-b border-foreground pb-3">
+        <div>
+          <p className="eyebrow text-brand">Refinar</p>
+          <h2 className="mt-1 font-display text-2xl font-medium tracking-tight">Filtros</h2>
         </div>
-      )}
-      
-      {/* Botón de limpiar para móvil - Solo mostrar si hay filtros activos */}
-      {isMobile && hasActiveFilters && (
-        <div className="flex justify-end pb-3">
-          <Button
-            variant="ghost"
-            size="sm"
+        {hasActiveFilters && (
+          <button
+            type="button"
             onClick={clearFilters}
-            className="text-xs text-gray-500 hover:text-gray-700"
+            className="flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
           >
-            <X className="w-4 h-4 mr-1" />
-            Limpiar filtros
-          </Button>
-        </div>
-      )}
+            <X className="h-3.5 w-3.5" />
+            Limpiar{activeCount > 0 ? ` (${activeCount})` : ""}
+          </button>
+        )}
+      </div>
 
       {/* Search */}
-      <div className="space-y-2">
+      <div>
         <Input
           id="search"
           type="text"
-          placeholder="Buscar productos..."
+          placeholder="Buscar fragancia, marca..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full bg-white"
+          className="h-11 w-full rounded-none border-border bg-background text-sm focus-visible:border-foreground focus-visible:ring-0"
         />
       </div>
 
+      {/* Comprar por aroma (colecciones = familias olfativas) — sección destacada */}
+      {collections.length > 0 && (
+        <FilterSection
+          title="Comprar por aroma"
+          eyebrow="Familia olfativa"
+          isOpen={showAroma}
+          onToggle={() => setShowAroma(!showAroma)}
+          accent
+        >
+          {collections.map((collection) => (
+            <CheckboxFilter
+              key={collection.id}
+              id={`collection-${collection.id}`}
+              label={collection.title}
+              checked={selectedCollections.includes(collection.id)}
+              onChange={() => handleCollectionChange(collection.id)}
+            />
+          ))}
+        </FilterSection>
+      )}
+
       {/* Categories */}
       <FilterSection
-        title="Categorías"
+        title="Categoría"
         isOpen={showCategories}
         onToggle={() => setShowCategories(!showCategories)}
       >
         {categories.length > 0 ? (
           getCategoriesTree(categories).map((category) => (
-            <CategoryFilterItem 
-              key={category.id} 
+            <CategoryFilterItem
+              key={category.id}
               category={category}
               selectedCategories={selectedCategories}
               onCategoryChange={handleCategoryChange}
             />
           ))
         ) : (
-          <p className="text-sm text-gray-500">Cargando categorías...</p>
+          <p className="text-sm text-muted-foreground">Cargando categorías…</p>
         )}
       </FilterSection>
 
       {/* Vendors (Marcas) */}
       {vendors.length > 0 && (
         <FilterSection
-          title="Marcas"
+          title="Marca"
           isOpen={showVendors}
           onToggle={() => setShowVendors(!showVendors)}
         >
@@ -471,59 +383,22 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
         </FilterSection>
       )}
 
-      {/* Collections */}
-      {collections.length > 0 && (
-        <FilterSection
-          title="Colecciones"
-          isOpen={showCollections}
-          onToggle={() => setShowCollections(!showCollections)}
-        >
-          {collections.map((collection) => (
-            <CheckboxFilter
-              key={collection.id}
-              id={`collection-${collection.id}`}
-              label={collection.title}
-              checked={selectedCollections.includes(collection.id)}
-              onChange={() => handleCollectionChange(collection.id)}
-            />
-          ))}
-        </FilterSection>
-      )}
-
-      {/* Sizes (Tallas) */}
-      <FilterSection
-        title="Tallas"
-        isOpen={showSizes}
-        onToggle={() => setShowSizes(!showSizes)}
-      >
-        {SIZE_OPTIONS.map((size) => (
-          <CheckboxFilter
-            key={size}
-            id={`size-${size}`}
-            label={getSizeVisualLabel(size)}
-            checked={selectedSizes.includes(size)}
-            onChange={() => handleSizeChange(size)}
-          />
-        ))}
-      </FilterSection>
-
       {/* Price Range */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         <button
+          type="button"
           onClick={() => setShowPriceFilter(!showPriceFilter)}
-          className="flex items-center justify-between w-full text-sm font-medium text-gray-700 hover:text-gray-900"
+          className="flex w-full items-center justify-between text-sm font-medium text-foreground"
         >
-          <span>Rango de precio</span>
-          {showPriceFilter ? (
-            <ChevronUp className="w-4 h-4" />
-          ) : (
-            <ChevronDown className="w-4 h-4" />
-          )}
+          <span className="font-display text-base tracking-tight">Precio</span>
+          <ChevronDown
+            className={`h-4 w-4 text-muted-foreground transition-transform ${showPriceFilter ? "rotate-180" : ""}`}
+          />
         </button>
 
         {showPriceFilter && (
-          <div className="space-y-4 pt-2">
-            <div className="relative py-2">
+          <div className="space-y-5 pt-1">
+            <div className="px-1 py-2">
               <Slider
                 min={0}
                 max={productPriceRange.max}
@@ -534,30 +409,30 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
                 className="w-full"
               />
             </div>
-            <div className="flex justify-between items-center gap-2">
-              {/* Input para precio mínimo */}
-              <div className="flex items-center gap-1 flex-1">
-                <span className="text-xs text-gray-500">{currencySymbol}</span>
+            <div className="flex items-center gap-3">
+              <div className="flex flex-1 items-center gap-1.5 border border-border px-3 py-2">
+                <span className="text-xs text-muted-foreground">{currencySymbol}</span>
                 <Input
                   type="text"
                   inputMode="numeric"
+                  aria-label="Precio mínimo"
                   value={minPriceInput}
                   onChange={(e) => handleMinPriceInputChange(e.target.value)}
                   onBlur={handleMinPriceBlur}
-                  className="w-full h-8 text-sm text-center px-2"
+                  className="h-6 rounded-none border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
                 />
               </div>
-              <span className="text-xs text-gray-500 px-1">-</span>
-              {/* Input para precio máximo */}
-              <div className="flex items-center gap-1 flex-1">
-                <span className="text-xs text-gray-500">{currencySymbol}</span>
+              <span className="text-xs text-muted-foreground">—</span>
+              <div className="flex flex-1 items-center gap-1.5 border border-border px-3 py-2">
+                <span className="text-xs text-muted-foreground">{currencySymbol}</span>
                 <Input
                   type="text"
                   inputMode="numeric"
+                  aria-label="Precio máximo"
                   value={maxPriceInput}
                   onChange={(e) => handleMaxPriceInputChange(e.target.value)}
                   onBlur={handleMaxPriceBlur}
-                  className="w-full h-8 text-sm text-center px-2"
+                  className="h-6 rounded-none border-0 bg-transparent p-0 text-sm shadow-none focus-visible:ring-0"
                 />
               </div>
             </div>
@@ -569,11 +444,11 @@ export default function ProductFilterSidebar({ isMobile = false }: ProductFilter
 }
 
 // Componente para mostrar una categoría con sus subcategorías
-function CategoryFilterItem({ 
-  category, 
+function CategoryFilterItem({
+  category,
   selectedCategories,
   onCategoryChange
-}: { 
+}: {
   category: any & { children: any[] }
   selectedCategories: string[]
   onCategoryChange: (slug: string) => void
@@ -587,9 +462,9 @@ function CategoryFilterItem({
   }
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       {/* Categoría padre */}
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center justify-between gap-2">
         <CheckboxFilter
           id={`category-${category.slug}`}
           label={category.name}
@@ -598,13 +473,13 @@ function CategoryFilterItem({
         />
         {category.children.length > 0 && (
           <button
+            type="button"
             onClick={handleArrowClick}
-            className="p-1 rounded-sm hover:bg-gray-100 transition-colors"
+            aria-label={`Mostrar subcategorías de ${category.name}`}
+            className="p-1 text-muted-foreground transition-colors hover:text-foreground"
           >
-            <ChevronRight 
-              className={`h-3 w-3 opacity-60 hover:opacity-100 transition-all duration-200 ${
-                showSubcategories ? "rotate-90" : ""
-              }`} 
+            <ChevronRight
+              className={`h-3.5 w-3.5 transition-transform duration-200 ${showSubcategories ? "rotate-90" : ""}`}
             />
           </button>
         )}
@@ -612,7 +487,7 @@ function CategoryFilterItem({
 
       {/* Subcategorías */}
       {category.children.length > 0 && showSubcategories && (
-        <div className="ml-6 space-y-1 animate-in slide-in-from-top-1 duration-200">
+        <div className="ml-3 space-y-1.5 border-l border-border pl-3 duration-200 animate-in slide-in-from-top-1">
           {category.children.map((child: any) => (
             <CheckboxFilter
               key={child.id}
@@ -629,33 +504,45 @@ function CategoryFilterItem({
 }
 
 // Componente reutilizable para secciones de filtro colapsables
-function FilterSection({ 
-  title, 
-  isOpen, 
-  onToggle, 
-  children 
-}: { 
+function FilterSection({
+  title,
+  eyebrow,
+  isOpen,
+  onToggle,
+  accent = false,
+  children
+}: {
   title: string
+  eyebrow?: string
   isOpen: boolean
   onToggle: () => void
+  accent?: boolean
   children: React.ReactNode
 }) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <button
+        type="button"
         onClick={onToggle}
-        className="flex items-center justify-between w-full text-sm font-medium text-gray-700 hover:text-gray-900"
+        className="flex w-full items-start justify-between gap-2 text-left"
       >
-        <span>{title}</span>
-        {isOpen ? (
-          <ChevronUp className="w-4 h-4" />
-        ) : (
-          <ChevronDown className="w-4 h-4" />
-        )}
+        <span>
+          {eyebrow && (
+            <span className={`block text-[11px] font-medium uppercase tracking-[0.18em] ${accent ? "text-brand" : "text-muted-foreground"}`}>
+              {eyebrow}
+            </span>
+          )}
+          <span className="mt-0.5 block font-display text-base tracking-tight text-foreground">
+            {title}
+          </span>
+        </span>
+        <ChevronDown
+          className={`mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`}
+        />
       </button>
-      
+
       {isOpen && (
-        <div className="max-h-48 overflow-y-auto pr-2 space-y-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400 transition-colors">
+        <div className="scrollbar-thin max-h-64 space-y-2.5 overflow-y-auto pr-1">
           {children}
         </div>
       )}
@@ -663,7 +550,7 @@ function FilterSection({
   )
 }
 
-// Componente reutilizable para checkboxes de filtro
+// Checkbox de filtro con acento de marca al marcar
 function CheckboxFilter({
   id,
   label,
@@ -676,21 +563,31 @@ function CheckboxFilter({
   onChange: () => void
 }) {
   return (
-    <div className="flex items-center space-x-2 flex-1">
-      <input
-        type="checkbox"
-        id={id}
-        checked={checked}
-        onChange={onChange}
-        className="w-4 h-4 text-blue-600 cursor-pointer rounded border-gray-300 focus:ring-blue-500"
-      />
-      <label
-        htmlFor={id}
-        className="text-sm text-gray-600 cursor-pointer hover:text-gray-900 flex-1"
-      >
+    <label
+      htmlFor={id}
+      className="group flex flex-1 cursor-pointer items-center gap-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
+    >
+      <span className="relative flex h-[18px] w-[18px] shrink-0 items-center justify-center">
+        <input
+          type="checkbox"
+          id={id}
+          checked={checked}
+          onChange={onChange}
+          className="peer sr-only"
+        />
+        <span
+          aria-hidden
+          className="flex h-[18px] w-[18px] items-center justify-center border border-border bg-background transition-colors peer-checked:border-brand peer-checked:bg-brand peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-1 group-hover:border-foreground"
+        >
+          <Check
+            className={`h-3 w-3 text-brand-foreground transition-opacity ${checked ? "opacity-100" : "opacity-0"}`}
+            strokeWidth={3}
+          />
+        </span>
+      </span>
+      <span className={`flex-1 leading-snug ${checked ? "font-medium text-foreground" : ""}`}>
         {label}
-      </label>
-    </div>
+      </span>
+    </label>
   )
 }
-

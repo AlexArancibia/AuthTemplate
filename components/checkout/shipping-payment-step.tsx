@@ -634,11 +634,11 @@ export function ShippingPaymentStep({
 
       {/* Shipping Method Section */}
       <div className="space-y-6">
-        <h2 className="text-xl font-semibold mb-4">Método de envío</h2>
+        <h2 className="font-display text-xl mb-4 text-foreground">Método de envío</h2>
 
         {isLoading ? (
           <div className="py-8 flex justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="h-8 w-8 animate-spin text-brand" />
           </div>
         ) : (
           <RadioGroup
@@ -665,58 +665,64 @@ export function ShippingPaymentStep({
               const methodName = method.name.toLowerCase()
               const isPickup = methodName.includes("recojo") || methodName.includes("pickup") || methodName.includes("tienda")
 
+              const isSelected = formData.shippingMethod === method.id
+
               return (
                 <div
                   key={method.id}
-                  className="flex items-center space-x-2 border rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
+                  className={`flex items-center space-x-3 border rounded-none p-4 cursor-pointer transition-colors ${
+                    isSelected
+                      ? "border-brand bg-brand/5"
+                      : "border-border hover:bg-muted"
+                  }`}
                 >
                   <RadioGroupItem value={method.id} id={method.id} />
                   <Label htmlFor={method.id} className="flex-1 cursor-pointer">
                     <div className="flex items-center">
                       {method.name.toLowerCase().includes("express") ? (
-                        <Package className="mr-3 h-5 w-5 text-primary" />
+                        <Package className="mr-3 h-5 w-5 text-foreground" />
                       ) : (
-                        <Truck className="mr-3 h-5 w-5 text-primary" />
+                        <Truck className="mr-3 h-5 w-5 text-foreground" />
                       )}
                       <div className="flex-1">
-                        <p className="font-medium">{method.name}</p>
-                        
+                        <p className="font-medium text-foreground">{method.name}</p>
+
                         {/* Información de tiempo de entrega (solo si NO es recojo) */}
                         {!isPickup && method.minDeliveryDays && method.maxDeliveryDays && method.availableDays && (
-                          <p className="text-sm text-gray-600 mt-1">
-                            {method.minDeliveryDays === method.maxDeliveryDays 
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {method.minDeliveryDays === method.maxDeliveryDays
                               ? `${method.minDeliveryDays} ${getDayType(method.availableDays)}`
                               : `${method.minDeliveryDays}-${method.maxDeliveryDays} ${getDayType(method.availableDays)}`
                             } ({getDeliveryDateRange(method.minDeliveryDays, method.maxDeliveryDays, method.availableDays)})
                           </p>
                         )}
-                        
+
                         {/* Descripción o tiempo estimado */}
                         {(() => {
                           // No mostrar si es solo "0" o vacío
                           const displayText = method.description || method.estimatedDeliveryTime
                           const textStr = String(displayText || "")
                           if (!displayText || textStr === "0" || textStr === "") return null
-                          
+
                           return (
-                            <p className="text-sm text-gray-500">
+                            <p className="text-sm text-muted-foreground">
                               {displayText}
                             </p>
                           )
                         })()}
-                        
+
                         {/* Mostrar progreso hacia envío gratis (solo si NO es recojo) */}
                         {!isPickup && typeof freeThreshold === "number" && !qualifiesForFreeShipping && (
-                          <p className="text-xs text-blue-600 mt-1">
+                          <p className="text-xs text-foreground mt-1">
                             ¡Envío gratis desde {paymentProviders[0]?.currency.symbol}{freeThreshold.toFixed(2)}!
                             {numericTotal > 0 && (
-                              <span className="ml-1 text-gray-500">
+                              <span className="ml-1 text-muted-foreground">
                                 (Te faltan {paymentProviders[0]?.currency.symbol}{(freeThreshold - numericTotal).toFixed(2)})
                               </span>
                             )}
                           </p>
                         )}
-                        
+
                         {/* Mensaje cuando ya califica (solo si NO es recojo) */}
                         {!isPickup && typeof freeThreshold === "number" && qualifiesForFreeShipping && (
                           <p className="text-xs text-green-600 mt-1 font-medium">
@@ -728,15 +734,15 @@ export function ShippingPaymentStep({
                   </Label>
                   {/* Mostrar precio o badge de gratis */}
                   {isPickup ? (
-                    <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 font-medium px-3 py-1">
+                    <Badge variant="outline" className="rounded-none bg-muted text-foreground border-border font-medium px-3 py-1">
                       Gratis
                     </Badge>
                   ) : isFree ? (
-                    <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 font-medium">
+                    <Badge variant="outline" className="rounded-none bg-green-50 text-green-600 border-green-200 font-medium">
                       Gratis
                     </Badge>
                   ) : (
-                    <span className="font-medium">
+                    <span className="font-medium text-foreground">
                       {paymentProviders[0]?.currency.symbol}
                       {Number(finalPrice).toFixed(2)}
                     </span>
@@ -752,11 +758,11 @@ export function ShippingPaymentStep({
 
       {/* Payment Method Section */}
       <div className="space-y-6">
-        <h2 className="text-xl font-semibold mb-4">Método de pago</h2>
+        <h2 className="font-display text-xl mb-4 text-foreground">Método de pago</h2>
 
         {isLoading ? (
           <div className="py-8 flex justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="h-8 w-8 animate-spin text-brand" />
           </div>
         ) : (
           <RadioGroup
@@ -764,10 +770,16 @@ export function ShippingPaymentStep({
             onValueChange={(value) => handleSelectChange("paymentMethod", value)}
             className="space-y-4"
           >
-            {paymentProviders.map((provider) => (
+            {paymentProviders.map((provider) => {
+              const isSelected = formData.paymentMethod === provider.id
+              return (
               <div
                 key={provider.id}
-                className="flex items-center space-x-2 border rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
+                className={`flex items-center space-x-3 border rounded-none p-4 cursor-pointer transition-colors ${
+                  isSelected
+                    ? "border-brand bg-brand/5"
+                    : "border-border hover:bg-muted"
+                }`}
               >
                 <RadioGroupItem value={provider.id} id={provider.id} />
                 <Label htmlFor={provider.id} className="flex-1 cursor-pointer">
@@ -775,7 +787,7 @@ export function ShippingPaymentStep({
                     {/* Mostrar imagen del proveedor si existe, si no mostrar icono de tarjeta */}
                     {provider.imgUrl ? (
                       <div className="relative h-10 w-10">
-                        <Image 
+                        <Image
                           src={provider.imgUrl}
                           alt={provider.name}
                           fill
@@ -783,19 +795,20 @@ export function ShippingPaymentStep({
                         />
                       </div>
                     ) : (
-                      <CreditCard className="h-5 w-5 text-primary" />
+                      <CreditCard className="h-5 w-5 text-foreground" />
                     )}
                     <div>
-                      <p className="font-medium">{provider.name}</p>
+                      <p className="font-medium text-foreground">{provider.name}</p>
                       {/* Mostrar descripción si existe */}
                       {provider.description && (
-                        <p className="text-sm text-gray-500">{provider.description}</p>
+                        <p className="text-sm text-muted-foreground">{provider.description}</p>
                       )}
                     </div>
                   </div>
                 </Label>
               </div>
-            ))}
+              )
+            })}
           </RadioGroup>
         )}
 
@@ -804,7 +817,7 @@ export function ShippingPaymentStep({
             .find((p) => p.id === formData.paymentMethod)
             ?.name.toLowerCase()
             .includes("tarjeta") && (
-            <div className="space-y-4 pt-4 border-t">
+            <div className="space-y-4 pt-4 border-t border-border">
               <div className="space-y-2">
                 <Label htmlFor="cardNumber">Número de tarjeta</Label>
                 <Input
@@ -870,7 +883,7 @@ export function ShippingPaymentStep({
         />
       </div>
       <div className="flex justify-between pt-4">
-        <Button variant="outline" onClick={prevStep}>
+        <Button variant="outline" onClick={prevStep} className="rounded-none border-border">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Atrás
         </Button>
@@ -887,7 +900,7 @@ export function ShippingPaymentStep({
             }
           }}
           disabled={isSubmitting || isValidatingStock}
-          className="px-8 py-2.5 bg-primary hover:bg-primary/90 transition-all shadow-md shadow-primary/10 hover:shadow-primary/20"
+          className="rounded-none px-8 py-2.5 bg-foreground text-background hover:bg-foreground/90 transition-all"
         >
           {isValidatingStock ? (
             <>

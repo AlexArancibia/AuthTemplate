@@ -328,31 +328,31 @@ export function CustomerInfoStep({
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
       {!authCheckComplete && (
-        <div className="bg-gray-50 p-4 rounded-lg mb-6">
+        <div className="bg-muted p-4 rounded-none mb-6">
           <div className="flex items-center justify-center">
             <div className="flex items-center gap-3">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-              <span className="text-sm text-gray-600">Verificando autenticación...</span>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-foreground"></div>
+              <span className="text-sm text-muted-foreground">Verificando autenticación...</span>
             </div>
           </div>
         </div>
       )}
-      
+
       {authCheckComplete && !isAuthenticated && (
-        <div className="bg-blue-50 p-4 rounded-lg mb-6">
-          <div className="flex items-center justify-between">
+        <div className="bg-muted border border-border p-4 rounded-none mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h3 className="font-medium text-blue-800">¿Ya tienes una cuenta?</h3>
-              <p className="text-sm text-blue-700">Inicia sesión para agilizar el proceso de compra</p>
+              <h3 className="font-medium text-foreground">¿Ya tienes una cuenta?</h3>
+              <p className="text-sm text-muted-foreground">Inicia sesión para agilizar el proceso de compra</p>
             </div>
-            <Button variant="outline" className="bg-white" onClick={() => router.push("/login?redirect=/checkout")}>
+            <Button variant="outline" className="bg-background" onClick={() => router.push("/login?redirect=/checkout")}>
               Iniciar sesión
             </Button>
           </div>
         </div>
       )}
 
-      <h2 className="text-xl font-semibold mb-4">Información de contacto</h2>
+      <h2 className="text-2xl font-display mb-4">Información de contacto</h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
@@ -391,7 +391,7 @@ export function CustomerInfoStep({
 
       <Separator className="my-6" />
 
-      <h2 className="text-xl font-semibold mb-4">Dirección de envío</h2>
+      <h2 className="text-2xl font-display mb-4">Dirección de envío</h2>
 
       {/* Display existing addresses for authenticated users */}
       {isAuthenticated && currentUser && currentUser.addresses && currentUser.addresses.length > 0 && (
@@ -573,9 +573,9 @@ export function CustomerInfoStep({
       </div>
 
       {!formData.sameBillingAddress && (
-        <div className="space-y-6 border-l-2 border-primary/20 pl-4">
+        <div className="space-y-6 border-l-2 border-border pl-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Dirección de facturación</h2>
+            <h2 className="text-2xl font-display">Dirección de facturación</h2>
             {showNewBillingAddress && (
               <Button type="button" variant="outline" size="sm" onClick={copyShippingToBilling}>
                 Copiar dirección de envío

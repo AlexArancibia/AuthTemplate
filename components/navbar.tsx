@@ -5,13 +5,11 @@ import type React from "react"
 import Link from "next/link"
 import { useState, useEffect, useRef } from "react"
 import { usePathname } from "next/navigation"
-import { Menu, ShoppingCart, User, X, Search, Store, Loader2 } from "lucide-react"
+import { ShoppingBag, User, X, Search, Minus, Plus, Heart, Sparkles, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { formatCurrency } from "@/lib/utils"
-import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -23,21 +21,15 @@ import {
 import { signOut } from "next-auth/react"
 import { toast } from "sonner"
 import { Skeleton } from "@/components/ui/skeleton"
+import { getCategoriesTree } from "@/lib/categoryUtils"
 import { useMainStore } from "@/stores/mainStore"
 import { useCurrencyStore } from "@/stores/currency"
 import { useCartStore } from "@/stores/cartStore"
 import { useCookieConsent } from "@/hooks/useCookieConsent"
 import CookieConsentDialog from "./CookieConsentDialog"
 import { useUserStore } from "@/stores/userStore"
-import ShopMenu from "./ShopMenu"
 import MobileMenu from "./MobileMenu"
-
-const navItems = [
-  { name: "Inicio", href: "/" },
-  { name: "Tienda", href: "/productos" },
-  { name: "DEPORTISTAS", href: "/nuestros-deportistas" },
-  { name: "Contacto", href: "/contactenos" },
-]
+import type { Category } from "@/types/category"
 
 export default function Navbar() {
   const pathname = usePathname()
@@ -56,128 +48,58 @@ export default function Navbar() {
     categories,
     collections,
   } = useMainStore()
-  const { 
-    showDialog, 
-    acceptAllCookies, 
-    declineAllCookies, 
-    acceptSelectedCookies, 
-  } = useCookieConsent()
+  const { showDialog, acceptAllCookies, declineAllCookies, acceptSelectedCookies } = useCookieConsent()
   const isCookieConsentEnabled = shopSettings?.[0]?.cookieConsentEnabled ?? false
   const { items, removeItem, updateQuantity, getTotal, getItemsCount } = useCartStore()
   const [mounted, setMounted] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
-  const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const [showInitialLoading, setShowInitialLoading] = useState(true)
   const sessionFetchAttempted = useRef(false)
   const [isSessionLoading, setIsSessionLoading] = useState(!currentUser)
-  const [logoStatus, setLogoStatus] = useState<"idle" | "loading" | "loaded" | "error">("idle")
-  const lastLogoRef = useRef<string | null>(null)
 
-  const {
-    selectedCurrencyId,
-    setSelectedCurrencyId,
-    acceptedCurrencies,
-    setAcceptedCurrencies
-  } = useCurrencyStore()
+  const { selectedCurrencyId, setSelectedCurrencyId, acceptedCurrencies, setAcceptedCurrencies } = useCurrencyStore()
 
   useEffect(() => {
     const settings = shopSettings?.[0]
     const accepted = settings?.acceptedCurrencies
-
     if (!accepted || accepted.length === 0) return
-
-    const currencyList = accepted.map((currency) => ({
-      id: currency.id,
-      code: currency.code,
-      name: currency.name,
-      symbol: currency.symbol || "",
-      label: `${currency.code} - ${currency.symbol || ""} (${currency.name})`,
+    const currencyList = accepted.map((c) => ({
+      id: c.id, code: c.code, name: c.name, symbol: c.symbol || "",
+      label: `${c.code} - ${c.symbol || ""} (${c.name})`,
     }))
-
     setAcceptedCurrencies(currencyList)
-
     const savedId = localStorage.getItem("currency")
-    const hasSavedCurrency = savedId && currencyList.some((currency) => currency.id === savedId)
-
-    const currencyId =
-      hasSavedCurrency
-        ? savedId
-        : settings?.defaultCurrency?.id || currencyList[0]?.id
-
-    if (currencyId) {
-      setSelectedCurrencyId(currencyId)
-    }
+    const hasSaved = savedId && currencyList.some((c) => c.id === savedId)
+    const currencyId = hasSaved ? savedId : settings?.defaultCurrency?.id || currencyList[0]?.id
+    if (currencyId) setSelectedCurrencyId(currencyId)
   }, [shopSettings, setAcceptedCurrencies, setSelectedCurrencyId])
 
-  const activeCurrency = acceptedCurrencies.find(c => c.id === selectedCurrencyId)
-
-  // Simple fetch control
+  const activeCurrency = acceptedCurrencies.find((c) => c.id === selectedCurrencyId)
   const hasFetched = useRef(false)
 
-  // Handle hydration
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
-    if (currentUser) {
-      setIsSessionLoading(false)
-      return
-    }
-
-    if (sessionFetchAttempted.current) {
-      return
-    }
-
+    if (currentUser) { setIsSessionLoading(false); return }
+    if (sessionFetchAttempted.current) return
     sessionFetchAttempted.current = true
     let active = true
-
     const loadSession = async () => {
       try {
-        const response = await fetch("/api/auth/session", { cache: "no-store" })
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch session: ${response.status}`)
-        }
-
-        const session = await response.json()
-
-        if (session?.user?.email) {
-          await fetchUserByEmail(session.user.email)
-        }
-      } catch (error) {
-        console.error("[NAVBAR] Error loading session:", error)
-      } finally {
-        if (active) {
-          setIsSessionLoading(false)
-        }
-      }
+        const r = await fetch("/api/auth/session", { cache: "no-store" })
+        if (!r.ok) throw new Error(`${r.status}`)
+        const s = await r.json()
+        if (s?.user?.email) await fetchUserByEmail(s.user.email)
+      } catch (e) { console.error("[NAVBAR] session", e) }
+      finally { if (active) setIsSessionLoading(false) }
     }
-
     loadSession()
-
-    return () => {
-      active = false
-    }
+    return () => { active = false }
   }, [currentUser, fetchUserByEmail])
 
-
-  // Show loading screen immediately and hide after 700ms
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowInitialLoading(false)
-    }, 1000)
-
-    return () => clearTimeout(timer)
-  }, [])
-
-  // Fetch shop settings on mount
   useEffect(() => {
     const loadData = async () => {
       if (hasFetched.current || loading) return
-
       hasFetched.current = true
-
       try {
         await Promise.all([
           fetchShopSettings(),
@@ -190,480 +112,291 @@ export default function Navbar() {
           fetchPaymentProviders(),
         ])
       } catch (err) {
-        console.error("[NAVBAR] Error fetching data:", err)
-        toast.error("Error de conexión", {
-          description: "No se pudieron cargar los datos de la tienda",
-        })
+        console.error("[NAVBAR] fetch", err)
+        toast.error("Error de conexión", { description: "No se pudieron cargar los datos de la tienda" })
       }
     }
-
     loadData()
-  }, [
-    fetchShopSettings,
-    fetchShippingMethods,
-    fetchCategories,
-    fetchCollections,
-    fetchContents,
-    fetchCardSections,
-    fetchCoupons,
-    fetchPaymentProviders,
-    loading,
-  ])
+  }, [fetchShopSettings, fetchShippingMethods, fetchCategories, fetchCollections, fetchContents, fetchCardSections, fetchCoupons, fetchPaymentProviders, loading])
 
   const handleSignOut = async () => {
     try {
-      toast.success("Sesión cerrada", {
-        description: "Has cerrado sesión correctamente",
-      })
+      toast.success("Sesión cerrada", { description: "Has cerrado sesión correctamente" })
       await signOut({ callbackUrl: "/login" })
-    } catch (error) {
-      console.error("[NAVBAR] Error signing out:", error)
-      toast.error("Error al cerrar sesión", {
-        description: "Ha ocurrido un error al cerrar la sesión",
-      })
-    }
+    } catch (e) { console.error(e); toast.error("Error al cerrar sesión") }
   }
 
-  const getInitials = (name?: string | null) => {
-    if (!name) return "U"
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .substring(0, 2)
-  }
+  const getInitials = (name?: string | null) =>
+    !name ? "U" : name.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2)
 
-  const shopName = shopSettings?.[0]?.name ?? "Mi Tienda"
-  const shopLogo = shopSettings?.[0]?.logo ?? null
-
-  useEffect(() => {
-    if (!shopLogo) {
-      lastLogoRef.current = null
-      setLogoStatus("idle")
-      return
-    }
-
-    if (shopLogo === lastLogoRef.current) {
-      setLogoStatus("loaded")
-      return
-    }
-
-    let cancelled = false
-    setLogoStatus("loading")
-
-    const img = new Image()
-
-    const handleLoad = () => {
-      if (cancelled) return
-      lastLogoRef.current = shopLogo
-      setLogoStatus("loaded")
-    }
-
-    const handleError = () => {
-      if (cancelled) return
-      lastLogoRef.current = null
-      setLogoStatus("error")
-    }
-
-    img.addEventListener("load", handleLoad)
-    img.addEventListener("error", handleError)
-    img.src = shopLogo
-
-    return () => {
-      cancelled = true
-      img.removeEventListener("load", handleLoad)
-      img.removeEventListener("error", handleError)
-    }
-  }, [shopLogo])
+  const shopName = shopSettings?.[0]?.name ?? "Scentra"
   const totalItems = getItemsCount()
   const totalPrice = getTotal(selectedCurrencyId)
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    const trimmedSearch = searchTerm.trim()
-    
-    if (trimmedSearch.length >= 2) {
-      setIsSearchOpen(false)
-      setSearchTerm("")
-      window.location.href = `/productos?search=${encodeURIComponent(trimmedSearch)}`
-    }
+    const t = searchTerm.trim()
+    if (t.length >= 2) { setSearchTerm(""); window.location.href = `/productos?search=${encodeURIComponent(t)}` }
   }
 
-  // Show loading screen immediately on initial page load - BEFORE any other renders
-  if (showInitialLoading) {
-    return (
-      <div className="fixed inset-0 z-[9999] bg-white flex items-center justify-center" style={{ zIndex: 99999 }}>
-        <div className="flex flex-col items-center">
-          <img
-            src="/fondo1.png"
-            alt="Cargando"
-            className="w-32 h-32 object-contain animate-pulse"
-            style={{ maxWidth: "128px", maxHeight: "128px" }}
-          />
-        </div>
-      </div>
+  const rootCategories = (getCategoriesTree(categories ?? []) as (Category & { children: Category[] })[])
+  const featured = (collections || []).filter((c) => c.isFeatured)
+
+  const announcement = "Envío gratis desde S/199 · Fragancias 100% originales · Asesoría olfativa personalizada"
+
+  // ---- Account control (shared desktop) ----
+  const AccountControl = () => (
+    isSessionLoading ? (
+      <Skeleton className="h-9 w-9 rounded-full" />
+    ) : currentUser ? (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={currentUser.image || ""} alt={currentUser.name || "Usuario"} />
+              <AvatarFallback className="text-xs">{getInitials(currentUser.name)}</AvatarFallback>
+            </Avatar>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-56 z-[999]" align="end" forceMount>
+          <div className="flex flex-col space-y-1 p-2">
+            <p className="text-sm font-medium">{currentUser.name}</p>
+            <p className="text-xs text-muted-foreground">{currentUser.email}</p>
+          </div>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem asChild><Link href="/dashboard" className="cursor-pointer"><User className="mr-2 h-4 w-4" />Mi cuenta</Link></DropdownMenuItem>
+          <DropdownMenuItem asChild><Link href="/historial" className="cursor-pointer"><ShoppingBag className="mr-2 h-4 w-4" />Mis pedidos</Link></DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive" onClick={handleSignOut}><X className="mr-2 h-4 w-4" />Cerrar sesión</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    ) : (
+      <Link href="/login" className="flex items-center gap-1.5 text-foreground hover:text-brand transition-colors" aria-label="Ingresar">
+        <User className="h-5 w-5" />
+        <span className="hidden xl:inline text-[13px]">Ingresar</span>
+      </Link>
     )
-  }
+  )
 
-  // Si no está montado, no renderizamos nada o un placeholder simple
   if (!mounted) {
     return (
-      <nav className="bg-background backdrop-blur-md border-b border-border sticky top-0 z-[180] h-16 -mb-16 transition-all duration-300">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
-            <div className="w-1/4 lg:w-1/4">
-              <Skeleton className="h-6 w-32" />
-            </div>
-            <div className="hidden lg:flex lg:w-1/2 xl:w-1/2 justify-center gap-4">
-              {[...Array(7)].map((_, i) => (
-                <Skeleton key={i} className="h-4 w-16" />
-              ))}
-            </div>
-            <div className="flex items-center justify-end w-3/4 lg:w-1/3 xl:w-1/4 gap-3">
-              <Skeleton className="h-8 w-8 rounded-full" />
-              <Skeleton className="h-8 w-8 rounded-full" />
-              <Skeleton className="h-8 w-24 rounded-md" />
-              <Skeleton className="h-8 w-8 rounded-full lg:hidden" />
-            </div>
-          </div>
+      <header>
+        <div className="bg-muted text-center text-[11px] tracking-[0.12em] py-2 text-muted-foreground">{announcement}</div>
+        <div className="border-b border-border h-16 flex items-center">
+          <div className="container-section w-full"><div className="content-section flex items-center justify-between">
+            <Skeleton className="h-5 w-28" /><Skeleton className="h-9 w-1/2 max-w-md rounded-full" /><Skeleton className="h-8 w-24" />
+          </div></div>
         </div>
-      </nav>
+        <div className="h-11 bg-foreground" />
+      </header>
     )
   }
 
   return (
     <>
-
-    <nav className="bg-background border-b border-border sticky top-0 z-[180] font-adi-regular font-light uppercase h-16 -mb-16">
-      <div className="container-section mx-auto ">
-        <div className="flex items-center justify-between content-section h-16">
-          {/* Logo */}
-          <div className="w-1/2 lg:w-1/4">
-            <Link href="/" aria-label="Ir a la página de inicio" className="flex items-center">
-              {shopLogo && logoStatus !== "error" ? (
-                logoStatus === "loading" ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <img
-                    src={shopLogo}
-                    alt={shopName}
-                    className="h-6 lg:h-7 w-auto mr-2"
-                    onError={() => setLogoStatus("error")}
-                  />
-                )
-              ) : (
-                <Store className="h-5 w-5 mr-2" />
-              )}
-            </Link>
-          </div>
-
-          {/* Navigation Links - Desktop */}
-          <div className="hidden lg:flex lg:w-1/2 xl:w-1/2 justify-evenly items-center relative gap-2 xl:gap-4">
-            {navItems.map((item) => {
-              const isShop = item.name.toLowerCase() === "tienda"
-              
-              if (isShop) {
-                return (
-                  <div key="tienda" className="px-2 xl:px-3 py-1 text-sm">
-                    <ShopMenu
-                      categories={categories ?? []}
-                      collections={collections || []}
-                      isActive={pathname.startsWith("/productos")}
-                    />
-                  </div>
-                )
-              }
-
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={cn(
-                    "px-2 xl:px-3 py-1 text-sm transition-colors hover:text-primary whitespace-nowrap",
-                    pathname === item.href ? "text-primary" : "text-secondary",
-                  )}
-                >
-                  {item.name}
-                </Link>
-              )
-            })}
-          </div>
-
-          {/* Search and Icons */}
-          <div className="flex items-center justify-end w-3/4 lg:w-1/3 xl:w-1/4 gap-2 md:gap-3">
-            {/* Search Icon and Dialog */}
-            <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
-              <DialogTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-secondary hover:text-primary hover:bg-secondary/10"
-                  aria-label="Buscar productos"
-                >
-                  <Search className="h-4 w-4" aria-hidden="true" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="w-[90%] max-w-md z-[555] bg-background/95 backdrop-blur-md border-none shadow-lg">
-                <DialogTitle className="text-lg text-center">Buscar productos</DialogTitle>
-                <form onSubmit={handleSearch} className="flex flex-col gap-4 mt-2">
-                  <div className="flex w-full items-center space-x-2">
-                    <Input
-                      type="text"
-                      placeholder="¿Qué estás buscando?"
-                      className="flex-1"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      autoFocus
-                    />
-                    <Button type="submit" size="sm">
-                      Buscar
-                    </Button>
-                  </div>
-                  {searchTerm.length > 0 && (
-                    <p className="text-xs text-muted-foreground">Presiona Enter para buscar &quot;{searchTerm}&quot;</p>
-                  )}
-                </form>
-              </DialogContent>
-            </Dialog>
-
-            {/* Cart Icon and Drawer */}
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 relative text-secondary hover:text-primary hover:bg-secondary/10"
-                  aria-label="Carrito de compras"
-                >
-                  <ShoppingCart className="h-4 w-4" aria-hidden="true" />
-                  {totalItems > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center text-[10px]">
-                      {totalItems}
-                    </span>
-                  )}
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[320px] sm:w-[380px] bg-background p-4">
-                <SheetHeader className="pb-2">
-                  <SheetTitle className="text-lg">Tu Carrito</SheetTitle>
-                </SheetHeader>
-                <div className="flex flex-col h-[calc(100%-3rem)]">
-                  <div className="flex-grow overflow-y-auto py-2">
-                    {items.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center h-40 mt-6">
-                        <ShoppingCart className="h-12 w-12 text-muted-foreground mb-3" />
-                        <p className="text-center text-muted-foreground text-sm">Tu carrito está vacío</p>
-                      </div>
-                    ) : (
-                      items.map((item) => (
-                        <div key={item.variant.id} className="flex items-center gap-3 py-3 border-b">
-                          <div className="relative h-14 w-14 bg-gray-100 rounded overflow-hidden flex-shrink-0">
-                            {item.variant.imageUrls && item.variant.imageUrls.length > 0 ? (
-                              <img
-                                src={item.variant.imageUrls[0] || "/placeholder.svg"}
-                                alt={item.product.title}
-                                className="object-cover h-full w-full"
-                              />
-                            ) : item.product.imageUrls && item.product.imageUrls.length > 0 ? (
-                              <img
-                                src={item.product.imageUrls[0] || "/placeholder.svg"}
-                                alt={item.product.title}
-                                className="object-cover h-full w-full"
-                              />
-                            ) : (
-                              <div className="flex items-center justify-center h-full w-full bg-gray-200">
-                                <ShoppingCart className="h-5 w-5 text-gray-400" />
-                              </div>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="text-sm truncate">{item.product.title}</h4>
-                            <p className="text-xs text-muted-foreground truncate mb-1">{item.variant.title}</p>
-
-                            {/* Quantity Controls */}
-                            <div className="flex items-center gap-2 mb-1">
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => updateQuantity(item.variant.id, Math.max(1, item.quantity - 1))}
-                                disabled={item.quantity <= 1}
-                              >
-                                <span className="text-xs">-</span>
-                              </Button>
-                              <span className="text-xs min-w-[20px] text-center">{item.quantity}</span>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => updateQuantity(item.variant.id, item.quantity + 1)}
-                              >
-                                <span className="text-xs">+</span>
-                              </Button>
-                            </div>
-
-                            <p className="text-xs">
-                              {(() => {
-                                const prices = item.variant.prices
-                                if (!prices?.length) return "N/A"
-                                
-                                const priceForCurrency = prices.find(p => p.currency?.id === activeCurrency?.id)
-                                const price = priceForCurrency || prices[0]
-                                
-                                return price 
-                                  ? formatCurrency(price.price * item.quantity, activeCurrency)
-                                  : "N/A"
-                              })()}
-                            </p>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => removeItem(item.variant.id)}
-                            aria-label="Eliminar producto"
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                  {items.length > 0 && (
-                    <div className="mt-auto pt-3 border-t">
-                      <p className="text-base mb-3 flex justify-between">
-                        <span>Total:</span>
-                        <span>{formatCurrency(totalPrice, activeCurrency)}</span>
-                      </p>
-                      <div className="flex gap-2">
-                        <SheetClose asChild>
-                          <Button asChild className="flex-1" variant="outline" size="sm">
-                            <Link href="/cart">Ver Carrito</Link>
-                          </Button>
-                        </SheetClose>
-                        <SheetClose asChild>
-                          <Button asChild className="flex-1" size="sm">
-                            <Link href="/checkout">Proceder a Pagar</Link>
-                          </Button>
-                        </SheetClose>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </SheetContent>
-            </Sheet>
-
-            
-            {/* Currency Selector */}
-            {shopSettings?.[0]?.multiCurrencyEnabled &&
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    className="h-8 px-3 text-sm border border-border bg-background rounded-md text-secondary hover:text-primary hover:bg-secondary/10 transition"
-                    aria-label="Seleccionar moneda"
-                  >
-                    {
-                      acceptedCurrencies.find((c) => c.id === selectedCurrencyId)?.code
-                      || "Moneda"
-                    }
-                  </button>
-                </DropdownMenuTrigger>
-
-                <DropdownMenuContent
-                  align="end"
-                  className="z-[999] bg-popover text-popover-foreground border rounded-md shadow-md p-1 w-40"
-                >
-                  {acceptedCurrencies.map((currency) => (
-                    <DropdownMenuItem
-                      key={currency.id}
-                      onClick={() => setSelectedCurrencyId(currency.id)}
-                      className={`cursor-pointer px-3 py-1.5 text-sm rounded-md hover:bg-secondary/10 ${
-                        selectedCurrencyId === currency.id ? "text-primary" : ""
-                      }`}
-                    >
-                      {currency.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            }
-
-            {/* User Menu */}
-            {isSessionLoading ? (
-              <Skeleton className="h-8 w-8 rounded-full" />
-            ) : currentUser ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full p-0">
-                    <Avatar className="h-7 w-7">
-                      <AvatarImage src={currentUser.image || ""} alt={currentUser.name || "Usuario"} />
-                      <AvatarFallback className="text-xs">{getInitials(currentUser.name)}</AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56 z-[999]" align="end" forceMount>
-                  <div className="flex flex-col space-y-1 p-2">
-                    <p className="text-sm">{currentUser.name}</p>
-                    <p className="text-xs text-muted-foreground">{currentUser.email}</p>
-                    {currentUser.role && (
-                      <p className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full w-fit">
-                        {currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)}
-                      </p>
-                    )}
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard" className="cursor-pointer flex items-center">
-                      <User className="mr-2 h-4 w-4" />
-                      <span>Mi Cuenta</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="cursor-pointer text-red-600 focus:text-red-600 flex items-center"
-                    onClick={handleSignOut}
-                  >
-                    <X className="mr-2 h-4 w-4" />
-                    <span>Cerrar sesión</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <Button
-                variant="ghost"
-                className="hidden sm:flex bg-primary text-white hover:bg-primary/70 hover:text-white hover:shadow-md text-xs px-2 h-8 transition-all duration-200"
-                asChild
-              >
-                <Link href="/login">
-                  <User className="h-4 w-4 mr-1.5" aria-hidden="true" />
-                  Iniciar Sesión
-                </Link>
-              </Button>
-            )}
-
-            {/* Mobile Menu */}
-            <MobileMenu
-              categories={categories ?? []}
-              collections={collections || []}
-              currentUser={currentUser}
-              pathname={pathname}
-              onSignOut={handleSignOut}
-              shopLogo={shopLogo}
-              shopName={shopName}
-            />
-          </div>
+      <header>
+        {/* Tier 1 — announcement (scrolls away) */}
+        <div className="bg-muted">
+          <p className="container-section py-2 text-center text-[10px] sm:text-[11px] font-medium uppercase tracking-[0.12em] sm:tracking-[0.16em] text-muted-foreground">
+            {announcement}
+          </p>
         </div>
-      </div>
-    </nav>
 
-    {isCookieConsentEnabled && showDialog && (
-        <CookieConsentDialog
-          onAccept={acceptAllCookies}
-          onDecline={declineAllCookies}
-          onAcceptSelected={acceptSelectedCookies}
-        />
+        {/* Tiers 2 + 3 — sticky */}
+        <div className="sticky top-0 z-[180] bg-background shadow-[0_1px_0_0_var(--border)]">
+          {/* Tier 2 — main row */}
+          <div className="border-b border-border bg-background/95 backdrop-blur-md">
+            <div className="container-section">
+              <div className="content-section flex h-16 items-center gap-3 sm:gap-5">
+                {/* mobile menu */}
+                <div className="lg:hidden">
+                  <MobileMenu
+                    categories={categories ?? []}
+                    collections={collections || []}
+                    currentUser={currentUser}
+                    pathname={pathname}
+                    onSignOut={handleSignOut}
+                    shopLogo={"/logos/logo2.png"}
+                    shopName={shopName}
+                  />
+                </div>
+
+                {/* logo */}
+                <Link href="/" aria-label="Scentra inicio" className="flex flex-shrink-0 items-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/logos/logo.png" alt={shopName} className="h-4 sm:h-5 w-auto" />
+                </Link>
+
+                {/* search (inline, prominent) */}
+                <form onSubmit={handleSearch} className="relative hidden flex-1 sm:block">
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="¿Qué fragancia buscas?"
+                    className="h-11 w-full rounded-full border border-border bg-secondary/60 pl-5 pr-12 text-sm text-foreground placeholder:text-muted-foreground focus:border-brand focus:bg-background focus:outline-none transition-colors"
+                  />
+                  <button type="submit" aria-label="Buscar" className="absolute right-1 top-1 flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background transition-colors hover:bg-brand hover:text-brand-foreground">
+                    <Search className="h-4 w-4" />
+                  </button>
+                </form>
+
+                {/* utility */}
+                <div className="ml-auto flex items-center gap-3 sm:gap-4">
+                  <Link href="/nosotros" className="hidden items-center gap-1.5 text-[13px] text-foreground hover:text-brand transition-colors xl:flex">
+                    <Sparkles className="h-4 w-4 text-brand" />
+                    Asesoría olfativa
+                  </Link>
+
+                  {shopSettings?.[0]?.enableWishlist && (
+                    <Link href="/dashboard" aria-label="Favoritos" className="hidden text-foreground hover:text-brand transition-colors sm:block">
+                      <Heart className="h-5 w-5" />
+                    </Link>
+                  )}
+
+                  <div className="hidden sm:block"><AccountControl /></div>
+
+                  {/* search icon (mobile) */}
+                  <Link href="/productos" aria-label="Buscar" className="text-foreground hover:text-brand sm:hidden">
+                    <Search className="h-5 w-5" />
+                  </Link>
+
+                  {/* cart */}
+                  <Sheet>
+                    <SheetTrigger asChild>
+                      <button className="relative text-foreground hover:text-brand transition-colors" aria-label="Carrito">
+                        <ShoppingBag className="h-5 w-5" />
+                        {totalItems > 0 && (
+                          <span className="absolute -top-2 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-semibold text-brand-foreground">{totalItems}</span>
+                        )}
+                      </button>
+                    </SheetTrigger>
+                    <SheetContent side="right" className="flex w-[340px] flex-col bg-background p-5 sm:w-[400px]">
+                      <SheetHeader className="border-b border-border pb-3"><SheetTitle className="text-left font-display text-2xl">Tu carrito</SheetTitle></SheetHeader>
+                      <div className="scrollbar-thin flex-grow overflow-y-auto py-3">
+                        {items.length === 0 ? (
+                          <div className="mt-6 flex h-48 flex-col items-center justify-center text-center">
+                            <ShoppingBag className="mb-3 h-10 w-10 text-muted-foreground/40" />
+                            <p className="text-sm text-muted-foreground">Tu carrito está vacío</p>
+                            <SheetClose asChild><Link href="/productos" className="mt-4 border-b border-brand pb-0.5 text-xs uppercase tracking-[0.14em] text-brand">Explorar fragancias</Link></SheetClose>
+                          </div>
+                        ) : (
+                          items.map((item) => {
+                            const price = item.variant.prices?.find((p) => p.currency?.id === activeCurrency?.id) || item.variant.prices?.[0]
+                            const img = item.variant.imageUrls?.[0] || item.product.imageUrls?.[0] || "/placeholders/product.svg"
+                            return (
+                              <div key={item.variant.id} className="flex gap-3 border-b border-border py-4">
+                                <div className="relative h-20 w-16 flex-shrink-0 overflow-hidden bg-secondary">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={img} alt={item.product.title} className="h-full w-full object-contain p-1.5" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  {item.product.vendor && <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{item.product.vendor}</p>}
+                                  <h4 className="line-clamp-2 text-sm font-medium leading-tight">{item.product.title}</h4>
+                                  <p className="mt-0.5 text-xs text-muted-foreground">{item.variant.title}</p>
+                                  <div className="mt-2 flex items-center justify-between">
+                                    <div className="flex items-center border border-border">
+                                      <button className="flex h-7 w-7 items-center justify-center hover:bg-secondary disabled:opacity-40" onClick={() => updateQuantity(item.variant.id, Math.max(1, item.quantity - 1))} disabled={item.quantity <= 1} aria-label="Disminuir"><Minus className="h-3 w-3" /></button>
+                                      <span className="w-7 text-center text-xs">{item.quantity}</span>
+                                      <button className="flex h-7 w-7 items-center justify-center hover:bg-secondary" onClick={() => updateQuantity(item.variant.id, item.quantity + 1)} aria-label="Aumentar"><Plus className="h-3 w-3" /></button>
+                                    </div>
+                                    <span className="text-sm font-medium">{price ? formatCurrency(Number(price.price) * item.quantity, activeCurrency) : "—"}</span>
+                                  </div>
+                                </div>
+                                <button className="self-start text-muted-foreground hover:text-destructive" onClick={() => removeItem(item.variant.id)} aria-label="Eliminar"><X className="h-4 w-4" /></button>
+                              </div>
+                            )
+                          })
+                        )}
+                      </div>
+                      {items.length > 0 && (
+                        <div className="border-t border-border pt-4">
+                          <div className="mb-1 flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span className="font-semibold">{formatCurrency(totalPrice, activeCurrency)}</span></div>
+                          <p className="mb-4 text-[11px] text-muted-foreground">Envío e impuestos calculados al pagar.</p>
+                          <div className="flex flex-col gap-2">
+                            <SheetClose asChild><Button asChild className="w-full"><Link href="/checkout">Proceder al pago</Link></Button></SheetClose>
+                            <SheetClose asChild><Button asChild variant="outline" className="w-full"><Link href="/cart">Ver carrito</Link></Button></SheetClose>
+                          </div>
+                        </div>
+                      )}
+                    </SheetContent>
+                  </Sheet>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Tier 3 — category bar (dark, desktop) */}
+          <nav className="hidden bg-foreground text-background lg:block">
+            <div className="container-section">
+              <ul className="content-section flex items-center justify-center gap-1">
+                <CatLink href="/productos?sort=createdAt" label="Novedades" pathname={pathname} />
+                {rootCategories.map((cat) => (
+                  <CategoryItem key={cat.id} category={cat} />
+                ))}
+                {featured.slice(0, 1).map((c) => (
+                  <li key={c.id}>
+                    <Link href={`/colecciones/${c.slug}`} className="block px-3 py-3 text-[12.5px] uppercase tracking-[0.08em] text-brand transition-colors hover:text-brand-dark">
+                      {c.title}
+                    </Link>
+                  </li>
+                ))}
+                <CatLink href="/blog" label="Diario" pathname={pathname} />
+              </ul>
+            </div>
+          </nav>
+        </div>
+      </header>
+
+      {isCookieConsentEnabled && showDialog && (
+        <CookieConsentDialog onAccept={acceptAllCookies} onDecline={declineAllCookies} onAcceptSelected={acceptSelectedCookies} />
       )}
     </>
+  )
+}
+
+function CatLink({ href, label, pathname }: { href: string; label: string; pathname: string }) {
+  const base = href.split("?")[0]
+  const active = base === "/blog" ? pathname.startsWith("/blog") : false
+  return (
+    <li>
+      <Link
+        href={href}
+        className={cn(
+          "block px-3 py-3 text-[12.5px] uppercase tracking-[0.08em] transition-colors hover:text-background",
+          active ? "text-background" : "text-background/70",
+        )}
+      >
+        {label}
+      </Link>
+    </li>
+  )
+}
+
+function CategoryItem({ category }: { category: Category & { children: Category[] } }) {
+  const hasChildren = category.children && category.children.length > 0
+  return (
+    <li className="group relative">
+      <Link
+        href={`/productos?category=${category.slug}`}
+        className="flex items-center gap-1 px-3 py-3 text-[12.5px] uppercase tracking-[0.08em] text-background/70 transition-colors hover:text-background"
+      >
+        {category.name}
+        {hasChildren && <ChevronDown className="h-3 w-3 opacity-60 transition-transform group-hover:rotate-180" />}
+      </Link>
+      {hasChildren && (
+        <div className="invisible absolute left-1/2 top-full z-50 min-w-[200px] -translate-x-1/2 border border-border bg-background py-2 opacity-0 shadow-xl transition-all duration-200 group-hover:visible group-hover:opacity-100">
+          {category.children.map((child) => (
+            <Link
+              key={child.id}
+              href={`/productos?category=${child.slug}`}
+              className="block px-4 py-2 text-[13px] capitalize text-foreground transition-colors hover:bg-secondary hover:text-brand"
+            >
+              {child.name}
+            </Link>
+          ))}
+        </div>
+      )}
+    </li>
   )
 }

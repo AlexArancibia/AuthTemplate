@@ -48,14 +48,14 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
   const pageNumbers = getPageNumbers()
 
   return (
-    <nav className="flex items-center gap-1" aria-label="Paginación">
+    <nav className="flex items-center gap-1.5" aria-label="Paginación">
       {/* Previous Button */}
       <Button
         variant="ghost"
         size="sm"
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
-        className="h-8 w-8 p-0 hover:bg-gray-100 disabled:opacity-40"
+        className="h-10 w-10 rounded-none p-0 text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-30"
         aria-label="Página anterior"
       >
         <ChevronLeft className="h-4 w-4" />
@@ -68,27 +68,28 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
           return (
             <span
               key={`${page}-${index}`}
-              className="h-8 w-8 flex items-center justify-center text-gray-400 text-sm"
+              className="flex h-10 w-10 items-center justify-center text-sm text-muted-foreground"
             >
-              •••
+              ···
             </span>
           )
         }
 
         // Page number button
+        const isActive = currentPage === page
         return (
           <Button
             key={page}
-            variant={currentPage === page ? "default" : "ghost"}
+            variant="ghost"
             size="sm"
             onClick={() => onPageChange(page)}
-            className={`h-8 w-8 p-0 text-sm font-medium transition-all ${
-              currentPage === page
-                ? "bg-black text-white hover:bg-gray-800 shadow-sm"
-                : "hover:bg-gray-100 text-gray-700"
+            className={`h-10 w-10 rounded-none p-0 text-sm font-medium transition-colors ${
+              isActive
+                ? "bg-foreground text-background hover:bg-foreground"
+                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
             }`}
             aria-label={`Página ${page}`}
-            aria-current={currentPage === page ? "page" : undefined}
+            aria-current={isActive ? "page" : undefined}
           >
             {page}
           </Button>
@@ -101,7 +102,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
         size="sm"
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className="h-8 w-8 p-0 hover:bg-gray-100 disabled:opacity-40"
+        className="h-10 w-10 rounded-none p-0 text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-30"
         aria-label="Página siguiente"
       >
         <ChevronRight className="h-4 w-4" />

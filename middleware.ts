@@ -20,7 +20,10 @@ const publicRoutes = [
   "/api/webhooks/culqui",
   "/terminos-y-condiciones",
   "/politica-de-privacidad",
+  "/politica-de-cookies",
+  "/politica-de-envios",
   "/libro-de-reclamaciones",
+  "/colecciones",
   "/promociones",
   "/catalogo",
   "/ofertas",
@@ -29,9 +32,8 @@ const publicRoutes = [
   "/cambios-devoluciones",
   "/forgot-password", // Nueva ruta pública
   "/reset-password", // Nueva ruta pública
-  "/nuestros-deportistas", // Nueva ruta pública
 ];
-const publicPrefixes = ["/productos/", "/blog/"];
+const publicPrefixes = ["/productos/", "/blog/", "/colecciones/"];
 const authRoutes = ["/login", "/register"]; // Estas son las páginas a las que se redirige si ya está logueado
 const apiAuthPrefix = "/api/auth";
 

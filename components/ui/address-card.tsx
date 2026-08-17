@@ -123,12 +123,10 @@ export function AddressCard({
           className={`flex items-start gap-3 ${variant === "checkout" ? "flex-1 cursor-pointer" : ""}`}
           onClick={variant === "checkout" ? onSelect : undefined}
         >
-          <div className={`mt-1 p-1 rounded-full ${
-            isSelected 
-              ? "bg-primary text-white" 
-              : isCompanyAddress 
-                ? "bg-blue-50 text-blue-600" 
-                : "bg-green-50 text-green-600"
+          <div className={`mt-1 p-1 rounded-none ${
+            isSelected
+              ? "bg-brand text-brand-foreground"
+              : "bg-secondary text-foreground"
           }`}>
             {isCompanyAddress ? (
               // Empresa: mostrar edificio (Building)
@@ -149,7 +147,7 @@ export function AddressCard({
                       : "Dirección de envío y facturación"}
                 </span>
                 {address.isDefault && (
-                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                  <Badge variant="outline" className="bg-brand/10 text-brand-foreground border-brand/30 rounded-none">
                     Predeterminada
                   </Badge>
                 )}
@@ -163,7 +161,7 @@ export function AddressCard({
             {address.phone && <p className="text-sm text-muted-foreground">{address.phone}</p>}
             {address.company && <p className="text-sm text-muted-foreground">Empresa: {address.company}</p>}
             {variant === "checkout" && address.isDefault && (
-              <Badge className="mt-1 bg-primary/10 text-primary">Predeterminada</Badge>
+              <Badge className="mt-1 bg-brand/10 text-brand-foreground rounded-none">Predeterminada</Badge>
             )}
           </div>
         </div>
@@ -187,7 +185,7 @@ export function AddressCard({
                     e.stopPropagation()
                     handleEditClick()
                   }}
-                  className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-1 h-8 w-8"
+                  className="text-muted-foreground hover:text-foreground hover:bg-muted p-1 h-8 w-8"
                 >
                   <Edit className="h-4 w-4" />
                 </Button>
@@ -227,14 +225,14 @@ export function AddressCard({
       </div>
       
       {variant === "dashboard" && showEditDeleteButtons && (
-        <div className="bg-muted/30 p-2 flex justify-end gap-2 border-t">
+        <div className="bg-muted/30 p-2 flex justify-end gap-2 border-t border-border">
           {!address.isDefault && onSetDefault && (
             <Button
               variant="ghost"
               size="sm"
               onClick={handleSetDefaultClick}
               disabled={isSubmitting}
-              className="text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50 disabled:opacity-50"
+              className="text-foreground hover:text-brand-foreground hover:bg-brand/10 disabled:opacity-50"
             >
               <Star className="h-4 w-4 mr-1" />
               Predeterminada
@@ -244,7 +242,7 @@ export function AddressCard({
             variant="ghost"
             size="sm"
             onClick={handleEditClick}
-            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+            className="text-muted-foreground hover:text-foreground hover:bg-muted"
           >
             <Edit className="h-4 w-4 mr-1" />
             Editar
@@ -282,11 +280,11 @@ export function AddressCard({
   return (
     <>
       <Card
-        className={`mb-3 transition-all ${
-          variant === "checkout" 
-            ? isSelected 
-              ? "ring-2 ring-primary" 
-              : "hover:border-primary/50"
+        className={`mb-3 rounded-none transition-all ${
+          variant === "checkout"
+            ? isSelected
+              ? "border-brand bg-brand/5"
+              : "border-border hover:border-foreground/40"
             : "overflow-hidden"
         }`}
         onClick={variant === "dashboard" ? onSelect : undefined}

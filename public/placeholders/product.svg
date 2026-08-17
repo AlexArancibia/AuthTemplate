@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="533" viewBox="0 0 400 533" fill="none">
+  <rect width="400" height="533" fill="#F4F4F5"/>
+  <g stroke="#C9C9CE" stroke-width="2" fill="none">
+    <rect x="170" y="120" width="60" height="40" rx="3"/>
+    <rect x="160" y="160" width="80" height="200" rx="10"/>
+    <line x1="160" y1="210" x2="240" y2="210"/>
+  </g>
+  <text x="200" y="410" font-family="Georgia, serif" font-size="22" letter-spacing="6" fill="#A1A1AA" text-anchor="middle">SCENTRA</text>
+</svg>

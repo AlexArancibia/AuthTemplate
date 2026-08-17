@@ -1,7 +1,6 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { Filter } from "lucide-react"
+import { SlidersHorizontal } from "lucide-react"
 import {
   Sheet,
   SheetContent,
@@ -15,31 +14,27 @@ export default function MobileFilterButton() {
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button
-          variant="outline"
-          className="lg:hidden w-full mb-4 flex items-center justify-center gap-2 text-sm px-4 py-2.5"
+        <button
+          type="button"
+          className="mb-8 flex w-full items-center justify-center gap-2 rounded-none border border-foreground bg-background px-4 py-3 text-xs font-medium uppercase tracking-[0.16em] text-foreground transition-colors hover:bg-foreground hover:text-background lg:hidden"
         >
-          <Filter className="w-4 h-4" />
-          <span className="hidden xs:inline">Filtrar productos</span>
-          <span className="xs:hidden">Filtros</span>
-        </Button>
+          <SlidersHorizontal className="h-4 w-4" />
+          Filtrar y ordenar
+        </button>
       </SheetTrigger>
-      <SheetContent 
-        side="left" 
-        className="w-full xs:w-80 sm:w-96 p-0 bg-white"
+      <SheetContent
+        side="left"
+        className="w-full max-w-sm overflow-y-auto rounded-none border-border bg-background p-0"
       >
-        <SheetHeader className="px-4 xs:px-6 pt-4 xs:pt-6 pb-3 xs:pb-4 border-b">
-          <SheetTitle className="flex items-center gap-2 text-base xs:text-lg">
-            <Filter className="w-4 h-4 xs:w-5 xs:h-5" />
-            <span className="hidden xs:inline">Filtros de productos</span>
-            <span className="xs:hidden">Filtros</span>
+        <SheetHeader className="border-b border-border px-6 pb-4 pt-6">
+          <SheetTitle className="text-left font-display text-2xl font-medium tracking-tight">
+            Filtros
           </SheetTitle>
         </SheetHeader>
-        <div className="overflow-y-auto h-full">
+        <div className="px-6 py-6">
           <ProductFilterSidebar isMobile />
         </div>
       </SheetContent>
     </Sheet>
   )
 }
-

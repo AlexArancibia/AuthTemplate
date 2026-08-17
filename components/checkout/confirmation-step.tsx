@@ -163,30 +163,30 @@ export function ConfirmationStep({
         initial={{ scale: 0, rotate: -180 }}
         animate={{ scale: 1, rotate: 0 }}
         transition={{ duration: 0.6, type: "spring" }}
-        className="w-24 h-24 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-full flex items-center justify-center mb-8 shadow-xl shadow-emerald-500/10"
+        className="w-24 h-24 bg-brand rounded-none flex items-center justify-center mb-8"
       >
-        <CheckCircle className="w-12 h-12 text-emerald-500" />
+        <CheckCircle className="w-12 h-12 text-brand-foreground" />
       </motion.div>
 
-      <h2 className="text-3xl md:text-4xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700">
+      <h2 className="font-display text-3xl md:text-4xl mb-6 text-foreground">
         ¡Gracias por tu compra!
       </h2>
 
-      <p className="text-gray-600 mb-8 max-w-lg mx-auto text-lg">
+      <p className="text-muted-foreground mb-8 max-w-lg mx-auto text-lg">
         Tu pedido ha sido recibido y está siendo procesado.
         {isAuthenticated && currentUser ? " Hemos enviado un correo electrónico con los detalles de tu compra." : ""}
       </p>
 
-      <div className="bg-gray-50 p-6 rounded-xl mb-10 w-full max-w-md border border-gray-100 shadow-sm">
-        <p className="text-gray-800 font-medium mb-2">
-          Número de pedido: <span className="font-bold">{orderId || `CL-${Math.floor(Math.random() * 10000)}`}</span>
+      <div className="bg-muted p-6 rounded-none mb-10 w-full max-w-md border border-border">
+        <p className="text-foreground font-medium mb-2">
+          Número de pedido: <span className="font-semibold text-foreground">{orderId || `CL-${Math.floor(Math.random() * 10000)}`}</span>
         </p>
-        <p className="text-gray-600 text-sm">Guarda este número para futuras referencias.</p>
+        <p className="text-muted-foreground text-sm">Guarda este número para futuras referencias.</p>
       </div>
 
       <div className="w-full max-w-md mb-8">
         {formData.paymentMethod === "pp_9c77d30e-6d2b" ? (
-          <div className="flex flex-col items-center justify-center gap-4 bg-emerald-50 border border-emerald-100 rounded-xl p-6 shadow-lg shadow-emerald-500/10">
+          <div className="flex flex-col items-center justify-center gap-4 bg-muted border border-border rounded-none p-6">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="48"
@@ -197,22 +197,22 @@ export function ConfirmationStep({
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="text-emerald-500 mb-2"
+              className="text-foreground mb-2"
             >
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="#10b981" />
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="currentColor" />
               <path d="M9 12l2 2 4-4" stroke="#fff" strokeWidth="2" fill="none" />
             </svg>
-            <h3 className="text-xl font-semibold text-emerald-700">¡Pago recibido!</h3>
-            <p className="text-gray-700 text-center">
+            <h3 className="font-display text-xl text-foreground">¡Pago recibido!</h3>
+            <p className="text-foreground text-center">
               Hemos recibido tu pago y estamos esperando la verificación para procesar el envío de tu pedido.
             </p>
-            <p className="text-gray-500 text-center text-sm">
+            <p className="text-muted-foreground text-center text-sm">
               Si deseas más información sobre tu pedido, comunícate con nosotros al{" "}
               <a
                 href={`https://wa.me/${shopSettings[0].phone?.replace(/\s+/g, "") || ""}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-emerald-600 underline"
+                className="text-brand underline"
               >
                 WhatsApp
               </a>
@@ -271,7 +271,7 @@ export function ConfirmationStep({
             )}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-3 bg-emerald-500 hover:bg-emerald-600 text-white font-medium py-4 px-6 rounded-lg w-full transition-all shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30"
+            className="flex items-center justify-center gap-3 bg-foreground hover:bg-foreground/90 text-background font-medium py-4 px-6 rounded-none w-full transition-all"
           >
             {/* ...SVG y texto de WhatsApp... */}
             <svg
@@ -291,7 +291,7 @@ export function ConfirmationStep({
           </a>
         )}
         {formData.paymentMethod !== "pp_9c77d30e-6d2b" && (
-          <p className="text-sm text-gray-500 mt-2 text-center">
+          <p className="text-sm text-muted-foreground mt-2 text-center">
             Nuestro equipo te ayudará a completar el proceso de pago y responderá todas tus dudas.
           </p>
         )}

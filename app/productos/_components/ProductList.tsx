@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { motion } from "framer-motion"
 import { useRouter, usePathname } from "next/navigation"
 import { useMainStore } from "@/stores/mainStore"
 import { ProductCard } from "@/components/ProductCard"
@@ -116,8 +117,23 @@ export default function ProductList({
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const validSortBy: ProductSortBy = (initialSortBy !== 'featured' ? initialSortBy : 'createdAt') as ProductSortBy
-        
+        // Map UI sort values to backend sortBy + sortOrder.
+        // "price_asc" / "price_desc" => sortBy: price; otherwise sortBy is the raw value.
+        let validSortBy: ProductSortBy
+        let sortOrder: 'asc' | 'desc' | undefined
+        if (initialSortBy === 'price_asc') {
+          validSortBy = 'price'
+          sortOrder = 'asc'
+        } else if (initialSortBy === 'price_desc') {
+          validSortBy = 'price'
+          sortOrder = 'desc'
+        } else if (initialSortBy === 'title') {
+          validSortBy = 'title'
+          sortOrder = 'asc'
+        } else {
+          validSortBy = (initialSortBy && initialSortBy !== 'featured' ? initialSortBy : 'createdAt') as ProductSortBy
+        }
+
         const hasVariantFilters = initialVariantFilters && Object.keys(initialVariantFilters).length > 0
 
         const params: SearchProductParams = {
@@ -128,6 +144,7 @@ export default function ProductList({
           maxPrice: initialMaxPrice,
           currencyId: selectedCurrencyId,
           sortBy: validSortBy,
+          ...(sortOrder && { sortOrder }),
           status: ['ACTIVE'],
           ...(initialCategories.length > 0 && { categorySlugs: initialCategories }),
           ...(initialVendors.length > 0 && { vendor: initialVendors }),
@@ -185,9 +202,12 @@ export default function ProductList({
   // No products found
   if (!loading && products.length === 0) {
     return (
-      <div className="text-center py-16">
-        <h3 className="text-2xl font-semibold text-gray-700 mb-2">No se encontraron productos</h3>
-        <p className="text-gray-500">Intenta ajustar tus filtros de búsqueda</p>
+      <div className="flex flex-col items-center justify-center border border-border bg-secondary/40 px-6 py-24 text-center">
+        <p className="eyebrow text-brand">Sin resultados</p>
+        <h3 className="mt-3">No encontramos fragancias</h3>
+        <p className="mt-3 max-w-sm text-sm leading-relaxed text-muted-foreground">
+          Prueba a ajustar tus filtros o a limpiar la búsqueda para descubrir más de nuestra colección.
+        </p>
       </div>
     )
   }
@@ -205,36 +225,43 @@ export default function ProductList({
           itemsPerPage={meta.limit}
         />
       )}
-      
-      {/* Products Grid - 3 columns on desktop, 1 column on mobile */}
+
+      {/* Products Grid — 2 cols mobile, 3 tablet, 4 desktop (max) */}
       {loading && products.length > 0 ? (
         // Skeleton loading state for pagination
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 xl:grid-cols-4">
           {[...Array(9)].map((_, index) => (
-            <div key={index} className="space-y-4 animate-pulse">
-              <div className="bg-gray-200 h-[300px] w-full rounded-lg" />
-              <div className="bg-gray-200 h-4 w-2/3 rounded" />
-              <div className="bg-gray-200 h-4 w-1/2 rounded" />
-              <div className="bg-gray-200 h-8 w-full rounded" />
+            <div key={index} className="animate-pulse space-y-3.5">
+              <div className="aspect-[3/4] w-full bg-secondary" />
+              <div className="h-2.5 w-1/3 bg-secondary" />
+              <div className="h-3.5 w-3/4 bg-secondary" />
+              <div className="h-3.5 w-1/4 bg-secondary" />
             </div>
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {products.map((product) => (
-            <ProductCard
+        <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 xl:grid-cols-4">
+          {products.map((product, i) => (
+            <motion.div
               key={product.id}
-              product={product}
-              selectedCurrencyId={selectedCurrencyId}
-              acceptedCurrencies={acceptedCurrencies}
-            />
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-40px" }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: (i % 4) * 0.05 }}
+            >
+              <ProductCard
+                product={product}
+                selectedCurrencyId={selectedCurrencyId}
+                acceptedCurrencies={acceptedCurrencies}
+              />
+            </motion.div>
           ))}
         </div>
       )}
 
       {/* Pagination */}
       {meta && meta.totalPages > 1 && (
-        <div className="mt-10 pt-8 border-t border-gray-200 flex justify-center">
+        <div className="mt-12 flex justify-center border-t border-border pt-8">
           <Pagination
             currentPage={meta.page}
             totalPages={meta.totalPages}

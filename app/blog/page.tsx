@@ -27,16 +27,27 @@ export default function BlogPage() {
     return <BlogSkeleton />
   }
 
+  const rest = filteredContents.slice(1)
+
   return (
-    <main className="bg-gray-50">
-      <div className="container-section py-8">
+    <main className="bg-background">
+      <div className="container-section pb-16 pt-12 sm:pt-16">
         <div className="content-section">
+          {/* Header */}
+          <header className="mb-10 text-center sm:mb-14">
+            <span className="eyebrow text-brand">Diario Scentra</span>
+            <h1 className="mt-3">El arte de la fragancia</h1>
+            <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+              Guías, notas olfativas y consejos para descubrir y cuidar tu firma aromática.
+            </p>
+          </header>
+
           {/* Featured Post */}
           {featuredPost && <FeaturedContent content={featuredPost} />}
 
           {/* Regular Posts Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-16">
-            {filteredContents.map((content, index) => (
+          <div className="mt-14 grid grid-cols-1 gap-x-6 gap-y-12 md:grid-cols-2 lg:grid-cols-3">
+            {rest.map((content, index) => (
               <PostCard key={content.id} content={content} index={index} />
             ))}
           </div>

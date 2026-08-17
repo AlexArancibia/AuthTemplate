@@ -179,12 +179,12 @@ export function CartReviewStep({ items, currency, nextStep, selectedCurrencyId, 
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
-      <h2 className="text-xl font-semibold mb-4">Revisa tu carrito</h2>
+      <h2 className="font-display text-xl mb-4 text-foreground">Revisa tu carrito</h2>
 
       {items.length === 0 ? (
         <div className="text-center py-8">
-          <p className="text-gray-500 mb-4">Tu carrito está vacío</p>
-          <Button asChild>
+          <p className="text-muted-foreground mb-4">Tu carrito está vacío</p>
+          <Button asChild className="rounded-none">
             <Link href="/products">Continuar comprando</Link>
           </Button>
         </div>
@@ -200,9 +200,9 @@ export function CartReviewStep({ items, currency, nextStep, selectedCurrencyId, 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.3 }}
-                className="flex items-center gap-5 py-5 border-b last:border-b-0 group"
+                className="flex items-center gap-5 py-5 border-b border-border last:border-b-0 group"
               >
-                <div className="relative w-24 h-24 bg-gray-50 rounded-lg overflow-hidden transition-transform group-hover:scale-105">
+                <div className="relative w-24 h-24 bg-secondary rounded-none overflow-hidden transition-transform group-hover:scale-105">
                   <Image
                     src={item.product.imageUrls?.[0] || "/placeholder.svg?height=96&width=96&query=product"}
                     alt={item.product.title || "Producto"}
@@ -211,14 +211,14 @@ export function CartReviewStep({ items, currency, nextStep, selectedCurrencyId, 
                   />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-medium text-gray-800 group-hover:text-primary transition-colors">
+                  <h3 className="font-display text-base text-foreground group-hover:text-foreground transition-colors">
                     {item.product.title || "Producto sin título"}
                   </h3>
-                  {/* <p className="text-sm text-gray-500 mt-1">
+                  {/* <p className="text-sm text-muted-foreground mt-1">
                     <span className="font-medium">Variante:</span> {item.variant.title || "Sin especificar"}
                   </p> */}
                   {item.variant.attributes && Object.entries(item.variant.attributes).length > 0 && (
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-sm text-muted-foreground mt-1">
                       {Object.entries(item.variant.attributes || {})
                         .map(([key, value]) => `${key}: ${value}`)
                         .join(", ")}
@@ -233,7 +233,7 @@ export function CartReviewStep({ items, currency, nextStep, selectedCurrencyId, 
 
                   <div className="mt-3 space-y-1">
                     <div className="flex items-center space-x-4">
-                      <div className="flex items-center border rounded-md">
+                      <div className="flex items-center border border-border rounded-none">
                         <Button
                           type="button"
                           variant="ghost"
@@ -296,9 +296,9 @@ export function CartReviewStep({ items, currency, nextStep, selectedCurrencyId, 
                         Eliminar
                       </Button>
                     </div>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-muted-foreground">
                       Stock disponible:{" "}
-                      <span className="font-semibold text-slate-700">
+                      <span className="font-semibold text-foreground">
                         {updatedStock[item.variant.id] ?? item.variant.inventoryQuantity}
                       </span>{" "}
                       unidades
@@ -306,12 +306,12 @@ export function CartReviewStep({ items, currency, nextStep, selectedCurrencyId, 
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-medium text-gray-800">
+                  <p className="font-medium text-foreground">
                     {currency}
                     {Number(itemTotal).toFixed(2)}
                   </p>
                   {itemPrice > 0 && (
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                       {currency}
                       {Number(itemPrice).toFixed(2)} c/u
                     </p>
@@ -322,10 +322,10 @@ export function CartReviewStep({ items, currency, nextStep, selectedCurrencyId, 
           })}
 
           {/* Resumen del total */}
-          <div className="border-t pt-4">
+          <div className="border-t border-border pt-4">
             <div className="flex justify-between items-center">
-              <span className="text-lg font-semibold">Subtotal:</span>
-              <span className="text-xl font-bold text-primary">
+              <span className="font-display text-lg">Subtotal</span>
+              <span className="text-xl font-medium text-foreground tabular-nums">
                 {currency}
                 {Number(displaySubtotal).toFixed(2)}
               </span>
@@ -333,7 +333,7 @@ export function CartReviewStep({ items, currency, nextStep, selectedCurrencyId, 
           </div>
 
           <div className="flex justify-between pt-6 gap-3">
-            <Button variant="outline" asChild className="px-6 gap-2 border-gray-300 hover:bg-gray-50 transition-colors">
+            <Button variant="outline" asChild className="px-6 gap-2 rounded-none border-border hover:bg-muted transition-colors">
               <Link href="/cart">
                 <ArrowLeft className="h-4 w-4" />
                 <span>Volver al carrito</span>
@@ -342,7 +342,7 @@ export function CartReviewStep({ items, currency, nextStep, selectedCurrencyId, 
             <Button
               onClick={handleNextStep}
               disabled={cartTotal === 0 || isValidatingStock}
-              className="px-6 gap-2 bg-primary hover:bg-primary/90 transition-all shadow-md shadow-primary/10 hover:shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 gap-2 rounded-none bg-foreground text-background hover:bg-foreground/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isValidatingStock ? (
                 <>

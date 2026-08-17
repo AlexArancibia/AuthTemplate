@@ -7,7 +7,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { formatCulqiDescription } from "@/lib/culqi-description";
 
 const sanitizePhone = (value?: string) => (value ?? "").replace(/\D/g, "");
-const CORS_ORIGIN = (process.env.CORS_ORIGIN || process.env.NEXTAUTH_URL || "https://anj.com").replace(/\/$/, "");
+const CORS_ORIGIN = (process.env.CORS_ORIGIN || process.env.NEXTAUTH_URL || "https://scentra.pe").replace(/\/$/, "");
 
 interface CulqiError {
   merchant_message?: string;

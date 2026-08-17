@@ -2,111 +2,69 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { motion } from "framer-motion"
-import { Calendar, Clock, Tag, User } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { motion, useReducedMotion } from "framer-motion"
 import { Content } from "@/types/content"
-import { getContentTypeBadgeVariant, translateContentType } from "@/lib/blog/utils"
-import { ContentType } from "@/types/common"
-
 
 interface PostCardProps {
   content: Content
   index: number
 }
 
+function getExcerpt(body: string | null | undefined, maxLength = 130) {
+  if (!body) return ""
+  const text = body.replace(/<[^>]*>/g, "").replace(/&[a-z]+;/gi, " ").replace(/\s+/g, " ").trim()
+  return text.length > maxLength ? text.slice(0, maxLength).trimEnd() + "…" : text
+}
+
+function readingTime(body?: string | null) {
+  const words = (body || "").replace(/<[^>]*>/g, " ").split(/\s+/).filter(Boolean).length
+  return Math.max(2, Math.round(words / 200))
+}
+
 export function PostCard({ content, index }: PostCardProps) {
-  // Función para formatear la fecha
-  const formatDate = (date: Date | undefined) => {
-    if (!date) return "Sin fecha"
-    return new Date(date).toLocaleDateString("es-PE", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    })
-  }
-
-  // Función para obtener un extracto del cuerpo
-  const getExcerpt = (body: string | undefined, maxLength = 120) => {
-    if (!body) return ""
-    // Convertir HTML a texto plano
-    const text = body.replace(/<[^>]*>/g, "")
-    return text.length > maxLength ? text.slice(0, maxLength) + "..." : text
-  }
-
-  // Obtener el nombre completo del autor
-  const getAuthorName = () => {
-    if (!content.author) return ""
-    return `${content.author.firstName} ${content.author.lastName}`
-  }
+  const reduce = useReducedMotion()
+  const formatDate = (date: Date | null | undefined) =>
+    !date ? "" : new Date(date).toLocaleDateString("es-PE", { year: "numeric", month: "long", day: "numeric" })
 
   return (
     <motion.article
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: index * 0.1 }}
-      className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300"
+      initial={reduce ? false : { opacity: 0, y: 18 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-40px" }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: (index % 3) * 0.06 }}
+      className="group flex flex-col"
     >
-      <Link href={`/blog/${content.slug}`} className="block">
-        <div className="relative h-48 overflow-hidden">
+      <Link href={`/blog/${content.slug}`} className="flex h-full flex-col">
+        <div className="relative aspect-[4/3] overflow-hidden bg-secondary">
           <Image
-            src={content.featuredImage || "/placeholder.svg?height=400&width=600"}
+            src={content.featuredImage || "/placeholders/hero.svg"}
             alt={content.title}
             fill
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
+            className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+            sizes="(max-width:768px) 100vw, 33vw"
           />
-          <Badge
-            className={`absolute top-3 right-3 font-medium ${getContentTypeBadgeVariant(content.type)}`}
-            variant="secondary"
-          >
-            {translateContentType(content.type)}
-          </Badge>
         </div>
-
-        <div className="p-5 space-y-3">
-          {content.metadata?.category && (
-            <div className="flex items-center text-xs text-gray-600">
-              <Tag className="w-3 h-3 mr-1" />
-              {content.metadata.category}
-            </div>
-          )}
-
-          <h3 className="text-lg font-semibold line-clamp-2 group-hover:text-primary transition-colors">
+        <div className="flex flex-grow flex-col pt-4">
+          <div className="mb-2 flex items-center gap-3">
+            {content.metadata?.category && (
+              <span className="eyebrow text-brand">{content.metadata.category as string}</span>
+            )}
+            <span className="text-[11px] text-muted-foreground">{readingTime(content.body)} min de lectura</span>
+          </div>
+          <h3 className="line-clamp-2 font-display text-xl leading-snug text-foreground transition-colors group-hover:text-brand">
             {content.title}
           </h3>
-
-          <p className="text-sm text-gray-600 line-clamp-3">{content.metadata?.excerpt || getExcerpt(content.body!)}</p>
-
-          <div className="flex flex-wrap gap-3 pt-2 text-xs text-gray-500">
-            {content.author && (
-              <div className="flex items-center">
-                <User className="w-3 h-3 mr-1" />
-                {getAuthorName()}
-              </div>
-            )}
-
-            {content.publishedAt && (
-              <div className="flex items-center">
-                <Calendar className="w-3 h-3 mr-1" />
-                {formatDate(content.publishedAt)}
-              </div>
-            )}
-
-            {content.metadata?.readTime && (
-              <div className="flex items-center">
-                <Clock className="w-3 h-3 mr-1" />
-                {content.metadata.readTime} min
-              </div>
-            )}
-
-            {/* Información específica para noticias */}
-            {content.type === ContentType.NEWS && content.metadata?.source && (
-              <div className="flex-1 text-right font-medium text-amber-600">{content.metadata.source}</div>
-            )}
+          <p className="mt-2 line-clamp-2 flex-grow text-sm leading-relaxed text-muted-foreground">
+            {(content.metadata?.excerpt as string) || getExcerpt(content.body)}
+          </p>
+          <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
+            <span className="text-xs text-muted-foreground">{formatDate(content.publishedAt)}</span>
+            <span className="text-xs font-medium uppercase tracking-[0.12em] text-foreground transition-colors group-hover:text-brand">
+              Leer →
+            </span>
           </div>
         </div>
       </Link>
     </motion.article>
   )
 }
-

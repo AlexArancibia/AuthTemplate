@@ -2,119 +2,64 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { Calendar, Clock, Tag, User } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { motion, useReducedMotion } from "framer-motion";
 import { Content } from "@/types/content";
-import { ContentType } from "@/types/common";
-import { getContentTypeBadgeVariant,   translateContentType } from "@/lib/blog/utils";
 
 interface FeaturedContentProps {
   content: Content;
 }
 
 export function FeaturedContent({ content }: FeaturedContentProps) {
+  const reduce = useReducedMotion();
   const formatDate = (date?: Date) =>
-    date
-      ? new Date(date).toLocaleDateString("es-PE", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })
-      : "Sin fecha";
+    date ? new Date(date).toLocaleDateString("es-PE", { year: "numeric", month: "long", day: "numeric" }) : "";
 
-  const getExcerpt = (body?: string, maxLength = 200) =>
-    body ? body.replace(/<[^>]*>/g, "").slice(0, maxLength) + "..." : "";
+  const getExcerpt = (body?: string, maxLength = 220) => {
+    if (!body) return "";
+    const text = body.replace(/<[^>]*>/g, "").replace(/&[a-z]+;/gi, " ").replace(/\s+/g, " ").trim();
+    return text.length > maxLength ? text.slice(0, maxLength).trimEnd() + "…" : text;
+  };
 
-  const getAuthorName = () =>
-    content.author ? `${content.author.firstName} ${content.author.lastName}` : "";
-
-  const getButtonText = () => {
-    switch (content.type) {
-      case ContentType.NEWS:
-        return "Ver noticia completa";
-      case ContentType.ARTICLE:
-        return "Leer artículo";
-      case ContentType.PAGE:
-        return "Ver página";
-      default:
-        return "Leer más";
-    }
+  const readingTime = () => {
+    const words = (content.body || "").replace(/<[^>]*>/g, " ").split(/\s+/).filter(Boolean).length;
+    return Math.max(2, Math.round(words / 200));
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={reduce ? false : { opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6 }}
-      className={`rounded-2xl overflow-hidden shadow-lg bg-white`}
+      transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+      className="grid grid-cols-1 overflow-hidden border border-border lg:grid-cols-2"
     >
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="relative h-[300px] lg:h-[400px]">
-          <Image
-            src={content.featuredImage || "/placeholder.svg?height=600&width=800"}
-            alt={content.title}
-            fill
-            className="object-cover"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent"></div>
-          <Badge
-            className={`absolute top-4 right-4 font-medium ${getContentTypeBadgeVariant(content.type)}`}
-            variant="secondary"
-          >
-            {translateContentType(content.type)}
-          </Badge>
+      <Link href={`/blog/${content.slug}`} className="group relative block h-[280px] overflow-hidden bg-secondary lg:h-auto lg:min-h-[420px]">
+        <Image
+          src={content.featuredImage || "/placeholders/hero.svg"}
+          alt={content.title}
+          fill
+          className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+          priority
+        />
+      </Link>
+
+      <div className="flex flex-col justify-center p-8 lg:p-14">
+        <div className="mb-3 flex items-center gap-3">
+          <span className="eyebrow text-brand">{(content.metadata?.category as string) || "Destacado"}</span>
+          <span className="text-xs text-muted-foreground">{readingTime()} min de lectura</span>
         </div>
-
-        <div className="p-6 lg:p-8 flex flex-col justify-center">
-          <div className="space-y-4">
-            {content.metadata?.category && (
-              <div className="flex items-center text-sm text-gray-600">
-                <Tag className="w-4 h-4 mr-1" />
-                {content.metadata.category}
-              </div>
-            )}
-
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900">{content.title}</h2>
-
-            <div className="flex flex-wrap gap-4 text-sm text-gray-600">
-              {content.author && (
-                <div className="flex items-center">
-                  <User className="w-4 h-4 mr-1" />
-                  {getAuthorName()}
-                </div>
-              )}
-              {content.publishedAt && (
-                <div className="flex items-center">
-                  <Calendar className="w-4 h-4 mr-1" />
-                  {formatDate(content.publishedAt)}
-                </div>
-              )}
-              {content.metadata?.readTime && (
-                <div className="flex items-center">
-                  <Clock className="w-4 h-4 mr-1" />
-                  {content.metadata.readTime} min de lectura
-                </div>
-              )}
-            </div>
-
-            <p className="text-gray-600 leading-relaxed">
-              {content.metadata?.excerpt || getExcerpt(content.body || undefined)}
-            </p>
-
-            {content.type === ContentType.NEWS && content.metadata?.source && (
-              <div className="bg-white p-4 rounded-lg text-sm text-gray-600">
-                <span className="font-bold text-amber-600">Fuente:</span> {content.metadata.source}
-              </div>
-            )}
-
-            <Button asChild className="w-fit">
-              <Link href={`/blog/${content.slug}`}>{getButtonText()}</Link>
-            </Button>
-          </div>
+        <h2 className="font-display text-3xl leading-tight text-foreground md:text-4xl">{content.title}</h2>
+        <p className="mt-4 leading-relaxed text-muted-foreground">
+          {(content.metadata?.excerpt as string) || getExcerpt(content.body || undefined)}
+        </p>
+        <div className="mt-6 flex items-center gap-4 text-xs text-muted-foreground">
+          {content.publishedAt && <span>{formatDate(content.publishedAt)}</span>}
         </div>
+        <Link
+          href={`/blog/${content.slug}`}
+          className="mt-7 inline-flex w-fit items-center gap-2 bg-foreground px-7 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-background transition-colors hover:bg-brand hover:text-brand-foreground"
+        >
+          Leer artículo →
+        </Link>
       </div>
     </motion.div>
   );

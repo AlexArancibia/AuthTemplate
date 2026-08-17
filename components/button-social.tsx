@@ -33,7 +33,8 @@ const ButtonSocial = ({ children, provider, callbackUrl = "/" }: ButtonSocialPro
   return (
     <Button
       type="button"
-      className="w-full h-10 bg-white text-gray-800 border border-gray-300 hover:bg-gray-50 cursor-pointer"
+      variant="outline"
+      className="w-full h-11 rounded-none bg-background text-foreground border-border hover:bg-muted cursor-pointer"
       onClick={handleClick}
       disabled={isLoading}
     >
